@@ -17,11 +17,12 @@ import { getSpeciesBySlug, listSpecies } from '../src/queries';
  * Skipped automatically when SUPABASE_URL is not set (see rls.integration.test.ts).
  */
 const supabaseUrl = process.env.SUPABASE_URL;
-const anonKey = process.env.SUPABASE_ANON_KEY;
-const hasLocalSupabase = Boolean(supabaseUrl && anonKey);
+const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+const hasLocalSupabase = Boolean(supabaseUrl && publishableKey);
 
 describe.skipIf(!hasLocalSupabase)('species/form queries against the full ingested dataset', () => {
-  const client = () => createPublicDatabaseClient({ url: supabaseUrl!, anonKey: anonKey! });
+  const client = () =>
+    createPublicDatabaseClient({ url: supabaseUrl!, publishableKey: publishableKey! });
 
   it('listSpecies returns the full species list, past the 1000-row PostgREST page cap', async () => {
     const species = await listSpecies(client());
@@ -87,7 +88,7 @@ describe.skipIf(!hasLocalSupabase)('species/form queries against the full ingest
 });
 
 describe.skipIf(hasLocalSupabase)('species/form queries (no local Supabase)', () => {
-  it.skip('set SUPABASE_URL and SUPABASE_ANON_KEY against a running local Supabase instance to run this suite', () => {
+  it.skip('set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY against a running local Supabase instance to run this suite', () => {
     // See db:start in packages/database/package.json.
   });
 });

@@ -71,6 +71,34 @@ silently truncates past 1000 rows rather than erroring. Both the ingestion write
 (`packages/pokemon-data/src/persist.ts`) and `listSpecies` (`packages/database/src/queries.ts`)
 paginate their reads past it.
 
+### Supabase API keys
+
+Supabase issues two key types per project (superseding the legacy `anon`/`service_role` JWTs,
+which local `supabase start` still also prints and remain valid — nothing here requires migrating
+an already-issued legacy key):
+
+- **publishable key** (`sb_publishable_...`) — safe in browser code, RLS-governed. Client code
+  uses `SupabasePublicConfig.publishableKey` (`packages/database/src/client.ts`).
+- **secret key** (`sb_secret_...`) — server-only, bypasses RLS. Client code uses
+  `SupabaseSecretConfig.secretKey`. Never expose to a client bundle; never log it (CLAUDE.md §15).
+
+Environment variable naming is standardized on the key's _role_, not its exact format, so a
+project can hold either a modern key or a legacy JWT in the same variable without a code change:
+
+| Variable                               | Used by                                         | Key type    |
+| -------------------------------------- | ----------------------------------------------- | ----------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | `apps/web` (browser + server)                   | —           |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `apps/web` (browser + server)                   | publishable |
+| `SUPABASE_URL`                         | tooling (`packages/database`, ingestion, tests) | —           |
+| `SUPABASE_PUBLISHABLE_KEY`             | tooling reading with anon-equivalent privilege  | publishable |
+| `SUPABASE_SECRET_KEY`                  | ingestion writes, any privileged server task    | secret      |
+
+`SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY`/`SUPABASE_SECRET_KEY` (no `NEXT_PUBLIC_` prefix) are
+deliberately separate from the web app's variables, even though local dev points both at the same
+project — this lets ingestion/tooling target a different environment (e.g. the remote DEV Supabase
+project) without touching `apps/web`'s configuration (the `SUPABASE_URL`-for-tooling split dates
+to Phase 1B's ingestion pipeline; this change only renames the key variables, not that split).
+
 ## Likely early domains
 
 Reference/data domains may include:

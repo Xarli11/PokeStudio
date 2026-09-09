@@ -45,8 +45,8 @@ pnpm --filter @pokestudio/database db:reset          # apply migrations only —
 pnpm --filter @pokestudio/database db:stop           # stop the local stack
 
 # Populate the database with the full Pokédex (requires db:start above, and
-# SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY — the `supabase start`
-# output above prints these; see .env.example):
+# SUPABASE_URL / SUPABASE_SECRET_KEY — `supabase start`'s output above prints
+# SECRET_KEY (sb_secret_...); see .env.example):
 pnpm --filter @pokestudio/pokemon-data ingest                # fetch -> normalize -> validate -> persist
 pnpm --filter @pokestudio/pokemon-data audit                 # same pipeline, report-only, no DB writes
 

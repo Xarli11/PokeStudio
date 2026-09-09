@@ -15,8 +15,8 @@ import type { NormalizedDataset } from '../src/types';
  * *.integration.test.ts for the same pattern).
  */
 const supabaseUrl = process.env.SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const hasLocalSupabase = Boolean(supabaseUrl && serviceRoleKey);
+const secretKey = process.env.SUPABASE_SECRET_KEY;
+const hasLocalSupabase = Boolean(supabaseUrl && secretKey);
 
 const TEST_SOURCE_ID = 'pokestudio-test';
 
@@ -58,7 +58,7 @@ describe.skipIf(!hasLocalSupabase)('persistDataset idempotency', () => {
   let client: IngestClient;
 
   beforeAll(async () => {
-    client = createClient<IngestSchema>(supabaseUrl!, serviceRoleKey!, {
+    client = createClient<IngestSchema>(supabaseUrl!, secretKey!, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
     await client.from('pokemon_form').delete().eq('source_id', TEST_SOURCE_ID);
@@ -109,7 +109,7 @@ describe.skipIf(!hasLocalSupabase)('persistDataset idempotency', () => {
 });
 
 describe.skipIf(hasLocalSupabase)('persistDataset idempotency (no local Supabase)', () => {
-  it.skip('set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY against a running local Supabase instance to run this suite', () => {
+  it.skip('set SUPABASE_URL and SUPABASE_SECRET_KEY against a running local Supabase instance to run this suite', () => {
     // See db:start in packages/database/package.json.
   });
 });

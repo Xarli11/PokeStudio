@@ -84,7 +84,7 @@ normalized species/form reference data end-to-end from Postgres.
   table queries, per CLAUDE.md §3 (no repository/service layer, but UI must
   not query arbitrary tables directly either).
 - `apps/web` reads this data server-side only: a small `getPokemonDatabaseClient()`
-  helper (`src/lib/pokemon-database.ts`) builds a public (anon-key, RLS-governed)
+  helper (`src/lib/pokemon-database.ts`) builds a public (publishable-key, RLS-governed)
   Supabase client, used only from Server Components. Both Pokédex routes and
   `sitemap.ts` are marked `export const dynamic = 'force-dynamic'` so `next build`
   never attempts to reach a database at build time (CI's Node job runs without

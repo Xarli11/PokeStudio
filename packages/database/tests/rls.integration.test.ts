@@ -12,19 +12,25 @@ import { createPublicDatabaseClient } from '../src/client';
  * spec for the RLS guarantee and must be run before shipping further Explore data.
  */
 const supabaseUrl = process.env.SUPABASE_URL;
-const anonKey = process.env.SUPABASE_ANON_KEY;
-const hasLocalSupabase = Boolean(supabaseUrl && anonKey);
+const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+const hasLocalSupabase = Boolean(supabaseUrl && publishableKey);
 
 describe.skipIf(!hasLocalSupabase)('species/pokemon_form reference data RLS', () => {
   it('species is readable by the anonymous role', async () => {
-    const client = createPublicDatabaseClient({ url: supabaseUrl!, anonKey: anonKey! });
+    const client = createPublicDatabaseClient({
+      url: supabaseUrl!,
+      publishableKey: publishableKey!,
+    });
     const { data, error } = await client.from('species').select('id').limit(1);
     expect(error).toBeNull();
     expect(Array.isArray(data)).toBe(true);
   });
 
   it('rejects anonymous writes to species', async () => {
-    const client = createPublicDatabaseClient({ url: supabaseUrl!, anonKey: anonKey! });
+    const client = createPublicDatabaseClient({
+      url: supabaseUrl!,
+      publishableKey: publishableKey!,
+    });
     const { error } = await client.from('species').insert({
       slug: 'should-fail',
       national_dex_number: 9999,
@@ -37,14 +43,20 @@ describe.skipIf(!hasLocalSupabase)('species/pokemon_form reference data RLS', ()
   });
 
   it('pokemon_form is readable by the anonymous role', async () => {
-    const client = createPublicDatabaseClient({ url: supabaseUrl!, anonKey: anonKey! });
+    const client = createPublicDatabaseClient({
+      url: supabaseUrl!,
+      publishableKey: publishableKey!,
+    });
     const { data, error } = await client.from('pokemon_form').select('id').limit(1);
     expect(error).toBeNull();
     expect(Array.isArray(data)).toBe(true);
   });
 
   it('rejects anonymous writes to pokemon_form', async () => {
-    const client = createPublicDatabaseClient({ url: supabaseUrl!, anonKey: anonKey! });
+    const client = createPublicDatabaseClient({
+      url: supabaseUrl!,
+      publishableKey: publishableKey!,
+    });
     const { data: species } = await client.from('species').select('id').limit(1).single();
     const { error } = await client.from('pokemon_form').insert({
       species_id: species!.id,
@@ -64,7 +76,7 @@ describe.skipIf(!hasLocalSupabase)('species/pokemon_form reference data RLS', ()
 describe.skipIf(hasLocalSupabase)(
   'species/pokemon_form reference data RLS (no local Supabase)',
   () => {
-    it.skip('set SUPABASE_URL and SUPABASE_ANON_KEY against a running local Supabase instance to run this suite', () => {
+    it.skip('set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY against a running local Supabase instance to run this suite', () => {
       // See db:start in packages/database/package.json.
     });
   },

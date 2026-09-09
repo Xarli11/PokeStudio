@@ -14,9 +14,12 @@
  *           --concurrency=N  requests in flight per fetch phase (default 12)
  *           --no-cache       bypass the on-disk raw-response cache
  *
- * Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (service role: RLS
- * only allows anon reads on these tables — ingestion writes need to bypass
- * it, same as any other write path in this repo, SECURITY.md).
+ * Requires SUPABASE_URL and SUPABASE_SECRET_KEY (the secret key bypasses
+ * RLS — only publishable/anon reads are allowed on these tables otherwise,
+ * and ingestion writes need to bypass that, same as any other write path in
+ * this repo, SECURITY.md). Accepts either Supabase's current secret-key
+ * format (`sb_secret_...`) or a legacy `service_role` JWT — both are valid
+ * bearer tokens here; see DATABASE.md "Supabase API keys".
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,20 +44,34 @@ function parseArgs(argv: string[]) {
   };
 }
 
+/**
+ * Describes the *shape* of a Supabase key for a diagnostic log line —
+ * never the key itself. Helps catch a misconfigured/wrong-format key (the
+ * "Invalid API key" failure this script exists to avoid) before spending a
+ * fetch/normalize pass finding out at the persist step.
+ */
+function describeKeySecretShape(key: string): string {
+  if (key.startsWith('sb_secret_')) return 'modern secret key (sb_secret_...)';
+  if (key.startsWith('sb_publishable_')) return 'publishable key (wrong key type for ingestion!)';
+  if (key.startsWith('eyJ')) return 'legacy JWT (service_role, presumably)';
+  return 'unrecognized format';
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const startedAt = Date.now();
 
   const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  if (!supabaseUrl || !secretKey) {
     console.error(
-      '[ingest] Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY.\n' +
+      '[ingest] Missing SUPABASE_URL / SUPABASE_SECRET_KEY.\n' +
         '  Start local Supabase first: pnpm --filter @pokestudio/database db:start',
     );
     process.exitCode = 1;
     return;
   }
+  console.warn(`[ingest] Using ${describeKeySecretShape(secretKey)} for ${supabaseUrl}`);
 
   const cacheDir = path.join(
     fileURLToPath(new URL('.', import.meta.url)),
@@ -106,7 +123,7 @@ async function main() {
   }
 
   console.warn('[ingest] Persisting to Postgres...');
-  const serviceClient: IngestClient = createClient<IngestSchema>(supabaseUrl, serviceRoleKey, {
+  const serviceClient: IngestClient = createClient<IngestSchema>(supabaseUrl, secretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const persistStartedAt = Date.now();

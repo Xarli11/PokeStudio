@@ -2,7 +2,7 @@ export { createPublicDatabaseClient, createServiceDatabaseClient } from './clien
 export type {
   PokeStudioDatabaseClient,
   SupabasePublicConfig,
-  SupabaseServiceConfig,
+  SupabaseSecretConfig,
 } from './client';
 export type { Database } from './types';
 export { getSpeciesBySlug, listSpecies, listSpeciesPage } from './queries';

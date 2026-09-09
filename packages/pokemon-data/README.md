@@ -9,12 +9,14 @@ time (CLAUDE.md §10); it only reads what this pipeline already wrote to Postgre
 
 Requires a running local Supabase instance with the schema migrations applied
 (`pnpm --filter @pokestudio/database db:start && pnpm --filter @pokestudio/database db:reset`)
-and `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` set (printed by `db:start`;
-see `.env.example`).
+and `SUPABASE_URL`/`SUPABASE_SECRET_KEY` set (`db:start` prints `SECRET_KEY`; see `.env.example`
+and DATABASE.md "Supabase API keys"). To target Supabase Cloud instead of local, set `SUPABASE_URL`
+to the project's URL and `SUPABASE_SECRET_KEY` to its secret key (`sb_secret_...`, from the
+project's API settings) — never commit either.
 
 ```bash
 pnpm --filter @pokestudio/pokemon-data ingest   # full pipeline: fetches, normalizes, validates, writes
-pnpm --filter @pokestudio/pokemon-data audit     # same pipeline, report-only — no DB writes, no service-role key needed
+pnpm --filter @pokestudio/pokemon-data audit     # same pipeline, report-only — no DB writes, no secret key needed
 ```
 
 Both accept:
