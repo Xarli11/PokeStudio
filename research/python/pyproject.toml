@@ -1,0 +1,22 @@
+[project]
+name = "pokestudio-research"
+version = "0.0.0"
+description = "PokeStudio Python research lane: simulation, Battle AI evaluation, statistical analysis (ADR-0007). Not a production service."
+requires-python = ">=3.11"
+dependencies = ["numpy>=2.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.8", "mypy>=1.13"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

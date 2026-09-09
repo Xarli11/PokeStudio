@@ -1,0 +1,14 @@
+PokeStudio.app — License status: PENDING
+
+This repository does not yet have a finalized license.
+
+The project's intended direction is a source-available license (not OSI Open
+Source) permitting noncommercial use, modification and distribution while
+restricting third-party commercial use — see LICENSING_STRATEGY.md and
+ADR-0008 (docs/adr/0008-source-available-commercial-control.md).
+
+Do not treat the absence of a final license as a grant of any rights. Final
+license text requires legal review before publication and before this file
+is replaced with binding terms.
+
+Third-party dependencies retain their own licenses — see THIRD_PARTY_NOTICES.md.

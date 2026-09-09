@@ -1,0 +1,26 @@
+name: Bug report
+description: Report incorrect behavior, including Pokémon mechanics/data bugs.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Include the exact Pokémon/team/format/generation involved if this is a mechanics or data bug.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source (for mechanics/data corrections)
+      description: A reliable reference (Bulbapedia, Smogon, official game behavior, etc.)
+  - type: input
+    id: repro
+    attributes:
+      label: Steps to reproduce / URL

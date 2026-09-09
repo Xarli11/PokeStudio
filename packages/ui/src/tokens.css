@@ -1,0 +1,60 @@
+/**
+ * PokeStudio design tokens.
+ * Dark is the default/primary theme; light is a first-class alternative.
+ * Pokémon type colors are semantic accents only — never the core brand palette.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Brand neutrals (dark-first) */
+  --ps-color-bg: #0a0b0f;
+  --ps-color-bg-elevated: #14161d;
+  --ps-color-bg-surface: #1b1e27;
+  --ps-color-border: #2a2e3a;
+  --ps-color-text: #f4f5f7;
+  --ps-color-text-muted: #a4a9b8;
+
+  /* Brand accent (not tied to any Pokémon type) */
+  --ps-color-primary: #6c8bff;
+  --ps-color-primary-contrast: #05060a;
+
+  /* Feedback */
+  --ps-color-success: #3ecf8e;
+  --ps-color-warning: #f5b849;
+  --ps-color-danger: #f56d6d;
+
+  /* Motion */
+  --ps-motion-fast: 120ms;
+  --ps-motion-base: 200ms;
+  --ps-motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Type semantic accents (subset — extended when Explore ships) */
+  --ps-type-fire: #f5804d;
+  --ps-type-water: #4d9bf5;
+  --ps-type-grass: #5cc26a;
+  --ps-type-electric: #f5cf4d;
+  --ps-type-psychic: #f56db0;
+  --ps-type-dragon: #7a6df5;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --ps-color-bg: #f7f8fa;
+  --ps-color-bg-elevated: #ffffff;
+  --ps-color-bg-surface: #ffffff;
+  --ps-color-border: #e1e3e8;
+  --ps-color-text: #14161d;
+  --ps-color-text-muted: #565c6b;
+
+  --ps-color-primary: #3a5ceb;
+  --ps-color-primary-contrast: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ps-motion-fast: 0ms;
+    --ps-motion-base: 0ms;
+  }
+}

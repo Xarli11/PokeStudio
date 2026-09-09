@@ -1,0 +1,21 @@
+{
+  "nav": {
+    "explore": "Explorar",
+    "build": "Construir",
+    "battleLab": "Laboratorio de Combate"
+  },
+  "home": {
+    "title": "PokeStudio",
+    "tagline": "Busca. Aprende. Construye. Simula. Combate. Analiza. Mejora. Colecciona.",
+    "status": "La base ya está lista. Explorar, Construir y el Laboratorio de Combate están en construcción activa.",
+    "cta": "Ver la hoja de ruta"
+  },
+  "theme": {
+    "toggle": "Cambiar tema",
+    "light": "Claro",
+    "dark": "Oscuro"
+  },
+  "footer": {
+    "disclaimer": "PokeStudio es un proyecto no oficial hecho por fans y no está afiliado, respaldado ni patrocinado por Nintendo, Game Freak o The Pokémon Company."
+  }
+}

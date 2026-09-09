@@ -1,0 +1,37 @@
+{
+  "name": "@pokestudio/web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "PokeStudio.app web application (Next.js).",
+  "license": "SEE LICENSE IN LICENSE",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "NODE_OPTIONS=--no-experimental-webstorage vitest run",
+    "clean": "rm -rf .next dist"
+  },
+  "dependencies": {
+    "@pokestudio/battle-engine": "workspace:*",
+    "@pokestudio/damage": "workspace:*",
+    "@pokestudio/i18n": "workspace:*",
+    "@pokestudio/pokemon-data": "workspace:*",
+    "@pokestudio/ui": "workspace:*",
+    "next": "^15.1.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@pokestudio/config": "workspace:*",
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^19.0.4",
+    "@types/react-dom": "^19.0.2",
+    "eslint-config-next": "^15.1.4",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
