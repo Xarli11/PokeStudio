@@ -58,3 +58,25 @@ cd research/python && pip install -e ".[dev]" && ruff check . && mypy . && pytes
 See `packages/database/README.md` for the full local Supabase workflow and `packages/pokemon-data/README.md`
 for the full ingestion pipeline (fetch/cache, idempotent upsert, classification audit). See
 `research/python/README.md` for the Python research lane.
+
+## Cloudflare Workers (DEV/staging — not deployed yet)
+
+`apps/web` builds and runs as a Cloudflare Worker via `@opennextjs/cloudflare` (ADR-0005). Normal
+local development is unaffected — `pnpm --filter @pokestudio/web dev` still runs plain `next dev`.
+
+```bash
+pnpm build:cf     # Cloudflare-target build (opennextjs-cloudflare build) — outputs apps/web/.open-next
+pnpm preview:cf   # build + run the Worker locally via Wrangler (real workerd runtime, not next dev)
+pnpm deploy:cf    # build + deploy to Cloudflare (do not run until DEV deployment is actually approved)
+```
+
+The deployed Worker needs these environment variables set in Cloudflare (dashboard or
+`wrangler secret put`) — never committed:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+`SUPABASE_SECRET_KEY` must **never** be configured on this Worker — species/form reference data is
+public-read, so the publishable key is sufficient for everything `apps/web` does server-side
+(DATABASE.md "Supabase API keys"). For local Worker preview, put the same two variables in
+`apps/web/.dev.vars` (gitignored, never committed).

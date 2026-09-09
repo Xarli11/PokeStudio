@@ -123,6 +123,25 @@ what changed architecturally:
   species in one response was a ~6MB page; page-size-60 responses are ~400KB. `listSpecies`
   (unpaginated, full list) still exists for callers that genuinely need everything (`sitemap.ts`).
 
+### Phase 1B.2 addition — Cloudflare Workers readiness
+
+`apps/web` builds and runs as a Cloudflare Worker via `@opennextjs/cloudflare` (ADR-0005
+addendum) — not deployed yet, but built and locally preview-verified end-to-end on the real
+`workerd` runtime (not just `next build`): locale middleware redirects, the paginated
+Supabase-backed Pokédex index, a 6-form detail page, ES regional-form names, `robots.txt`, and a
+2054-URL `sitemap.xml` all served correctly. `pnpm dev`/`pnpm build` (plain Next.js) are
+unchanged and unaffected — `apps/web/next.config.mjs` only additionally calls
+`initOpenNextCloudflareForDev()`, which makes `next dev` itself Cloudflare-binding-aware without
+changing what command a developer runs day to day.
+
+Config is deliberately minimal (Ponytail): `apps/web/wrangler.jsonc` declares only `nodejs_compat`,
+a static-asset binding and a name — no R2/KV incremental cache (this app has no ISR/on-demand
+revalidation needing one yet), no images binding (no `next/image` usage yet), no custom domain,
+no production routes. Server-side Supabase access in the deployed Worker uses the same
+`NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` variables `apps/web` already
+reads locally (DATABASE.md "Supabase API keys") — set as Worker environment variables in
+Cloudflare, never committed; `SUPABASE_SECRET_KEY` must never be configured on this Worker.
+
 ## Layering
 
 ### UI
@@ -211,7 +230,10 @@ The app must not depend on real-time PokéAPI calls for normal page rendering.
 
 ### Phase 0/early beta
 
-- Web: Cloudflare-compatible Next.js deployment path.
+- Web: Cloudflare Workers, via `@opennextjs/cloudflare` (ADR-0005). `apps/web` builds and deploys
+  as a Worker; `apps/web/wrangler.jsonc` + `open-next.config.ts` hold the (deliberately minimal —
+  no R2/KV cache, no custom domain yet) config. `pnpm dev`/`pnpm build` (plain Next.js) are
+  unaffected — the Cloudflare path is additive (`build:cf`/`preview:cf`/`deploy:cf`).
 - DB/Auth: Supabase.
 - Battle engine: local/in-process spike until persistent transport is needed.
 - CI: GitHub Actions.

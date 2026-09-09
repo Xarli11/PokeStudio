@@ -10,6 +10,12 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 
+# Cloudflare (ADR-0005, @opennextjs/cloudflare)
+.open-next/
+.wrangler/
+apps/web/.dev.vars
+apps/web/.dev.vars.*
+
 # Env
 .env
 .env.local

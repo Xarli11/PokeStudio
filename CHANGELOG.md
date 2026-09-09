@@ -6,6 +6,31 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Phase 1B.2 — Cloudflare Workers readiness (2026-09-09)
+
+Prepared `apps/web` to deploy to Cloudflare Workers (ADR-0005) — not deployed yet.
+
+- Evaluated Cloudflare's two current Next.js deployment paths against this actual repo: **vinext**
+  (Cloudflare's stated default, but explicitly experimental/AI-built/unreviewed) was tried via
+  `npx vinext init` and reverted after it broke `pnpm typecheck` (its generated `vite.config.ts`
+  fails under this repo's strict `exactOptionalPropertyTypes`) and showed unmet peer dependencies
+  (React 19.2.8 vs. required ^19.3.0). **`@opennextjs/cloudflare`** (the mature, `next build`-adapting
+  path) installed and built cleanly with zero peer conflicts and no extra infrastructure — chosen
+  instead. Full evaluation in ADR-0005's Phase 1B.2 addendum.
+- Added minimal Cloudflare config: `apps/web/wrangler.jsonc` (nodejs_compat, static assets, no
+  R2/KV cache, no images binding — none needed yet) and `apps/web/open-next.config.ts` (default,
+  no incremental-cache override).
+- `apps/web/next.config.mjs` now also calls `initOpenNextCloudflareForDev()`, which makes plain
+  `next dev` Cloudflare-binding-aware. `pnpm dev`/`pnpm build` are otherwise unchanged — verified
+  both still work exactly as before.
+- New scripts (root and `apps/web`): `build:cf`, `preview:cf`, `deploy:cf`.
+- Verified end-to-end on the real `workerd` runtime (`preview:cf`, not just `next build`): locale
+  middleware redirects, the paginated Supabase-backed Pokédex index, a 6-form Rotom detail page,
+  ES regional-form names, `robots.txt`, and a 2054-URL dynamic `sitemap.xml` all served correctly.
+- The deployed Worker needs `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` as
+  Worker environment variables (never committed) — `SUPABASE_SECRET_KEY` must never be configured
+  on it. No deployment performed; no domain connected; no production config added.
+
 ### Phase 1B — Full Pokédex ingestion and dataset hardening (2026-09-09)
 
 Replaces the Phase 1A hand-mirrored 3-species sample with a reproducible, idempotent, full-dataset

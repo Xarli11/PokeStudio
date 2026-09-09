@@ -86,6 +86,12 @@ locally-declared schema type (`packages/pokemon-data/src/persist.ts`) rather tha
 Reason: low-cost scalable web deployment/CDN/edge capabilities.
 
 Boundary: do not embed domain semantics into Cloudflare-only primitives without reason.
+`@opennextjs/cloudflare` (Apache-2.0) is the concrete adapter (ADR-0005) — it adapts `next build`'s
+own output into a Worker; `apps/web`'s application code has no Cloudflare-specific imports.
+`wrangler` (MPL-2.0) is the CLI/dev-tool used to build/preview/deploy, not a runtime dependency of
+the app itself. Evaluated and deliberately not adopted (yet): `vinext` — experimental, unreviewed,
+had real peer-dependency and strict-TypeScript-config friction with this repo at evaluation time
+(ADR-0005 addendum); revisit once it matures.
 
 ### Sentry
 

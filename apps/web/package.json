@@ -11,9 +11,13 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "NODE_OPTIONS=--no-experimental-webstorage vitest run",
-    "clean": "rm -rf .next dist"
+    "clean": "rm -rf .next dist .open-next .wrangler",
+    "build:cf": "opennextjs-cloudflare build",
+    "preview:cf": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy:cf": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.6",
     "@pokestudio/battle-engine": "workspace:*",
     "@pokestudio/damage": "workspace:*",
     "@pokestudio/database": "workspace:*",
@@ -33,6 +37,7 @@
     "eslint-config-next": "^15.1.4",
     "jsdom": "^25.0.1",
     "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "wrangler": "^4.130.0"
   }
 }

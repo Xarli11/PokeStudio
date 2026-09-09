@@ -17,7 +17,10 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "build:cf": "pnpm --filter @pokestudio/web build:cf",
+    "preview:cf": "pnpm --filter @pokestudio/web preview:cf",
+    "deploy:cf": "pnpm --filter @pokestudio/web deploy:cf"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

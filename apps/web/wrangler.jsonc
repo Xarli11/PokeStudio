@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // PokeStudio web app on Cloudflare Workers (ADR-0005) via @opennextjs/cloudflare.
+  // DEV/staging only — no custom domain, no production routes configured yet.
+  "name": "pokestudio-web-dev",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-05-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  // Server-side Supabase access uses NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  // (apps/web/src/lib/pokemon-database.ts) — set as Worker environment variables/secrets in the
+  // Cloudflare dashboard (or `wrangler secret put`) for the deployed Worker, never committed here.
+  // SUPABASE_SECRET_KEY must never be configured on this Worker — species/form reference data is
+  // public-read, so the publishable key is sufficient (DATABASE.md "Supabase API keys").
+}

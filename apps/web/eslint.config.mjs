@@ -9,6 +9,13 @@ export default [
   ...baseConfig,
   ...compat.extends('next/core-web-vitals'),
   {
-    ignores: ['.next/**', '*.config.mjs', '*.config.ts', 'next-env.d.ts'],
+    ignores: [
+      '.next/**',
+      '.open-next/**',
+      '.wrangler/**',
+      '*.config.mjs',
+      '*.config.ts',
+      'next-env.d.ts',
+    ],
   },
 ];
