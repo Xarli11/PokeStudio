@@ -50,6 +50,9 @@
     "forms": "Forms",
     "otherForms": "Other forms",
     "backToPokedex": "Back to Pokédex",
+    "pageLabel": "Page {page} of {totalPages}",
+    "previousPage": "Previous",
+    "nextPage": "Next",
     "stat": {
       "hp": "HP",
       "attack": "Attack",

@@ -6,6 +6,51 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Phase 1B — Full Pokédex ingestion and dataset hardening (2026-09-09)
+
+Replaces the Phase 1A hand-mirrored 3-species sample with a reproducible, idempotent, full-dataset
+ingestion pipeline: **1025 species, 1579 forms** — the complete PokéAPI dataset for this scope.
+
+- **`seed.sql` retired as the Pokémon-data mechanism** (DATABASE.md "Seed vs. ingestion"):
+  `species`/`pokemon_form`/`data_sources` now come exclusively from
+  `pnpm --filter @pokestudio/pokemon-data ingest`. `db:reset` applies schema only.
+- **General ingestion pipeline** (`packages/pokemon-data`): fetch (bounded concurrency, on-disk
+  cache keyed by URL, three flat phases — species → varieties → forms) → normalize (pure,
+  fixture-tested) → validate (expanded invariants: type/category validity, external-identity
+  collisions, orphan forms) → persist (batched, identity-based upsert). No hand-declared manifest
+  — the full species list comes from PokéAPI's own listing endpoint.
+- **Idempotent, identity-based persistence**: species/forms matched by `(source_id, external_id)`
+  — new unique constraints added via migration — never by slug; an existing row's slug is
+  preserved verbatim on every re-sync. Verified: two full runs against a freshly reset database
+  produced byte-identical row counts (1025/1579) with unchanged row ids/`created_at` timestamps.
+- **Form classification hardened against real edge cases** the small sample couldn't exercise
+  (`packages/pokemon-data/src/classify.ts`): fixed two genuine bugs found via full-dataset
+  auditing — Rotom-style forms that change type but carry no PokéAPI battle-only/mega flag (now
+  classified `battle` by comparing against the species' default-variety types/stats, not just
+  those flags) and Xerneas' two-state default form (neither `xerneas-active` nor
+  `xerneas-neutral` matches the species name; PokéAPI's per-form `is_default` is unreliable when
+  every form claims it, but correctly disambiguates when exactly one does). Both fixes are
+  general rules, not per-Pokémon patches.
+- **Classification/localization audit report** (`pnpm --filter @pokestudio/pokemon-data audit`):
+  species/form counts, category distribution (1025 default / 220 battle / 54 regional / 280
+  cosmetic), largest form families (Alcremie 64, Unown 28, Vivillon/Scatterbug/Spewpa 20 each),
+  and a localization breakdown distinguishing genuine PokéAPI-provided Spanish names (273) from
+  correct-by-design regional composition (54) from a real upstream data gap requiring a
+  descriptor-based fallback (227, e.g. "Charizard (gmax)") — never manually translated in this
+  phase, per instruction.
+- **Generated Supabase types are now authoritative** (`packages/database/src/generated-database-types.ts`),
+  replacing the Phase 0/1A hand-maintained subset that had already caused real `never`-inference
+  bugs from small omissions.
+- **Fixed a real scale bug found during the first full ingestion run**: PostgREST's default
+  1000-row response cap silently truncated identity-resolution reads once the dataset exceeded it
+  — both the ingestion write path and `listSpecies` now paginate past it.
+- **Pokédex index now paginates** (`listSpeciesPage`, page-number navigation, no client JS/search):
+  the full 1025-species index was a ~6MB response; page-size-60 responses are ~400KB.
+- Expanded test coverage: classification edge cases (Rotom/Xerneas/Vivillon/Charizard-mega),
+  expanded validation invariants, a persistence idempotency integration test, and full-dataset
+  query integration tests (Alcremie/Xerneas/Rotom/Meowth) replacing the Phase 1A 3-species-only
+  assertions.
+
 ### Phase 1A — Explore Core vertical slice (2026-09-09)
 
 First real product feature: proves source → normalization → PostgreSQL/Supabase

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ExploreDataset, NormalizedForm, NormalizedSpecies } from './types';
+import type { NormalizedDataset, NormalizedForm, NormalizedSpecies } from './types';
 import { validateExploreDataset } from './validate';
 
 function makeSpecies(overrides: Partial<NormalizedSpecies> = {}): NormalizedSpecies {
@@ -34,7 +34,7 @@ function makeForm(overrides: Partial<NormalizedForm> = {}): NormalizedForm {
   };
 }
 
-function makeDataset(species: NormalizedSpecies[], forms: NormalizedForm[]): ExploreDataset {
+function makeDataset(species: NormalizedSpecies[], forms: NormalizedForm[]): NormalizedDataset {
   return {
     provenance: {
       sourceId: 'pokeapi',
@@ -64,6 +64,7 @@ describe('validateExploreDataset', () => {
           isDefault: false,
           category: 'battle',
           types: ['electric', 'fire'],
+          source: { sourceId: 'pokeapi', externalId: '10058' },
         }),
       ],
     );
@@ -89,11 +90,20 @@ describe('validateExploreDataset', () => {
     );
   });
 
-  it('flags a form referencing an unknown species', () => {
+  it('flags an invalid national dex number', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies({ nationalDexNumber: 0 })], [makeForm()]),
+    );
+    expect(issues.some((issue) => issue.message.includes('Invalid national dex number'))).toBe(
+      true,
+    );
+  });
+
+  it('flags a form referencing an unknown species as an orphan', () => {
     const issues = validateExploreDataset(
       makeDataset([makeSpecies()], [makeForm({ speciesSlug: 'missing-species' })]),
     );
-    expect(issues.some((issue) => issue.message.includes('unknown species slug'))).toBe(true);
+    expect(issues.some((issue) => issue.message.includes('Orphan form'))).toBe(true);
   });
 
   it('flags a species with no default form', () => {
@@ -113,6 +123,22 @@ describe('validateExploreDataset', () => {
   it('flags an invalid type count', () => {
     const issues = validateExploreDataset(makeDataset([makeSpecies()], [makeForm({ types: [] })]));
     expect(issues.some((issue) => issue.message.includes('1-2 types'))).toBe(true);
+  });
+
+  it('flags an unknown type value', () => {
+    const issues = validateExploreDataset(
+      // @ts-expect-error deliberately invalid at the type boundary, as would arrive from untrusted input
+      makeDataset([makeSpecies()], [makeForm({ types: ['not-a-real-type'] })]),
+    );
+    expect(issues.some((issue) => issue.message.includes('Unknown type'))).toBe(true);
+  });
+
+  it('flags an unknown form category value', () => {
+    const issues = validateExploreDataset(
+      // @ts-expect-error deliberately invalid at the type boundary
+      makeDataset([makeSpecies()], [makeForm({ category: 'mythical' })]),
+    );
+    expect(issues.some((issue) => issue.message.includes('Unknown form category'))).toBe(true);
   });
 
   it('flags missing localized names', () => {
@@ -140,7 +166,27 @@ describe('validateExploreDataset', () => {
         ],
       ),
     );
-    expect(issues.some((issue) => issue.message.includes('Base stats must be positive'))).toBe(
+    expect(issues.some((issue) => issue.message.includes('Base stat "hp"'))).toBe(true);
+  });
+
+  it('flags missing provenance', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies({ source: { sourceId: '', externalId: '' } })], [makeForm()]),
+    );
+    expect(issues.some((issue) => issue.message.includes('Missing provenance'))).toBe(true);
+  });
+
+  it('flags an external identity collision between two species', () => {
+    const issues = validateExploreDataset(
+      makeDataset(
+        [
+          makeSpecies(),
+          makeSpecies({ slug: 'fake-duplicate', nationalDexNumber: 2 }), // same source/externalId as makeSpecies()
+        ],
+        [makeForm(), makeForm({ slug: 'fake-duplicate', speciesSlug: 'fake-duplicate' })],
+      ),
+    );
+    expect(issues.some((issue) => issue.message.includes('External identity collision'))).toBe(
       true,
     );
   });

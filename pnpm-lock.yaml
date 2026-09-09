@@ -158,6 +158,10 @@ importers:
         version: 2.1.9(@types/node@22.20.1)(jsdom@25.0.1)
 
   packages/pokemon-data:
+    dependencies:
+      '@supabase/supabase-js':
+        specifier: ^2.47.10
+        version: 2.116.0
     devDependencies:
       '@pokestudio/config':
         specifier: workspace:*

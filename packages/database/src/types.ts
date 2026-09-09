@@ -1,97 +1,16 @@
 /**
- * Hand-maintained subset of the generated Supabase `Database` type,
- * matching `supabase/migrations/*.sql`.
+ * Generated Supabase types are authoritative (Phase 1B).
  *
- * Once the local database runs, regenerate the full type with:
- *   supabase gen types typescript --local > src/generated-database-types.ts
- * and replace this file's contents with the generated output.
+ * Phase 1A hand-maintained a subset of this file and hit real `never`-
+ * inference bugs from small omissions (a missing `Relationships: []`,
+ * missing `Views`/`Functions`/`Enums`/`CompositeTypes`). Now that the schema
+ * has real constraints and two migrations, manual sync risk outweighs the
+ * convenience of not running a generator — regenerate instead of hand-editing:
  *
- * `Relationships: []` on every table is required structurally by
- * `@supabase/supabase-js`'s generic `GenericTable` shape even though this
- * hand-written subset doesn't declare real foreign-key relationship
- * metadata — omitting it silently degrades query builder results to `never`.
+ *   pnpm --filter @pokestudio/database exec supabase gen types typescript --local > src/generated-database-types.ts
+ *
+ * This file only re-exports it — not a wrapper, just the one place the rest
+ * of the package imports `Database` from, so call sites don't need to know
+ * the type is generated.
  */
-export interface Database {
-  public: {
-    Tables: {
-      data_sources: {
-        Row: {
-          source_id: string;
-          source_url: string;
-          license: string;
-          fetched_at: string;
-          importer_version: string;
-        };
-        Insert: {
-          source_id: string;
-          source_url: string;
-          license: string;
-          fetched_at: string;
-          importer_version: string;
-        };
-        Update: Partial<Database['public']['Tables']['data_sources']['Insert']>;
-        Relationships: [];
-      };
-      species: {
-        Row: {
-          id: string;
-          slug: string;
-          national_dex_number: number;
-          name_en: string;
-          name_es: string;
-          source_id: string;
-          external_id: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          slug: string;
-          national_dex_number: number;
-          name_en: string;
-          name_es: string;
-          source_id: string;
-          external_id: string;
-          created_at?: string;
-        };
-        Update: Partial<Database['public']['Tables']['species']['Insert']>;
-        Relationships: [];
-      };
-      pokemon_form: {
-        Row: {
-          id: string;
-          species_id: string;
-          slug: string;
-          name_en: string;
-          name_es: string;
-          is_default: boolean;
-          form_category: string;
-          types: string[];
-          base_stats: Record<string, number>;
-          source_id: string;
-          external_id: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          species_id: string;
-          slug: string;
-          name_en: string;
-          name_es: string;
-          is_default?: boolean;
-          form_category: string;
-          types: string[];
-          base_stats: Record<string, number>;
-          source_id: string;
-          external_id: string;
-          created_at?: string;
-        };
-        Update: Partial<Database['public']['Tables']['pokemon_form']['Insert']>;
-        Relationships: [];
-      };
-    };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
-  };
-}
+export type { Database } from './generated-database-types';

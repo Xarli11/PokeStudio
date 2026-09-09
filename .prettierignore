@@ -5,3 +5,4 @@ dist
 coverage
 pnpm-lock.yaml
 research/python/.venv
+packages/database/src/generated-database-types.ts

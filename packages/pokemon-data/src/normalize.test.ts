@@ -1,203 +1,319 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeForm, normalizeSpecies, resolveFormName } from './normalize';
-import type { PokeApiPokemon, PokeApiPokemonForm, PokeApiPokemonSpecies } from './pokeapi-client';
+import { normalizeSpeciesGroup, type RawSpeciesGroup } from './normalize';
+import type { PokeApiPokemon, PokeApiPokemonForm } from './pokeapi-client';
 
-// Fixtures below are literal captures of real PokéAPI responses (fetched
-// 2026-09-09) — normalization is tested against fixture data, never a live
-// network call (ROADMAP.md: "source fixtures can be tested without
-// repeatedly calling the live API").
+// Fixtures below are literal captures of real PokéAPI responses — normalization
+// is tested against fixture data, never a live network call (§18: "Mock/fixture
+// the source boundary for deterministic unit tests").
 
-const bulbasaurSpecies: PokeApiPokemonSpecies = {
-  id: 1,
-  names: [
-    { name: 'Bulbasaur', language: { name: 'en', url: '' } },
-    { name: 'Bulbasaur', language: { name: 'es', url: '' } },
-  ],
-  varieties: [{ is_default: true, pokemon: { name: 'bulbasaur', url: '' } }],
-};
+function pokemon(
+  overrides: Partial<PokeApiPokemon> & { id: number; name: string },
+): PokeApiPokemon {
+  return {
+    types: [{ slot: 1, type: { name: 'normal', url: '' } }],
+    stats: [
+      { base_stat: 45, stat: { name: 'hp', url: '' } },
+      { base_stat: 49, stat: { name: 'attack', url: '' } },
+      { base_stat: 49, stat: { name: 'defense', url: '' } },
+      { base_stat: 65, stat: { name: 'special-attack', url: '' } },
+      { base_stat: 65, stat: { name: 'special-defense', url: '' } },
+      { base_stat: 45, stat: { name: 'speed', url: '' } },
+    ],
+    forms: [],
+    ...overrides,
+  };
+}
 
-const bulbasaurPokemon: PokeApiPokemon = {
-  id: 1,
-  name: 'bulbasaur',
-  types: [
-    { slot: 1, type: { name: 'grass', url: '' } },
-    { slot: 2, type: { name: 'poison', url: '' } },
-  ],
-  stats: [
-    { base_stat: 45, stat: { name: 'hp', url: '' } },
-    { base_stat: 49, stat: { name: 'attack', url: '' } },
-    { base_stat: 49, stat: { name: 'defense', url: '' } },
-    { base_stat: 65, stat: { name: 'special-attack', url: '' } },
-    { base_stat: 65, stat: { name: 'special-defense', url: '' } },
-    { base_stat: 45, stat: { name: 'speed', url: '' } },
-  ],
-  forms: [{ name: 'bulbasaur', url: 'https://pokeapi.co/api/v2/pokemon-form/1/' }],
-};
+function form(
+  overrides: Partial<PokeApiPokemonForm> & { id: number; name: string },
+): PokeApiPokemonForm {
+  return {
+    form_name: '',
+    is_default: true,
+    is_battle_only: false,
+    is_mega: false,
+    names: [],
+    form_names: [],
+    ...overrides,
+  };
+}
 
-const rotomHeatPokemon: PokeApiPokemon = {
-  id: 10008,
-  name: 'rotom-heat',
-  types: [
-    { slot: 1, type: { name: 'electric', url: '' } },
-    { slot: 2, type: { name: 'fire', url: '' } },
-  ],
-  stats: [
-    { base_stat: 50, stat: { name: 'hp', url: '' } },
-    { base_stat: 65, stat: { name: 'attack', url: '' } },
-    { base_stat: 107, stat: { name: 'defense', url: '' } },
-    { base_stat: 105, stat: { name: 'special-attack', url: '' } },
-    { base_stat: 107, stat: { name: 'special-defense', url: '' } },
-    { base_stat: 86, stat: { name: 'speed', url: '' } },
-  ],
-  forms: [{ name: 'rotom-heat', url: 'https://pokeapi.co/api/v2/pokemon-form/10058/' }],
-};
+describe('normalizeSpeciesGroup', () => {
+  it('normalizes a simple single-form species (Bulbasaur)', () => {
+    const group: RawSpeciesGroup = {
+      species: {
+        id: 1,
+        name: 'bulbasaur',
+        names: [
+          { name: 'Bulbasaur', language: { name: 'en', url: '' } },
+          { name: 'Bulbasaur', language: { name: 'es', url: '' } },
+        ],
+        varieties: [{ is_default: true, pokemon: { name: 'bulbasaur', url: '' } }],
+      },
+      varieties: [
+        {
+          isDefaultVariety: true,
+          pokemon: pokemon({
+            id: 1,
+            name: 'bulbasaur',
+            types: [
+              { slot: 1, type: { name: 'grass', url: '' } },
+              { slot: 2, type: { name: 'poison', url: '' } },
+            ],
+          }),
+          forms: [form({ id: 1, name: 'bulbasaur' })],
+        },
+      ],
+    };
 
-// Full name present for en, missing for es — form_names carries the real
-// full name for both languages for this form group ("battle").
-const rotomHeatForm: PokeApiPokemonForm = {
-  names: [{ name: 'Heat Rotom', language: { name: 'en', url: '' } }],
-  form_names: [
-    { name: 'Heat Rotom', language: { name: 'en', url: '' } },
-    { name: 'Rotom Calor', language: { name: 'es', url: '' } },
-  ],
-};
-
-const meowthAlolaPokemon: PokeApiPokemon = {
-  id: 10107,
-  name: 'meowth-alola',
-  types: [{ slot: 1, type: { name: 'dark', url: '' } }],
-  stats: [
-    { base_stat: 40, stat: { name: 'hp', url: '' } },
-    { base_stat: 35, stat: { name: 'attack', url: '' } },
-    { base_stat: 35, stat: { name: 'defense', url: '' } },
-    { base_stat: 50, stat: { name: 'special-attack', url: '' } },
-    { base_stat: 40, stat: { name: 'special-defense', url: '' } },
-    { base_stat: 90, stat: { name: 'speed', url: '' } },
-  ],
-  forms: [{ name: 'meowth-alola', url: 'https://pokeapi.co/api/v2/pokemon-form/10209/' }],
-};
-
-// Full name present for en; es is missing from *both* `names` and
-// `form_names` (form_names.es is a generic "Forma de Alola" descriptor
-// shared across species, not "Meowth de Alola") — this is the case the
-// regional composition rule exists for.
-const meowthAlolaForm: PokeApiPokemonForm = {
-  names: [{ name: 'Alolan Meowth', language: { name: 'en', url: '' } }],
-  form_names: [
-    { name: 'Alolan Form', language: { name: 'en', url: '' } },
-    { name: 'Forma de Alola', language: { name: 'es', url: '' } },
-  ],
-};
-
-describe('normalizeSpecies', () => {
-  it('normalizes a species using the PokeStudio-declared slug, not PokéAPI naming', () => {
-    const species = normalizeSpecies({
-      species: bulbasaurSpecies,
-      slug: 'bulbasaur',
-      sourceId: 'pokeapi',
-    });
+    const { species, forms } = normalizeSpeciesGroup(group, 'pokeapi');
     expect(species).toEqual({
       slug: 'bulbasaur',
       nationalDexNumber: 1,
       name: { en: 'Bulbasaur', es: 'Bulbasaur' },
       source: { sourceId: 'pokeapi', externalId: '1' },
     });
-  });
-});
-
-describe('normalizeForm', () => {
-  it('uses the species name for a default form (a simple single-form species)', () => {
-    const form = normalizeForm({
-      pokemon: bulbasaurPokemon,
-      form: undefined,
+    expect(forms).toHaveLength(1);
+    expect(forms[0]).toMatchObject({
       slug: 'bulbasaur',
-      speciesSlug: 'bulbasaur',
-      speciesName: { en: 'Bulbasaur', es: 'Bulbasaur' },
       isDefault: true,
       category: 'default',
-      sourceId: 'pokeapi',
+      types: ['grass', 'poison'],
+      name: { en: 'Bulbasaur', es: 'Bulbasaur' },
     });
-    expect(form.name).toEqual({ en: 'Bulbasaur', es: 'Bulbasaur' });
-    expect(form.types).toEqual(['grass', 'poison']);
-    expect(form.baseStats).toEqual({
-      hp: 45,
-      attack: 49,
-      defense: 49,
-      specialAttack: 65,
-      specialDefense: 65,
-      speed: 45,
-    });
-    expect(form.source).toEqual({ sourceId: 'pokeapi', externalId: '1' });
   });
 
-  it('resolves a battle-relevant form name from form_names when `names` lacks Spanish (Rotom)', () => {
-    const form = normalizeForm({
-      pokemon: rotomHeatPokemon,
-      form: rotomHeatForm,
-      slug: 'rotom-heat',
-      speciesSlug: 'rotom',
-      speciesName: { en: 'Rotom', es: 'Rotom' },
+  it('normalizes a battle-form family as separate varieties sharing base stats (Rotom)', () => {
+    const speciesName = { en: 'Rotom', es: 'Rotom' };
+    const group: RawSpeciesGroup = {
+      species: {
+        id: 479,
+        name: 'rotom',
+        names: [
+          { name: 'Rotom', language: { name: 'en', url: '' } },
+          { name: 'Rotom', language: { name: 'es', url: '' } },
+        ],
+        varieties: [
+          { is_default: true, pokemon: { name: 'rotom', url: '' } },
+          { is_default: false, pokemon: { name: 'rotom-heat', url: '' } },
+        ],
+      },
+      varieties: [
+        {
+          isDefaultVariety: true,
+          pokemon: pokemon({
+            id: 479,
+            name: 'rotom',
+            types: [
+              { slot: 1, type: { name: 'electric', url: '' } },
+              { slot: 2, type: { name: 'ghost', url: '' } },
+            ],
+          }),
+          forms: [form({ id: 479, name: 'rotom' })],
+        },
+        {
+          isDefaultVariety: false,
+          pokemon: pokemon({
+            id: 10008,
+            name: 'rotom-heat',
+            types: [
+              { slot: 1, type: { name: 'electric', url: '' } },
+              { slot: 2, type: { name: 'fire', url: '' } },
+            ],
+          }),
+          forms: [
+            form({
+              id: 10058,
+              name: 'rotom-heat',
+              names: [{ name: 'Heat Rotom', language: { name: 'en', url: '' } }],
+              form_names: [{ name: 'Rotom Calor', language: { name: 'es', url: '' } }],
+            }),
+          ],
+        },
+      ],
+    };
+
+    const { forms } = normalizeSpeciesGroup(group, 'pokeapi');
+    expect(forms).toHaveLength(2);
+    const bySlug = Object.fromEntries(forms.map((f) => [f.slug, f]));
+    expect(bySlug.rotom).toMatchObject({ isDefault: true, category: 'default', name: speciesName });
+    expect(bySlug['rotom-heat']).toMatchObject({
       isDefault: false,
       category: 'battle',
-      sourceId: 'pokeapi',
-    });
-    expect(form.name).toEqual({ en: 'Heat Rotom', es: 'Rotom Calor' });
-    expect(form.types).toEqual(['electric', 'fire']);
-    // Rotom formes share base stats with the default form — only typing differs.
-    expect(form.baseStats.hp).toBe(50);
-  });
-
-  it('composes a regional form name from the species name + region when PokéAPI has no full Spanish name (Meowth)', () => {
-    const form = normalizeForm({
-      pokemon: meowthAlolaPokemon,
-      form: meowthAlolaForm,
-      slug: 'meowth-alola',
-      speciesSlug: 'meowth',
-      speciesName: { en: 'Meowth', es: 'Meowth' },
-      isDefault: false,
-      category: 'regional',
-      regionLabel: 'Alola',
-      sourceId: 'pokeapi',
-    });
-    expect(form.name).toEqual({ en: 'Alolan Meowth', es: 'Meowth de Alola' });
-    expect(form.types).toEqual(['dark']);
-    // Regional Meowth genuinely differs in base stats from Kantonian Meowth —
-    // the reason types/stats live on the form, not the species (ADR-0010).
-    expect(form.baseStats).toEqual({
-      hp: 40,
-      attack: 35,
-      defense: 35,
-      specialAttack: 50,
-      specialDefense: 40,
-      speed: 90,
+      types: ['electric', 'fire'],
+      name: { en: 'Heat Rotom', es: 'Rotom Calor' },
     });
   });
 
-  it('throws for a non-default form with no `form` payload', () => {
-    expect(() =>
-      normalizeForm({
-        pokemon: rotomHeatPokemon,
-        form: undefined,
-        slug: 'rotom-heat',
-        speciesSlug: 'rotom',
-        speciesName: { en: 'Rotom', es: 'Rotom' },
-        isDefault: false,
-        category: 'battle',
-        sourceId: 'pokeapi',
-      }),
-    ).toThrow(/required for non-default form/);
-  });
-});
+  it('composes a regional form name when PokéAPI has no full Spanish name (Meowth)', () => {
+    const group: RawSpeciesGroup = {
+      species: {
+        id: 52,
+        name: 'meowth',
+        names: [
+          { name: 'Meowth', language: { name: 'en', url: '' } },
+          { name: 'Meowth', language: { name: 'es', url: '' } },
+        ],
+        varieties: [
+          { is_default: true, pokemon: { name: 'meowth', url: '' } },
+          { is_default: false, pokemon: { name: 'meowth-alola', url: '' } },
+        ],
+      },
+      varieties: [
+        {
+          isDefaultVariety: true,
+          pokemon: pokemon({ id: 52, name: 'meowth' }),
+          forms: [form({ id: 52, name: 'meowth' })],
+        },
+        {
+          isDefaultVariety: false,
+          pokemon: pokemon({
+            id: 10107,
+            name: 'meowth-alola',
+            types: [{ slot: 1, type: { name: 'dark', url: '' } }],
+          }),
+          forms: [
+            form({
+              id: 10209,
+              name: 'meowth-alola',
+              names: [{ name: 'Alolan Meowth', language: { name: 'en', url: '' } }],
+              form_names: [{ name: 'Alolan Form', language: { name: 'en', url: '' } }],
+            }),
+          ],
+        },
+      ],
+    };
 
-describe('resolveFormName', () => {
-  it('requires a regionLabel for regional forms', () => {
-    expect(() =>
-      resolveFormName({
-        form: meowthAlolaForm,
-        category: 'regional',
-        speciesName: { en: 'Meowth', es: 'Meowth' },
-      }),
-    ).toThrow(/regionLabel is required/);
+    const { forms } = normalizeSpeciesGroup(group, 'pokeapi');
+    const alola = forms.find((f) => f.slug === 'meowth-alola')!;
+    expect(alola.category).toBe('regional');
+    expect(alola.name).toEqual({ en: 'Alolan Meowth', es: 'Meowth de Alola' });
+  });
+
+  it('normalizes a cosmetic form family under one variety, picking exactly one default (Vivillon)', () => {
+    const group: RawSpeciesGroup = {
+      species: {
+        id: 666,
+        name: 'vivillon',
+        names: [
+          { name: 'Vivillon', language: { name: 'en', url: '' } },
+          { name: 'Vivillon', language: { name: 'es', url: '' } },
+        ],
+        varieties: [{ is_default: true, pokemon: { name: 'vivillon', url: '' } }],
+      },
+      varieties: [
+        {
+          isDefaultVariety: true,
+          pokemon: pokemon({ id: 666, name: 'vivillon' }),
+          // Every Vivillon pattern form reports is_default: true at the
+          // pokemon-form level — none of them are named plain "vivillon", so
+          // pickPrimaryForm must fall back to the first in API order.
+          forms: [
+            form({
+              id: 10059,
+              name: 'vivillon-meadow',
+              is_default: true,
+              names: [{ name: 'Meadow Vivillon', language: { name: 'en', url: '' } }],
+            }),
+            form({
+              id: 10060,
+              name: 'vivillon-polar',
+              is_default: true,
+              names: [{ name: 'Polar Vivillon', language: { name: 'en', url: '' } }],
+            }),
+          ],
+        },
+      ],
+    };
+
+    const { forms } = normalizeSpeciesGroup(group, 'pokeapi');
+    expect(forms).toHaveLength(2);
+    const defaults = forms.filter((f) => f.isDefault);
+    expect(defaults).toHaveLength(1);
+    expect(defaults[0]!.slug).toBe('vivillon-meadow');
+    expect(defaults[0]!.category).toBe('default');
+    const polar = forms.find((f) => f.slug === 'vivillon-polar')!;
+    expect(polar.isDefault).toBe(false);
+    expect(polar.category).toBe('cosmetic');
+    expect(polar.name.en).toBe('Polar Vivillon');
+  });
+
+  it('classifies a Mega form as battle even for a non-region-suffixed, non-default variety', () => {
+    const group: RawSpeciesGroup = {
+      species: {
+        id: 6,
+        name: 'charizard',
+        names: [
+          { name: 'Charizard', language: { name: 'en', url: '' } },
+          { name: 'Charizard', language: { name: 'es', url: '' } },
+        ],
+        varieties: [
+          { is_default: true, pokemon: { name: 'charizard', url: '' } },
+          { is_default: false, pokemon: { name: 'charizard-mega-x', url: '' } },
+        ],
+      },
+      varieties: [
+        {
+          isDefaultVariety: true,
+          pokemon: pokemon({
+            id: 6,
+            name: 'charizard',
+            types: [
+              { slot: 1, type: { name: 'fire', url: '' } },
+              { slot: 2, type: { name: 'flying', url: '' } },
+            ],
+          }),
+          forms: [form({ id: 6, name: 'charizard' })],
+        },
+        {
+          isDefaultVariety: false,
+          pokemon: pokemon({
+            id: 10034,
+            name: 'charizard-mega-x',
+            types: [
+              { slot: 1, type: { name: 'fire', url: '' } },
+              { slot: 2, type: { name: 'dragon', url: '' } },
+            ],
+          }),
+          forms: [
+            form({
+              id: 10035,
+              name: 'charizard-mega-x',
+              is_mega: true,
+              names: [{ name: 'Mega Charizard X', language: { name: 'en', url: '' } }],
+            }),
+          ],
+        },
+      ],
+    };
+
+    const { forms } = normalizeSpeciesGroup(group, 'pokeapi');
+    const megaX = forms.find((f) => f.slug === 'charizard-mega-x')!;
+    expect(megaX.category).toBe('battle');
+    expect(megaX.types).toEqual(['fire', 'dragon']);
+  });
+
+  it('throws for a species with an invalid type count', () => {
+    const group: RawSpeciesGroup = {
+      species: {
+        id: 999,
+        name: 'test-mon',
+        names: [
+          { name: 'Test', language: { name: 'en', url: '' } },
+          { name: 'Test', language: { name: 'es', url: '' } },
+        ],
+        varieties: [{ is_default: true, pokemon: { name: 'test-mon', url: '' } }],
+      },
+      varieties: [
+        {
+          isDefaultVariety: true,
+          pokemon: pokemon({ id: 999, name: 'test-mon', types: [] }),
+          forms: [form({ id: 999, name: 'test-mon' })],
+        },
+      ],
+    };
+
+    expect(() => normalizeSpeciesGroup(group, 'pokeapi')).toThrow(/1-2 types/);
   });
 });

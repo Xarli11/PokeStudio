@@ -2,7 +2,7 @@
   "name": "@pokestudio/pokemon-data",
   "private": true,
   "version": "0.0.0",
-  "description": "PokeStudio Pokémon reference data: ingestion pipeline skeleton and normalized types. Not a runtime PokéAPI client.",
+  "description": "PokeStudio Pokémon reference data: full ingestion pipeline (fetch/cache -> normalize -> validate -> persist) and normalized types. Not a runtime PokéAPI client.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "main": "./src/index.ts",
@@ -11,8 +11,12 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "ingest:explore": "tsx scripts/ingest-explore.ts",
-    "clean": "rm -rf dist"
+    "ingest": "tsx scripts/ingest.ts",
+    "audit": "tsx scripts/audit.ts",
+    "clean": "rm -rf dist .cache"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.10"
   },
   "devDependencies": {
     "@pokestudio/config": "workspace:*",

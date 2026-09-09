@@ -73,6 +73,13 @@ Use through PokeStudio damage boundary.
 Reason: managed PostgreSQL + Auth + Storage/Realtimes capabilities available when needed.
 
 Boundary: PostgreSQL-first schema, PokeStudio identity/storage abstractions where useful.
+`@supabase/supabase-js` is a direct dependency of both `packages/database` (the shared connection
+adapter, `PokeStudioDatabaseClient`) and `packages/pokemon-data` (Phase 1B's ingestion write path,
+`IngestClient`) — the two packages otherwise cannot depend on each other without a circular
+workspace dependency (`database` already depends on `pokemon-data` for shared domain types), so
+`pokemon-data` talks to Postgres via `@supabase/supabase-js` directly with its own minimal,
+locally-declared schema type (`packages/pokemon-data/src/persist.ts`) rather than importing
+`packages/database`'s `Database` type.
 
 ### Cloudflare
 

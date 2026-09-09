@@ -8,10 +8,15 @@ Requires Docker (the Supabase CLI runs Postgres, GoTrue, PostgREST, etc. in cont
 
 ```bash
 pnpm --filter @pokestudio/database db:start   # supabase start
-pnpm --filter @pokestudio/database db:reset   # apply migrations + seed
+pnpm --filter @pokestudio/database db:reset   # apply migrations (schema/constraints/indexes only)
 pnpm --filter @pokestudio/database db:diff    # generate a new migration from schema changes
 pnpm --filter @pokestudio/database db:stop
 ```
+
+`db:reset` no longer seeds Pokémon data — `supabase/seed.sql` is reserved for small static
+lookup data (none exists yet). After `db:reset`, run
+`pnpm --filter @pokestudio/pokemon-data ingest` to populate `species`/`pokemon_form`
+(DATABASE.md "Seed vs. ingestion").
 
 These scripts run with this package (`packages/database`) as the working directory, which is
 where `supabase/config.toml` lives — do not add `--workdir supabase` to them or to any ad hoc
@@ -20,8 +25,8 @@ and to look for `supabase/migrations` and `supabase/seed.sql` one level below th
 exist), so `db:start`/`db:reset` silently skip the real migrations and seed and stand up an empty
 database under a stray nested `supabase/supabase/` directory instead.
 
-After `db:start`, regenerate the typed schema from the real database and replace
-`src/types.ts`'s hand-written subset:
+After a schema change, regenerate `src/generated-database-types.ts` — it is the authoritative
+`Database` type (Phase 1B; `src/types.ts` just re-exports it), not hand-maintained:
 
 ```bash
 pnpm --filter @pokestudio/database exec supabase gen types typescript --local > src/generated-database-types.ts

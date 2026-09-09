@@ -1,3 +1,4 @@
+import { assertValidSlug, classifyForm, detectRegionLabel, pickPrimaryForm } from './classify';
 import type { PokeApiPokemon, PokeApiPokemonForm, PokeApiPokemonSpecies } from './pokeapi-client';
 import type {
   BaseStats,
@@ -6,7 +7,6 @@ import type {
   NormalizedForm,
   NormalizedSpecies,
   PokemonType,
-  SourceRef,
 } from './types';
 
 function findLocalized(
@@ -27,11 +27,12 @@ function localizedFrom(names: { name: string; language: { name: string } }[]): L
 
 export function normalizeSpecies(params: {
   species: PokeApiPokemonSpecies;
-  slug: string;
   sourceId: string;
 }): NormalizedSpecies {
+  const slug = params.species.name;
+  assertValidSlug(slug, `species #${params.species.id}`);
   return {
-    slug: params.slug,
+    slug,
     nationalDexNumber: params.species.id,
     name: localizedFrom(params.species.names),
     source: { sourceId: params.sourceId, externalId: String(params.species.id) },
@@ -43,47 +44,56 @@ export function normalizeSpecies(params: {
  *
  * PokéAPI's `pokemon-form` resource is inconsistent across form groups:
  * - `names` (full "Species Form" name) is reliable for English but is
- *   frequently missing Spanish entirely (observed for every non-default form
- *   in this sample).
- * - `form_names` fills that Spanish gap, but its *meaning* differs by form
- *   group: for Rotom's appliance formes it is the full name ("Rotom Calor");
- *   for regional formes it is a generic descriptor shared across many species
- *   ("Forma de Alola"), not "Meowth de Alola".
+ *   frequently missing Spanish entirely.
+ * - `form_names` fills that Spanish gap for *some* form groups (Rotom's
+ *   appliance formes: the full name, e.g. "Rotom Calor") but means something
+ *   else for others (regional formes: a generic "Forma de Alola"-style
+ *   descriptor, not "Meowth de Alola") and for cosmetic sub-forms (just the
+ *   pattern/letter/flavor word, e.g. "Meadow", not the species name).
  *
  * So the fallback differs by category:
- * - `battle` forms (Rotom-style): `names[lang] ?? form_names[lang]` — both
- *   happen to carry the full name for this group.
- * - `regional` forms: `names[lang]` when present (true for English); for
- *   Spanish, compose `"{species} de {region}"`, which is the real,
- *   consistent Nintendo localization pattern for every regional form (Alolan/
- *   Galarian/Hisuian/Paldean), not a per-Pokémon hardcode.
+ * - `regional`: compose `"{species} de {region}"` for Spanish — the real,
+ *   consistent Nintendo localization pattern for every regional form, not a
+ *   per-Pokémon hardcode.
+ * - anything else (`battle`, `cosmetic`): `names[lang] ?? form_names[lang]`,
+ *   falling back further to `"{species} {form_names[lang]}"` when even that
+ *   is missing, so a bare descriptor is never shown alone without the
+ *   species name attached (avoids "Meadow" standing in for "Meadow
+ *   Vivillon").
  */
+export type FormNameSource = 'api' | 'composed-regional' | 'composed-fallback';
+
 export function resolveFormName(params: {
   form: PokeApiPokemonForm;
   category: FormCategory;
   speciesName: LocalizedName;
   /** Required for `category: 'regional'` — the region's proper noun, e.g. "Alola". Identical in en/es. */
   regionLabel?: string | undefined;
-}): LocalizedName {
+}): { name: LocalizedName; esSource: FormNameSource } {
   const namesEn = findLocalized(params.form.names, 'en');
   const namesEs = findLocalized(params.form.names, 'es');
 
   if (params.category === 'regional') {
     if (!params.regionLabel) throw new Error('regionLabel is required for regional forms');
     return {
-      en: namesEn ?? `${params.regionLabel} ${params.speciesName.en}`,
-      es: namesEs ?? `${params.speciesName.es} de ${params.regionLabel}`,
+      name: {
+        en: namesEn ?? `${params.regionLabel} ${params.speciesName.en}`,
+        es: namesEs ?? `${params.speciesName.es} de ${params.regionLabel}`,
+      },
+      esSource: namesEs ? 'api' : 'composed-regional',
     };
   }
 
   const formNamesEn = findLocalized(params.form.form_names, 'en');
   const formNamesEs = findLocalized(params.form.form_names, 'es');
-  const en = namesEn ?? formNamesEn;
-  const es = namesEs ?? formNamesEs;
-  if (!en || !es) {
-    throw new Error(`Could not resolve a full en/es name from pokemon-form (en=${en}, es=${es})`);
-  }
-  return { en, es };
+  const descriptor = params.form.form_name || params.form.name;
+  return {
+    name: {
+      en: namesEn ?? formNamesEn ?? `${params.speciesName.en} (${descriptor})`,
+      es: namesEs ?? formNamesEs ?? `${params.speciesName.es} (${descriptor})`,
+    },
+    esSource: namesEs ? 'api' : formNamesEs ? 'api' : 'composed-fallback',
+  };
 }
 
 function findStat(stats: { base_stat: number; stat: { name: string } }[], name: string): number {
@@ -103,47 +113,108 @@ function baseStatsFrom(stats: { base_stat: number; stat: { name: string } }[]): 
   };
 }
 
-export function normalizeForm(params: {
+function typesEqual(a: readonly PokemonType[], b: readonly PokemonType[]): boolean {
+  return a.length === b.length && a.every((type, index) => type === b[index]);
+}
+
+function statsEqual(a: BaseStats, b: BaseStats): boolean {
+  return (
+    a.hp === b.hp &&
+    a.attack === b.attack &&
+    a.defense === b.defense &&
+    a.specialAttack === b.specialAttack &&
+    a.specialDefense === b.specialDefense &&
+    a.speed === b.speed
+  );
+}
+
+/** One `pokemon` (variety) plus the raw detail of every `pokemon-form` under it. */
+export interface RawVarietyGroup {
   pokemon: PokeApiPokemon;
-  /** Required unless `isDefault` — the default form's name is always the species name. */
-  form: PokeApiPokemonForm | undefined;
-  slug: string;
-  speciesSlug: string;
-  speciesName: LocalizedName;
-  isDefault: boolean;
-  category: FormCategory;
-  regionLabel?: string | undefined;
-  sourceId: string;
-}): NormalizedForm {
-  const types = [...params.pokemon.types]
-    .sort((a, b) => a.slot - b.slot)
-    .map((entry) => entry.type.name as PokemonType);
-  if (types.length < 1 || types.length > 2) {
-    throw new Error(`Expected 1-2 types for ${params.slug}, got ${types.length}`);
-  }
+  isDefaultVariety: boolean;
+  forms: PokeApiPokemonForm[];
+}
 
-  if (!params.isDefault && !params.form) {
-    throw new Error(`"form" is required for non-default form "${params.slug}"`);
-  }
-  const name: LocalizedName = params.isDefault
-    ? params.speciesName
-    : resolveFormName({
-        form: params.form!,
-        category: params.category,
-        speciesName: params.speciesName,
-        regionLabel: params.regionLabel,
+/** Everything fetched for one species — the unit `normalizeSpeciesGroup` transforms. */
+export interface RawSpeciesGroup {
+  species: PokeApiPokemonSpecies;
+  varieties: RawVarietyGroup[];
+}
+
+export interface LocalizationNote {
+  formSlug: string;
+  esSource: FormNameSource;
+}
+
+export function normalizeSpeciesGroup(
+  group: RawSpeciesGroup,
+  sourceId: string,
+): { species: NormalizedSpecies; forms: NormalizedForm[]; localizationNotes: LocalizationNote[] } {
+  const species = normalizeSpecies({ species: group.species, sourceId });
+  const localizationNotes: LocalizationNote[] = [];
+
+  const varietyShapes = group.varieties.map((variety) => {
+    const types = [...variety.pokemon.types]
+      .sort((a, b) => a.slot - b.slot)
+      .map((entry) => entry.type.name as PokemonType);
+    if (types.length < 1 || types.length > 2) {
+      throw new Error(`Expected 1-2 types for ${variety.pokemon.name}, got ${types.length}`);
+    }
+    return { variety, types, baseStats: baseStatsFrom(variety.pokemon.stats) };
+  });
+  const defaultShape = varietyShapes.find((shape) => shape.variety.isDefaultVariety);
+
+  const forms = varietyShapes.flatMap(({ variety, types, baseStats }) => {
+    const primaryForm = pickPrimaryForm(variety.forms, variety.pokemon.name);
+
+    return variety.forms.map((form) => {
+      const isPrimaryForm = form === primaryForm;
+      const regionLabel = detectRegionLabel(variety.pokemon.name);
+      const mechanicallyDifferentFromDefault = defaultShape
+        ? !typesEqual(types, defaultShape.types) || !statsEqual(baseStats, defaultShape.baseStats)
+        : false;
+      const category = classifyForm({
+        isDefaultVariety: variety.isDefaultVariety,
+        isPrimaryForm,
+        isMega: form.is_mega,
+        isBattleOnly: form.is_battle_only,
+        regionLabel,
+        mechanicallyDifferentFromDefault,
       });
+      const isDefault = variety.isDefaultVariety && isPrimaryForm;
 
-  const source: SourceRef = { sourceId: params.sourceId, externalId: String(params.pokemon.id) };
+      const slug = form.name;
+      assertValidSlug(slug, `form of species "${species.slug}"`);
 
-  return {
-    slug: params.slug,
-    speciesSlug: params.speciesSlug,
-    name,
-    isDefault: params.isDefault,
-    category: params.category,
-    types,
-    baseStats: baseStatsFrom(params.pokemon.stats),
-    source,
-  };
+      let name: LocalizedName;
+      if (isDefault) {
+        name = species.name;
+      } else {
+        const resolved = resolveFormName({
+          form,
+          category,
+          speciesName: species.name,
+          regionLabel,
+        });
+        name = resolved.name;
+        if (resolved.esSource !== 'api') {
+          localizationNotes.push({ formSlug: slug, esSource: resolved.esSource });
+        }
+      }
+
+      const normalized: NormalizedForm = {
+        slug,
+        speciesSlug: species.slug,
+        name,
+        isDefault,
+        category,
+        types,
+        baseStats,
+        source: { sourceId, externalId: String(form.id) },
+      };
+      return normalized;
+    });
+  });
+
+  return { species, forms, localizationNotes };
 }

@@ -1,26 +1,62 @@
-import type { ExploreDataset } from './types';
+import type { FormCategory, NormalizedDataset, PokemonType } from './types';
 
 export interface ValidationIssue {
   recordId: string;
   message: string;
 }
 
+const KNOWN_FORM_CATEGORIES: readonly FormCategory[] = [
+  'default',
+  'regional',
+  'battle',
+  'cosmetic',
+];
+const KNOWN_TYPES: ReadonlySet<PokemonType> = new Set<PokemonType>([
+  'normal',
+  'fire',
+  'water',
+  'electric',
+  'grass',
+  'ice',
+  'fighting',
+  'poison',
+  'ground',
+  'flying',
+  'psychic',
+  'bug',
+  'rock',
+  'ghost',
+  'dragon',
+  'dark',
+  'steel',
+  'fairy',
+]);
+const STAT_KEYS = ['hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'] as const;
+
 /**
- * Validates dataset invariants (DATA_SOURCES.md "Validation examples",
- * ADR-0010). Returns an empty array when the dataset is valid.
+ * Validates dataset invariants (Phase 1B §9, ADR-0010). Returns an empty
+ * array when the dataset is valid. Never repairs bad data — callers must
+ * fail ingestion (or explicitly, visibly accept a known/reviewed warning),
+ * never silently drop or "fix" a malformed record.
  */
-export function validateExploreDataset(dataset: ExploreDataset): ValidationIssue[] {
+export function validateExploreDataset(dataset: NormalizedDataset): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
   const seenSpeciesSlugs = new Set<string>();
   const seenDexNumbers = new Set<number>();
+  const seenSpeciesExternalIds = new Set<string>();
   for (const species of dataset.species) {
     if (seenSpeciesSlugs.has(species.slug)) {
       issues.push({ recordId: species.slug, message: 'Duplicate species slug.' });
     }
     seenSpeciesSlugs.add(species.slug);
 
-    if (seenDexNumbers.has(species.nationalDexNumber)) {
+    if (!Number.isInteger(species.nationalDexNumber) || species.nationalDexNumber < 1) {
+      issues.push({
+        recordId: species.slug,
+        message: `Invalid national dex number ${species.nationalDexNumber}.`,
+      });
+    } else if (seenDexNumbers.has(species.nationalDexNumber)) {
       issues.push({
         recordId: species.slug,
         message: `Duplicate national dex number ${species.nationalDexNumber}.`,
@@ -31,9 +67,23 @@ export function validateExploreDataset(dataset: ExploreDataset): ValidationIssue
     if (!species.name.en.trim() || !species.name.es.trim()) {
       issues.push({ recordId: species.slug, message: 'Missing localized name for en or es.' });
     }
+
+    if (!species.source.sourceId || !species.source.externalId) {
+      issues.push({ recordId: species.slug, message: 'Missing provenance (source/external id).' });
+    } else {
+      const externalKey = `${species.source.sourceId}:${species.source.externalId}`;
+      if (seenSpeciesExternalIds.has(externalKey)) {
+        issues.push({
+          recordId: species.slug,
+          message: `External identity collision: another species already uses ${externalKey}.`,
+        });
+      }
+      seenSpeciesExternalIds.add(externalKey);
+    }
   }
 
   const seenFormSlugs = new Set<string>();
+  const seenFormExternalIds = new Set<string>();
   const defaultFormCountBySpecies = new Map<string, number>();
   for (const form of dataset.forms) {
     if (seenFormSlugs.has(form.slug)) {
@@ -41,10 +91,12 @@ export function validateExploreDataset(dataset: ExploreDataset): ValidationIssue
     }
     seenFormSlugs.add(form.slug);
 
+    // Orphan check: every form must belong to exactly one known species —
+    // an unresolved speciesSlug means this record must never reach persistence.
     if (!seenSpeciesSlugs.has(form.speciesSlug)) {
       issues.push({
         recordId: form.slug,
-        message: `References unknown species slug "${form.speciesSlug}".`,
+        message: `Orphan form: references unknown species slug "${form.speciesSlug}".`,
       });
     }
 
@@ -54,14 +106,41 @@ export function validateExploreDataset(dataset: ExploreDataset): ValidationIssue
         message: `Form must have 1-2 types, got ${form.types.length}.`,
       });
     }
+    for (const type of form.types) {
+      if (!KNOWN_TYPES.has(type)) {
+        issues.push({ recordId: form.slug, message: `Unknown type "${type}".` });
+      }
+    }
+
+    if (!KNOWN_FORM_CATEGORIES.includes(form.category)) {
+      issues.push({ recordId: form.slug, message: `Unknown form category "${form.category}".` });
+    }
 
     if (!form.name.en.trim() || !form.name.es.trim()) {
       issues.push({ recordId: form.slug, message: 'Missing localized name for en or es.' });
     }
 
-    const statValues = Object.values(form.baseStats);
-    if (statValues.some((value) => value <= 0)) {
-      issues.push({ recordId: form.slug, message: 'Base stats must be positive.' });
+    for (const key of STAT_KEYS) {
+      const value = form.baseStats[key];
+      if (!Number.isFinite(value) || value <= 0) {
+        issues.push({
+          recordId: form.slug,
+          message: `Base stat "${key}" must be a positive number, got ${value}.`,
+        });
+      }
+    }
+
+    if (!form.source.sourceId || !form.source.externalId) {
+      issues.push({ recordId: form.slug, message: 'Missing provenance (source/external id).' });
+    } else {
+      const externalKey = `${form.source.sourceId}:${form.source.externalId}`;
+      if (seenFormExternalIds.has(externalKey)) {
+        issues.push({
+          recordId: form.slug,
+          message: `External identity collision: another form already uses ${externalKey}.`,
+        });
+      }
+      seenFormExternalIds.add(externalKey);
     }
 
     if (form.isDefault) {

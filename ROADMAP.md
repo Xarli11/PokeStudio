@@ -39,8 +39,18 @@ Do not attempt every game guide/location feature yet.
 Postgres/Supabase → typed data access → Pokédex index → detail page — for a
 deliberately small, structurally challenging sample (Bulbasaur, Rotom + its
 forms, Meowth + its regional forms). Types/stats/SEO/EN-ES localization work
-on real imported data. Abilities, evolutions, structured search/filtering,
-game/generation context and Pokémon comparison remain Phase 1B+.
+on real imported data.
+
+**Phase 1B (complete)** proved the same model and pipeline at full scale: the
+complete PokéAPI species/form dataset (~1025 species, ~1580 forms) via a
+reproducible, idempotent ingestion command (`pnpm --filter @pokestudio/pokemon-data
+ingest`) — no more hand-mirrored `seed.sql` sample. Form classification and
+localization were hardened against real edge cases the small sample couldn't
+exercise (Alcremie's 64-form cosmetic family, Xerneas' two-state default
+form, Rotom-style unflagged type-changing forms). The Pokédex index now
+paginates (full-dataset payload size made that necessary, not optional
+polish). Abilities, evolutions, structured search/filtering, game/generation
+context and Pokémon comparison remain Phase 1C+.
 
 ## Phase 2 — Build Core
 

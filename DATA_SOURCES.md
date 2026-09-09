@@ -6,35 +6,59 @@ PokeStudio owns a normalized runtime data model while respecting source licenses
 
 External sources are inputs, not runtime truth APIs.
 
-## Implementation status (Phase 1A)
+## Implementation status (Phase 1B)
 
-The real (non-spike) ingestion path is `packages/pokemon-data/scripts/ingest-explore.ts`:
-fetches Bulbasaur, Rotom (+ its 5 battle-relevant appliance forms) and Meowth
-(+ its 2 regional forms) from PokéAPI, normalizes them into the species/form
-model (ADR-0010), validates dataset invariants, and writes a provenance-tagged
-JSON artifact (`packages/pokemon-data/data/explore-species.json`). Run manually
-(`pnpm --filter @pokestudio/pokemon-data ingest:explore`), not on every build or
-page request. `packages/database/supabase/seed.sql` mirrors that exact output
-into the local reference schema (`species` + `pokemon_form` tables). This is
-still a deliberately small representative sample — see ADR-0010 for what
-Phase 1 ingests next — not the complete Pokédex.
+The real ingestion path is `packages/pokemon-data/scripts/ingest.ts`: fetches the _complete_
+PokéAPI species/form dataset — every species (~1025), every variety (~1351: default + regional +
+battle-only forms), every cosmetic sub-form under each variety (~1579 forms total) — normalizes
+into the species/form model (ADR-0010), validates dataset invariants, and upserts directly into
+Postgres by upstream identity (idempotent). Run via `pnpm --filter @pokestudio/pokemon-data ingest`;
+`pnpm --filter @pokestudio/pokemon-data audit` runs the same fetch/normalize/validate pipeline
+report-only, without touching the database. See `packages/pokemon-data/README.md` for the full
+pipeline shape, fetch/cache strategy and idempotency guarantee.
+
+Phase 1A's small hand-mirrored 3-species sample (`seed.sql`) has been fully superseded — see
+DATABASE.md "Seed vs. ingestion."
 
 ## Normalization strategy (Phase 1)
 
 ADR-0010 defines how species/form/regional-form/battle-only-form/cosmetic-form,
 generation-scoped types/stats, and game/format availability are modeled
-without flattening away information Explore/Build/Battle Lab need. Phase 1A
-implemented the species/form split and proved it against Rotom (6 forms
-sharing base stats but differing types) and Meowth (regional forms differing
-in both types _and_ base stats) — the remaining strategy (generation-scoped
-stat history, game/format availability, moves/abilities/items/evolutions as
-their own entities) stays deferred until a real feature needs it.
+without flattening away information Explore/Build/Battle Lab need. Phase 1A proved the species/
+form split on 3 representative species; Phase 1B proved the same model holds across the real,
+complete dataset — including cases the small sample couldn't exercise (see "Classification
+findings" below). The remaining deferred strategy (generation-scoped stat history, game/format
+availability, moves/abilities/items/evolutions as their own entities) stays deferred until a real
+feature needs it.
+
+## Classification findings (Phase 1B, full-dataset audit)
+
+`packages/pokemon-data/src/classify.ts` classifies every form generically — driven by PokéAPI's
+own signals, never a per-Pokémon hardcode. Two real edge cases the full dataset surfaced and fixed
+during Phase 1B, both centralized as general rules (not species-specific patches):
+
+- **Rotom's appliance forms aren't flagged `is_mega`/`is_battle_only`** by PokéAPI (they're
+  obtainable outside battle), so classifying purely on those flags put them in `cosmetic` despite
+  changing types. Fixed by comparing each variety's types/stats against its species' default
+  variety: a mechanical difference (type or stat change) now classifies as `battle` regardless of
+  those flags. This also improved Indeedee's gender-differentiated variety (different base stats)
+  from a previous mis-fit `cosmetic` default to the more accurate `battle`.
+- **Xerneas has no form named plain "xerneas"** — only `xerneas-active`/`xerneas-neutral` — so the
+  name-match rule for picking a variety's canonical form found nothing, and the naive fallback (API
+  array order) picked the wrong one (`active`, which is `is_battle_only: true`). Fixed by falling
+  back to PokéAPI's own `is_default` form-level flag when _exactly one_ form claims it (reliable
+  for a real two-state species like Xerneas; deliberately not used when _every_ form claims it,
+  which is the common case for cosmetic groups like Vivillon where that flag is meaningless).
+
+Final distribution (full dataset): 1025 `default`, 220 `battle`, 54 `regional`, 280 `cosmetic`.
+Largest cosmetic families: Alcremie (64 forms — flavor/cream combinations), Unown (28 — letters),
+Vivillon/Scatterbug/Spewpa (20 each — regional wing patterns), Arceus (19 — Plates), Silvally (18).
 
 ## Localized form names — a PokéAPI data-quality gap
 
 PokéAPI's `pokemon-form` resource is inconsistent about which languages get a
 full combined "Species Form" name: English is reliably present in `names`,
-but Spanish is missing for every non-default form in this sample, and the
+but Spanish is missing for most non-default forms, and the
 fallback field (`form_names`) means different things per form group (the full
 name for Rotom's appliance formes, a generic "Forma de Alola"-style regional
 descriptor for Meowth's regional formes — not that region's usable full name).
@@ -42,8 +66,17 @@ descriptor for Meowth's regional formes — not that region's usable full name).
 and composes the Spanish regional-form name (`"{species} de {region}"`) from
 the species name + region label instead — a normalization rule grounded in
 Nintendo's real, consistent regional-form naming convention, not a
-per-Pokémon hardcode. Reconsider if a form group is found where this
-composition rule doesn't hold.
+per-Pokémon hardcode.
+
+At full-dataset scale (Phase 1B audit): of 554 non-default forms, 273 have a genuine PokéAPI-
+provided Spanish name, 54 use the regional composition above (correct by design, not a gap), and
+227 fall back further still — composing `"{species} ({descriptor})"` from the species name and the
+form's short English-only `form_name` field (e.g. "Charizard (gmax)") because _neither_ `names` nor
+`form_names` had a usable Spanish string. That fallback is deliberately never left bare (never just
+"gmax" with no species name attached) and is deterministic. No manual translation was done for
+these 227 — `pnpm --filter @pokestudio/pokemon-data audit` lists them for future review; a
+centralized override table would be the right mechanism if any of these need a hand-authored name,
+not scattered fixes.
 
 ## Candidate sources
 
@@ -122,6 +155,18 @@ write versioned data
     ↓
 application consumption
 ```
+
+### Fetch strategy (PokéAPI, Phase 1B)
+
+The full dataset needs ~4200 requests (species detail + variety detail + per-form detail). Fetched
+through bounded concurrency (default 12 in flight, `packages/pokemon-data/src/concurrency.ts`) in
+three flat phases (species → varieties → forms), not thousands of sequential requests nor
+per-species nested concurrency that could multiply unpredictably for a large form family. Every raw
+response is cached to disk by URL (`packages/pokemon-data/.cache/`, gitignored, mirrors the API
+path shape) — a full run takes ~40-60s cold and under a second warm; re-running `ingest` or `audit`
+after the first successful fetch touches the network 0 times. No static bulk dataset/mirror was
+adopted for this — PokéAPI's live REST API plus this caching was materially simpler for the current
+scope, and remains an option to revisit if request volume ever became a real problem.
 
 ## Validation examples
 

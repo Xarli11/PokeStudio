@@ -19,6 +19,10 @@ next-env.d.ts
 supabase/.branches
 supabase/.temp
 
+# Pokémon ingestion raw-response cache (packages/pokemon-data) — reproducible
+# from the live source, deliberately not committed (DATA_SOURCES.md).
+packages/pokemon-data/.cache/
+
 # Turborepo
 .turbo/
 

@@ -1,5 +1,5 @@
 /**
- * PokeStudio normalized Pokémon reference schema (Phase 1A, ADR-0010).
+ * PokeStudio normalized Pokémon reference schema (ADR-0010).
  *
  * Deliberately small: species + form only, generation-scoped stat history and
  * game/format availability are deferred until a real feature needs them
@@ -27,8 +27,9 @@ export type PokemonType =
   | 'fairy';
 
 /**
- * How a form relates to its species (ADR-0010). Only the categories the
- * current representative sample actually needs are implemented.
+ * How a form relates to its species (ADR-0010, `classify.ts`).
+ * `cosmetic` is also the fallback bucket for varieties that don't fit the
+ * other three (e.g. gender-differentiated varieties) — see `classify.ts`.
  */
 export type FormCategory = 'default' | 'regional' | 'battle' | 'cosmetic';
 
@@ -96,7 +97,7 @@ export interface DataProvenance {
 }
 
 /** A normalized, provenance-tagged import batch — species and their forms together. */
-export interface ExploreDataset {
+export interface NormalizedDataset {
   provenance: DataProvenance;
   species: NormalizedSpecies[];
   forms: NormalizedForm[];

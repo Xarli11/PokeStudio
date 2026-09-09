@@ -41,13 +41,20 @@ pnpm install                                        # install all workspace pack
 pnpm --filter @pokestudio/web dev                    # run the web app (http://localhost:3000)
 
 pnpm --filter @pokestudio/database db:start          # start local Supabase (Postgres/Auth/Storage/…)
-pnpm --filter @pokestudio/database db:reset          # apply migrations + seed from a clean database
+pnpm --filter @pokestudio/database db:reset          # apply migrations only — schema, not Pokémon data
 pnpm --filter @pokestudio/database db:stop           # stop the local stack
+
+# Populate the database with the full Pokédex (requires db:start above, and
+# SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY — the `supabase start`
+# output above prints these; see .env.example):
+pnpm --filter @pokestudio/pokemon-data ingest                # fetch -> normalize -> validate -> persist
+pnpm --filter @pokestudio/pokemon-data audit                 # same pipeline, report-only, no DB writes
 
 pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build   # all TS/JS gates
 
 cd research/python && pip install -e ".[dev]" && ruff check . && mypy . && pytest   # Python lane
 ```
 
-See `packages/database/README.md` for the full local Supabase workflow and `research/python/README.md`
-for the Python research lane.
+See `packages/database/README.md` for the full local Supabase workflow and `packages/pokemon-data/README.md`
+for the full ingestion pipeline (fetch/cache, idempotent upsert, classification audit). See
+`research/python/README.md` for the Python research lane.

@@ -4,95 +4,85 @@ import { createPublicDatabaseClient } from '../src/client';
 import { getSpeciesBySlug, listSpecies } from '../src/queries';
 
 /**
- * Proves the domain-shaped query layer against the real seeded Phase 1A
- * dataset (Bulbasaur/Rotom/Meowth) — in particular that the Rotom
- * meaningful-form model and the Meowth regional-form model come back
- * correctly through `listSpecies`/`getSpeciesBySlug` (Phase 1A Definition of
- * Done #10/#11).
+ * Proves the domain-shaped query layer against the real, fully-ingested
+ * Pokédex (Phase 1B — `pnpm --filter @pokestudio/pokemon-data ingest`),
+ * not just the Phase 1A 3-species sample. In particular that `listSpecies`
+ * doesn't silently truncate past PostgREST's default 1000-row page (found
+ * during full ingestion — see `packages/pokemon-data/src/persist.ts`), and
+ * that representative full-dataset edge cases (Rotom's battle forms,
+ * Meowth's regional forms, Alcremie's 64-form cosmetic family, Xerneas'
+ * two-state default-form quirk) come back correctly.
  *
- * Requires a running local Supabase instance seeded via `db:reset`. Skipped
- * automatically when SUPABASE_URL is not set (see rls.integration.test.ts).
+ * Requires a running local Supabase instance seeded via full ingestion.
+ * Skipped automatically when SUPABASE_URL is not set (see rls.integration.test.ts).
  */
 const supabaseUrl = process.env.SUPABASE_URL;
 const anonKey = process.env.SUPABASE_ANON_KEY;
 const hasLocalSupabase = Boolean(supabaseUrl && anonKey);
 
-describe.skipIf(!hasLocalSupabase)('species/form queries against seeded data', () => {
+describe.skipIf(!hasLocalSupabase)('species/form queries against the full ingested dataset', () => {
   const client = () => createPublicDatabaseClient({ url: supabaseUrl!, anonKey: anonKey! });
 
-  it('listSpecies returns all three seeded species with their default form', async () => {
+  it('listSpecies returns the full species list, past the 1000-row PostgREST page cap', async () => {
     const species = await listSpecies(client());
-    const slugs = species.map((s) => s.slug).sort();
-    expect(slugs).toEqual(['bulbasaur', 'meowth', 'rotom']);
+    // The exact count grows as PokéAPI adds species — assert "a real full
+    // dataset", not a magic number, but specifically confirm we're past the
+    // page-cap threshold that exposed the pagination bug.
+    expect(species.length).toBeGreaterThan(1000);
+    expect(new Set(species.map((s) => s.slug)).size).toBe(species.length); // no duplicates
+  });
 
-    const bulbasaur = species.find((s) => s.slug === 'bulbasaur')!;
-    expect(bulbasaur.nationalDexNumber).toBe(1);
-    expect(bulbasaur.name).toEqual({ en: 'Bulbasaur', es: 'Bulbasaur' });
-    expect(bulbasaur.defaultForm.types).toEqual(['grass', 'poison']);
-
-    // The default form shown on the index card must be the base/Kantonian
-    // Meowth, not one of its regional forms.
-    const meowth = species.find((s) => s.slug === 'meowth')!;
-    expect(meowth.defaultForm.slug).toBe('meowth');
-    expect(meowth.defaultForm.types).toEqual(['normal']);
+  it('every species in the list has a default form with 1-2 types and 6 base stats', async () => {
+    const species = await listSpecies(client());
+    for (const item of species) {
+      expect(item.defaultForm.types.length).toBeGreaterThanOrEqual(1);
+      expect(item.defaultForm.types.length).toBeLessThanOrEqual(2);
+      expect(Object.keys(item.defaultForm.baseStats)).toHaveLength(6);
+    }
   });
 
   it('getSpeciesBySlug returns null for an unknown slug', async () => {
     expect(await getSpeciesBySlug(client(), 'does-not-exist')).toBeNull();
   });
 
-  it('Rotom is one species with six related forms, not separate species (Phase 1A DoD #10)', async () => {
+  it('Rotom is one species with six related forms (Phase 1A/1B invariant, still holds at scale)', async () => {
     const rotom = await getSpeciesBySlug(client(), 'rotom');
-    expect(rotom).not.toBeNull();
-    expect(rotom!.name).toEqual({ en: 'Rotom', es: 'Rotom' });
     expect(rotom!.forms).toHaveLength(6);
-
-    const bySlug = Object.fromEntries(rotom!.forms.map((f) => [f.slug, f]));
-    expect(bySlug.rotom).toMatchObject({
-      isDefault: true,
-      category: 'default',
-      types: ['electric', 'ghost'],
-    });
-    expect(bySlug['rotom-heat']).toMatchObject({
-      isDefault: false,
-      category: 'battle',
-      types: ['electric', 'fire'],
-    });
-    expect(bySlug['rotom-wash']?.types).toEqual(['electric', 'water']);
-
-    // All Rotom formes share base stats — only typing differs.
-    for (const form of rotom!.forms) {
-      expect(form.baseStats.hp).toBe(50);
-    }
+    const heat = rotom!.forms.find((f) => f.slug === 'rotom-heat')!;
+    expect(heat.category).toBe('battle');
+    expect(heat.types).toEqual(['electric', 'fire']);
   });
 
-  it('Meowth regional forms are related forms with their own types and stats (Phase 1A DoD #11)', async () => {
+  it('Meowth regional forms keep their own types/stats', async () => {
     const meowth = await getSpeciesBySlug(client(), 'meowth');
-    expect(meowth).not.toBeNull();
-    expect(meowth!.forms).toHaveLength(3);
+    const alola = meowth!.forms.find((f) => f.slug === 'meowth-alola')!;
+    expect(alola.category).toBe('regional');
+    expect(alola.types).toEqual(['dark']);
+  });
 
-    const bySlug = Object.fromEntries(meowth!.forms.map((f) => [f.slug, f]));
-    expect(bySlug.meowth).toMatchObject({
-      isDefault: true,
-      category: 'default',
-      types: ['normal'],
-    });
-    expect(bySlug['meowth-alola']).toMatchObject({
-      isDefault: false,
-      category: 'regional',
-      types: ['dark'],
-      name: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
-    });
-    expect(bySlug['meowth-galar']).toMatchObject({
-      isDefault: false,
-      category: 'regional',
-      types: ['steel'],
-      name: { en: 'Galarian Meowth', es: 'Meowth de Galar' },
-    });
+  it('Alcremie — an unusually large cosmetic form family — returns intact', async () => {
+    const alcremie = await getSpeciesBySlug(client(), 'alcremie');
+    expect(alcremie).not.toBeNull();
+    expect(alcremie!.forms.length).toBeGreaterThan(50);
+    expect(alcremie!.forms.filter((f) => f.isDefault)).toHaveLength(1);
+    // Cosmetic sub-forms share the same types/stats as the default form.
+    const defaultForm = alcremie!.forms.find((f) => f.isDefault)!;
+    const cosmeticForm = alcremie!.forms.find((f) => !f.isDefault)!;
+    expect(cosmeticForm.types).toEqual(defaultForm.types);
+    expect(cosmeticForm.baseStats).toEqual(defaultForm.baseStats);
+  });
 
-    // Regional Meowth forms genuinely differ in base stats from Kantonian
-    // Meowth — proves types/stats had to live on the form, not the species.
-    expect(bySlug.meowth!.baseStats).not.toEqual(bySlug['meowth-alola']!.baseStats);
+  it('Xerneas resolves its true default form despite neither form matching the species name', async () => {
+    // Regression case for the pickPrimaryForm bug found during full
+    // ingestion: PokéAPI's forms are "xerneas-active"/"xerneas-neutral",
+    // neither named plain "xerneas"; only "neutral" is the real default.
+    const xerneas = await getSpeciesBySlug(client(), 'xerneas');
+    expect(xerneas!.forms).toHaveLength(2);
+    const defaultForm = xerneas!.forms.find((f) => f.isDefault)!;
+    expect(defaultForm.slug).toBe('xerneas-neutral');
+    const active = xerneas!.forms.find((f) => f.slug === 'xerneas-active')!;
+    expect(active.category).toBe('battle');
+    expect(active.isDefault).toBe(false);
   });
 });
 

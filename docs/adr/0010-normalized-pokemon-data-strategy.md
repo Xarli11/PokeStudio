@@ -74,3 +74,15 @@ learnset display) requires them — per-table justification, not built speculati
   representing the rare case (a form whose stats did change) correctly.
 - Queries that only need "current" data (the common case for Explore) stay simple; generation-aware
   queries are an explicit, opt-in join, not the default path.
+
+## Phase 1B addendum — validated at full dataset scale
+
+The species/form split (decision #1) was ingested and proved against the complete PokéAPI dataset
+(~1025 species, ~1579 forms), not just the 3-species Phase 1A sample — including cases the sample
+couldn't exercise: a 64-form cosmetic family (Alcremie), a species with no default-named form at
+all (Xerneas), and forms that change type without any PokéAPI battle-only/mega flag (Rotom). No
+change to the decision itself; see DATA_SOURCES.md "Classification findings" and
+`packages/pokemon-data/src/classify.ts` for what the full-scale audit found and how it was
+generalized (not patched per-species). Decision #5 (canonical id/slug distinct from external id)
+is now also enforced at the database level via a `unique (source_id, external_id)` constraint,
+which the ingestion pipeline's idempotent upsert depends on.

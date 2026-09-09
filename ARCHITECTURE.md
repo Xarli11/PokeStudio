@@ -75,9 +75,9 @@ normalized species/form reference data end-to-end from Postgres.
 - `packages/pokemon-data` gained a real (non-spike) ingestion path:
   `pokeapi-client.ts` (typed fetch, no normalization) → `normalize.ts` (pure,
   fixture-testable) → `validate.ts` → `scripts/ingest-explore.ts`, which
-  writes a provenance-tagged JSON artifact that `packages/database/supabase/seed.sql`
-  mirrors, the same "offline ingestion, not a runtime dependency" shape as
-  Phase 0 (CLAUDE.md §10).
+  wrote a provenance-tagged JSON artifact that `packages/database/supabase/seed.sql`
+  mirrored, the same "offline ingestion, not a runtime dependency" shape as
+  Phase 0 (CLAUDE.md §10). Superseded at full dataset scale by Phase 1B — see below.
 - `packages/database` gained domain-shaped read queries (`listSpecies`,
   `getSpeciesBySlug` in `src/queries.ts`) on top of the existing typed
   connection adapter — apps/web calls these, never raw `species`/`pokemon_form`
@@ -90,6 +90,38 @@ normalized species/form reference data end-to-end from Postgres.
   never attempts to reach a database at build time (CI's Node job runs without
   a live Supabase instance) — verified by building with Supabase stopped and
   confirming neither route appears in the static prerender manifest.
+
+### Phase 1B addition — full Pokédex ingestion at scale
+
+Replaced the small hand-mirrored sample with a reproducible, idempotent, full-dataset ingestion
+pipeline (~1025 species, ~1580 forms — the complete PokéAPI dataset for this scope). See
+`DATA_SOURCES.md` and `packages/pokemon-data/README.md` for the full pipeline shape; summary of
+what changed architecturally:
+
+- **`seed.sql` no longer carries Pokémon data.** `packages/database/supabase/seed.sql` is now
+  reserved for small static bootstrap lookups (none exist yet); `species`/`pokemon_form` come
+  exclusively from `pnpm --filter @pokestudio/pokemon-data ingest` (DATABASE.md "Seed vs.
+  ingestion"). `db:reset` alone no longer produces a Pokédex-ready database — a second, separate
+  step is required, by design.
+- **Ingestion writes directly to Postgres** (batched, identity-based upsert —
+  `packages/pokemon-data/src/persist.ts`) instead of producing a JSON artifact for a human to
+  mirror into SQL by hand. Idempotent: safe to re-run, never duplicates rows, never rewrites an
+  existing row's public slug.
+- **Generated Supabase types are now authoritative** (`packages/database/src/generated-database-types.ts`;
+  `src/types.ts` just re-exports it) rather than hand-maintained — real `never`-inference bugs from
+  small hand-maintained omissions outweighed the convenience once the schema had real constraints.
+- **`packages/pokemon-data` and `packages/database` cannot depend on each other bidirectionally**
+  (a real circular-workspace-dependency risk hit while building the persist layer, since `database`
+  already depends on `pokemon-data` for shared domain types): `pokemon-data`'s write path uses
+  `@supabase/supabase-js` directly with its own minimal local schema type instead of importing
+  `@pokestudio/database`.
+- **PostgREST's default 1000-row response cap** (`max_rows`) is a real constraint at this scale —
+  both the ingestion write path and `packages/database/src/queries.ts`'s `listSpecies` now
+  paginate reads past it; this was found via a real failure during the first full ingestion run,
+  not anticipated in advance.
+- **The Pokédex index paginates** (`listSpeciesPage`, `?page=` query param, no client JS) — 1025
+  species in one response was a ~6MB page; page-size-60 responses are ~400KB. `listSpecies`
+  (unpaginated, full list) still exists for callers that genuinely need everything (`sitemap.ts`).
 
 ## Layering
 
