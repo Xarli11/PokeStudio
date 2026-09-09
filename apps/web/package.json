@@ -16,6 +16,7 @@
   "dependencies": {
     "@pokestudio/battle-engine": "workspace:*",
     "@pokestudio/damage": "workspace:*",
+    "@pokestudio/database": "workspace:*",
     "@pokestudio/i18n": "workspace:*",
     "@pokestudio/pokemon-data": "workspace:*",
     "@pokestudio/ui": "workspace:*",

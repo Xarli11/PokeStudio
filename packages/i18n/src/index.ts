@@ -19,3 +19,5 @@ export function isLocale(value: string): value is Locale {
 export function getDictionary(locale: Locale): Dictionary {
   return dictionaries[locale];
 }
+
+export { formatMessage } from './format';

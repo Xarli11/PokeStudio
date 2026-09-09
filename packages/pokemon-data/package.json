@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "ingest:spike": "tsx scripts/ingest-spike.ts",
+    "ingest:explore": "tsx scripts/ingest-explore.ts",
     "clean": "rm -rf dist"
   },
   "devDependencies": {

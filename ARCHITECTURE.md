@@ -66,6 +66,31 @@ would eventually live in `packages/domain` (e.g. the conceptual `BattleEngine`
 API in BATTLE_ENGINE.md) currently live as each adapter package's own public
 API surface until a second consumer justifies extracting a shared package.
 
+### Phase 1A addition — Explore Core vertical slice
+
+The first real product feature (ROADMAP.md Phase 1, ADR-0010): a Pokédex index
+(`/[locale]/pokemon`) and detail page (`/[locale]/pokemon/[slug]`) reading
+normalized species/form reference data end-to-end from Postgres.
+
+- `packages/pokemon-data` gained a real (non-spike) ingestion path:
+  `pokeapi-client.ts` (typed fetch, no normalization) → `normalize.ts` (pure,
+  fixture-testable) → `validate.ts` → `scripts/ingest-explore.ts`, which
+  writes a provenance-tagged JSON artifact that `packages/database/supabase/seed.sql`
+  mirrors, the same "offline ingestion, not a runtime dependency" shape as
+  Phase 0 (CLAUDE.md §10).
+- `packages/database` gained domain-shaped read queries (`listSpecies`,
+  `getSpeciesBySlug` in `src/queries.ts`) on top of the existing typed
+  connection adapter — apps/web calls these, never raw `species`/`pokemon_form`
+  table queries, per CLAUDE.md §3 (no repository/service layer, but UI must
+  not query arbitrary tables directly either).
+- `apps/web` reads this data server-side only: a small `getPokemonDatabaseClient()`
+  helper (`src/lib/pokemon-database.ts`) builds a public (anon-key, RLS-governed)
+  Supabase client, used only from Server Components. Both Pokédex routes and
+  `sitemap.ts` are marked `export const dynamic = 'force-dynamic'` so `next build`
+  never attempts to reach a database at build time (CI's Node job runs without
+  a live Supabase instance) — verified by building with Supabase stopped and
+  confirming neither route appears in the static prerender manifest.
+
 ## Layering
 
 ### UI

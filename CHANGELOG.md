@@ -6,6 +6,56 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Phase 1A — Explore Core vertical slice (2026-09-09)
+
+First real product feature: proves source → normalization → PostgreSQL/Supabase
+→ typed data access → Pokédex index → detail page end-to-end, for a
+deliberately small, structurally challenging sample.
+
+- **Normalized species/form schema** (`supabase/migrations/20260909150000_pokemon_species_forms.sql`,
+  ADR-0010): `species` (canonical identity — slug, dex number, localized
+  name) and `pokemon_form` (default/regional/battle/cosmetic — types and base
+  stats live here, since they differ _by form_) replace the Phase 0 flattened
+  `species` spike table. PokeStudio's own `slug` is the primary identity;
+  PokéAPI's id is recorded only as provenance (`source_id`/`external_id`),
+  never used to look records up. Public-read/service-write RLS, same pattern
+  as `data_sources`.
+- **Real ingestion path** (`packages/pokemon-data`): `pokeapi-client.ts`
+  (typed fetch) → `normalize.ts` (pure, unit-tested against fixture JSON, no
+  network) → `validate.ts` → `scripts/ingest-explore.ts`, run against the
+  live PokéAPI for Bulbasaur, Rotom (+ its 5 appliance forms: Heat/Wash/
+  Frost/Fan/Mow) and Meowth (+ Alolan/Galarian regional forms). Output
+  mirrored into `packages/database/supabase/seed.sql` for reproducible local
+  dev. Found and worked around a real PokéAPI data-quality gap: non-default
+  forms' Spanish full names are frequently missing (see DATA_SOURCES.md
+  "Localized form names").
+- **Domain-shaped data access** (`packages/database/src/queries.ts`):
+  `listSpecies`/`getSpeciesBySlug`, returning PokeStudio-shaped results, not
+  raw rows. Proved against the real seeded data — Rotom returns as one
+  species with 6 related forms sharing base stats but differing types;
+  Meowth's regional forms return with their own (different) types _and_ base
+  stats, confirming why that data has to live on the form, not the species.
+- **Pokédex routes**: `/[locale]/pokemon` (index) and `/[locale]/pokemon/[slug]`
+  (detail, forms shown together with in-page jump links — no client-side
+  form-switching component needed for 1-6 forms). Server-rendered per request
+  (`export const dynamic = 'force-dynamic'`) — verified `next build` never
+  touches the database (no local Supabase instance was running during that
+  verification build, and neither route appears in the static prerender
+  manifest afterward), so CI's build job needs no live Supabase instance.
+  Localized title/description/canonical/hreflang/Open Graph per page;
+  `sitemap.ts` now lists both routes for both locales (best-effort — falls
+  back to locale-only entries rather than 500ing if the database is briefly
+  unreachable).
+- **No Pokémon sprite/artwork introduced.** A neutral, type-accented
+  placeholder stands in for visuals pending a reviewed, license-cleared asset
+  source (DATA_SOURCES.md "Phase 1A decision: no sprite/artwork source yet").
+- Extended `packages/ui`'s Pokémon type-color tokens from 6 to the full
+  18-type set (`--ps-type-*`), needed for this phase's real type data.
+- Added a minimal `formatMessage(template, vars)` `{placeholder}` helper to
+  `packages/i18n` for the handful of dictionary strings that need a value —
+  the small-interpolation-helper path ADR-0009 anticipated, not a message-format
+  library.
+
 ### Phase 0.5 — Foundation hardening (2026-09-09)
 
 - **Node runtime pinned to 24 LTS** (`.nvmrc`, `package.json#engines`). Confirmed the

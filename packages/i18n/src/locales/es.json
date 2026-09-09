@@ -17,5 +17,52 @@
   },
   "footer": {
     "disclaimer": "PokeStudio es un proyecto no oficial hecho por fans y no está afiliado, respaldado ni patrocinado por Nintendo, Game Freak o The Pokémon Company."
+  },
+  "types": {
+    "normal": "Normal",
+    "fire": "Fuego",
+    "water": "Agua",
+    "electric": "Eléctrico",
+    "grass": "Planta",
+    "ice": "Hielo",
+    "fighting": "Lucha",
+    "poison": "Veneno",
+    "ground": "Tierra",
+    "flying": "Volador",
+    "psychic": "Psíquico",
+    "bug": "Bicho",
+    "rock": "Roca",
+    "ghost": "Fantasma",
+    "dragon": "Dragón",
+    "dark": "Siniestro",
+    "steel": "Acero",
+    "fairy": "Hada"
+  },
+  "pokedex": {
+    "title": "Pokédex",
+    "tagline": "La base de datos normalizada de Pokémon de PokeStudio.",
+    "indexDescription": "Consulta tipos y estadísticas base de {count} Pokémon en la Pokédex de PokeStudio.",
+    "detailDescription": "{name}: tipos, estadísticas base{formsNote} en la Pokédex de PokeStudio.",
+    "detailDescriptionWithForms": " y {formCount} formas",
+    "dexNumber": "N.º {number}",
+    "types": "Tipos",
+    "baseStats": "Estadísticas base",
+    "forms": "Formas",
+    "otherForms": "Otras formas",
+    "backToPokedex": "Volver a la Pokédex",
+    "stat": {
+      "hp": "PS",
+      "attack": "Ataque",
+      "defense": "Defensa",
+      "specialAttack": "At. Esp.",
+      "specialDefense": "Def. Esp.",
+      "speed": "Velocidad"
+    },
+    "formCategory": {
+      "default": "Forma base",
+      "regional": "Forma regional",
+      "battle": "Forma relevante en combate",
+      "cosmetic": "Forma cosmética"
+    }
   }
 }

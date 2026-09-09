@@ -35,6 +35,13 @@ Exit criteria: all foundation checks pass and the repository can support real ve
 
 Do not attempt every game guide/location feature yet.
 
+**Phase 1A (complete)** proved the full vertical slice — source → normalization →
+Postgres/Supabase → typed data access → Pokédex index → detail page — for a
+deliberately small, structurally challenging sample (Bulbasaur, Rotom + its
+forms, Meowth + its regional forms). Types/stats/SEO/EN-ES localization work
+on real imported data. Abilities, evolutions, structured search/filtering,
+game/generation context and Pokémon comparison remain Phase 1B+.
+
 ## Phase 2 — Build Core
 
 - Team Builder,

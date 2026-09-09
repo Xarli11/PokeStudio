@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { type Locale, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 import { notFound } from 'next/navigation';
 
@@ -27,7 +28,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     >
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <nav style={{ display: 'flex', gap: '1rem', color: 'var(--ps-color-text-muted)' }}>
-          <span>{dictionary.nav.explore}</span>
+          <Link href={`/${locale}/pokemon`} style={{ color: 'inherit' }}>
+            {dictionary.nav.explore}
+          </Link>
           <span>{dictionary.nav.build}</span>
           <span>{dictionary.nav.battleLab}</span>
         </nav>

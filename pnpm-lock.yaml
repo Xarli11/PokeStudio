@@ -32,6 +32,9 @@ importers:
       '@pokestudio/damage':
         specifier: workspace:*
         version: link:../../packages/damage
+      '@pokestudio/database':
+        specifier: workspace:*
+        version: link:../../packages/database
       '@pokestudio/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -122,6 +125,9 @@ importers:
 
   packages/database:
     dependencies:
+      '@pokestudio/pokemon-data':
+        specifier: workspace:*
+        version: link:../pokemon-data
       '@supabase/supabase-js':
         specifier: ^2.47.10
         version: 2.116.0

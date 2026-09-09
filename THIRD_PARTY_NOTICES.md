@@ -34,10 +34,14 @@ Action before shipping:
 
 Repository: https://github.com/PokeAPI/pokeapi
 
-Used by the Phase 0 ingestion spike (`packages/pokemon-data/scripts/ingest-spike.ts`)
+Used by the Phase 1A ingestion script (`packages/pokemon-data/scripts/ingest-explore.ts`)
 to fetch a small, versioned species sample (see
-`packages/pokemon-data/data/spike-species.json` for the provenance record).
+`packages/pokemon-data/data/explore-species.json` for the provenance record).
 Not called at runtime by the web app (CLAUDE.md §10).
+
+No sprite/artwork/icon assets from PokéAPI or any other source have been
+introduced — Pokédex visuals use a neutral placeholder pending a reviewed,
+license-cleared asset source (DATA_SOURCES.md "Asset policy").
 
 License: BSD-3-Clause (confirmed via the repository's `LICENSE.md`). Requires
 retaining the copyright notice; Pokémon names/characters remain Nintendo

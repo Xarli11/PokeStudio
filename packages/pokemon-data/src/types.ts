@@ -1,9 +1,9 @@
 /**
- * PokeStudio normalized Pokémon reference schema (spike subset).
+ * PokeStudio normalized Pokémon reference schema (Phase 1A, ADR-0010).
  *
- * This is intentionally a small slice of the eventual data model
- * (CLAUDE.md §10, DATABASE.md) — enough to prove the ingestion pipeline
- * shape, not a production dataset.
+ * Deliberately small: species + form only, generation-scoped stat history and
+ * game/format availability are deferred until a real feature needs them
+ * (ADR-0010 "What Phase 1 actually builds").
  */
 
 export type PokemonType =
@@ -26,6 +26,12 @@ export type PokemonType =
   | 'steel'
   | 'fairy';
 
+/**
+ * How a form relates to its species (ADR-0010). Only the categories the
+ * current representative sample actually needs are implemented.
+ */
+export type FormCategory = 'default' | 'regional' | 'battle' | 'cosmetic';
+
 export interface BaseStats {
   hp: number;
   attack: number;
@@ -40,15 +46,45 @@ export interface LocalizedName {
   es: string;
 }
 
+/**
+ * Where one PokeStudio record came from. PokeStudio's own `slug`/id is the
+ * primary key everywhere — this is provenance, never used to look records up
+ * (ADR-0010 "canonical PokeStudio id/slug distinct from any external source id").
+ */
+export interface SourceRef {
+  /** FK to `data_sources.source_id`, e.g. `"pokeapi"`. */
+  sourceId: string;
+  /** The id/slug this record has within that source, e.g. a PokéAPI pokemon id. */
+  externalId: string;
+}
+
+/** The biological/canonical Pokémon species — dex number, evolution family, base identity. */
 export interface NormalizedSpecies {
-  /** Stable PokeStudio identifier, independent of any upstream source id. */
-  id: string;
+  /** Stable PokeStudio identity, independent of any upstream source id. */
+  slug: string;
   nationalDexNumber: number;
   name: LocalizedName;
+  source: SourceRef;
+}
+
+/**
+ * A specific expression of a species. Types and base stats live here, not on
+ * the species, because they can differ by form (ADR-0010) — proven by this
+ * sample: Alolan/Galarian Meowth both have different types AND base stats
+ * from Kantonian Meowth, despite sharing a species.
+ */
+export interface NormalizedForm {
+  /** Stable PokeStudio identity, e.g. `"meowth-alola"`. */
+  slug: string;
+  /** FK by slug to the owning species. */
+  speciesSlug: string;
+  name: LocalizedName;
+  isDefault: boolean;
+  category: FormCategory;
+  /** Ordered (primary type first); 1-2 entries. */
   types: PokemonType[];
   baseStats: BaseStats;
-  /** Earliest generation this species is documented for in this spike. */
-  introducedInGeneration: number;
+  source: SourceRef;
 }
 
 export interface DataProvenance {
@@ -59,7 +95,9 @@ export interface DataProvenance {
   importerVersion: string;
 }
 
-export interface ProvenancedDataset<T> {
+/** A normalized, provenance-tagged import batch — species and their forms together. */
+export interface ExploreDataset {
   provenance: DataProvenance;
-  records: T[];
+  species: NormalizedSpecies[];
+  forms: NormalizedForm[];
 }

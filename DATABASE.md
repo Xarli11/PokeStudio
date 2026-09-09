@@ -16,6 +16,18 @@ PokeStudio must remain PostgreSQL-centric rather than spreading Supabase-specifi
 - provenance/versioning exists for imported datasets,
 - do not design tables for hypothetical features years away.
 
+## Implementation status (Phase 1A)
+
+`species` and `pokemon_form` are implemented (`supabase/migrations/20260909150000_pokemon_species_forms.sql`),
+superseding the Phase 0 flattened `species` spike table. Species (canonical
+identity: slug, dex number, localized name) and forms (default/regional/
+battle/cosmetic — types and base stats live here, since they can differ by
+form) are separate tables, per ADR-0010. Reference data is public-read
+(`anon`/`authenticated`) via RLS policy; writes are service-role only, same
+pattern as `data_sources`. Not yet implemented from "Likely early domains"
+below: generations/games as their own tables, abilities, moves, items,
+evolutions, learnsets — deferred until a real feature needs them (YAGNI).
+
 ## Likely early domains
 
 Reference/data domains may include:

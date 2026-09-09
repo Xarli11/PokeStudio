@@ -29,13 +29,25 @@
   --ps-motion-base: 200ms;
   --ps-motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Type semantic accents (subset — extended when Explore ships) */
+  /* Type semantic accents — full 18-type set (Phase 1A, Explore data). */
+  --ps-type-normal: #c2c2a3;
   --ps-type-fire: #f5804d;
   --ps-type-water: #4d9bf5;
-  --ps-type-grass: #5cc26a;
   --ps-type-electric: #f5cf4d;
+  --ps-type-grass: #5cc26a;
+  --ps-type-ice: #7ed6e0;
+  --ps-type-fighting: #e0654f;
+  --ps-type-poison: #a55cd4;
+  --ps-type-ground: #d9bb5c;
+  --ps-type-flying: #a3a3f0;
   --ps-type-psychic: #f56db0;
+  --ps-type-bug: #a8c23c;
+  --ps-type-rock: #c2b280;
+  --ps-type-ghost: #8b6dd9;
   --ps-type-dragon: #7a6df5;
+  --ps-type-dark: #9c8574;
+  --ps-type-steel: #b8c2d1;
+  --ps-type-fairy: #f2a8d8;
 }
 
 [data-theme='light'] {
