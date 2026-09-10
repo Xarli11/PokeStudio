@@ -26,7 +26,7 @@ export function PokemonVisualPlaceholder({
       style={{
         width: size,
         height: size,
-        borderRadius: '9999px',
+        borderRadius: 'var(--ps-radius-pill)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

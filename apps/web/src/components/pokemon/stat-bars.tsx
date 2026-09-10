@@ -25,28 +25,35 @@ export function PokemonStatBars({
   labels: Record<(typeof STAT_KEYS)[number], string>;
 }) {
   return (
-    <dl style={{ display: 'grid', gap: '0.5rem', margin: 0 }}>
+    <dl style={{ display: 'grid', gap: 'var(--ps-space-2)', margin: 0 }}>
       {STAT_KEYS.map((key) => (
         <div
           key={key}
           style={{
             display: 'grid',
-            gridTemplateColumns: '6rem 2.5rem 1fr',
+            gridTemplateColumns: 'minmax(4.5rem, 5.5rem) 2.25rem 1fr',
             alignItems: 'center',
-            gap: '0.625rem',
+            gap: 'var(--ps-space-2)',
           }}
         >
-          <dt style={{ color: 'var(--ps-color-text-muted)', fontSize: '0.8125rem' }}>
+          <dt style={{ color: 'var(--ps-color-text-muted)', fontSize: 'var(--ps-font-size-sm)' }}>
             {labels[key]}
           </dt>
-          <dd style={{ margin: 0, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+          <dd
+            style={{
+              margin: 0,
+              fontVariantNumeric: 'tabular-nums',
+              fontWeight: 600,
+              fontSize: 'var(--ps-font-size-sm)',
+            }}
+          >
             {stats[key]}
           </dd>
           <div
             aria-hidden="true"
             style={{
               height: '0.5rem',
-              borderRadius: '9999px',
+              borderRadius: 'var(--ps-radius-pill)',
               background: 'var(--ps-color-bg-elevated)',
               overflow: 'hidden',
             }}
@@ -56,7 +63,8 @@ export function PokemonStatBars({
                 height: '100%',
                 width: `${Math.min(100, (stats[key] / MAX_DISPLAY_STAT) * 100)}%`,
                 background: 'var(--ps-color-primary)',
-                borderRadius: '9999px',
+                borderRadius: 'var(--ps-radius-pill)',
+                transition: `width var(--ps-motion-base) var(--ps-motion-easing)`,
               }}
             />
           </div>

@@ -12,30 +12,50 @@ export interface PokemonCardProps {
   types: { type: PokemonType; label: string }[];
 }
 
-/** One Pokédex index entry — real localized name/number/types, links to the detail page. */
+/**
+ * One Pokédex index entry — real localized name/number/types, linking to
+ * the detail page. Sits in a responsive grid (`pokemon-grid.module.css`),
+ * so it stays a compact tile rather than a full-width row (UX/UI 0.1 Part C).
+ */
 export function PokemonCard({ href, name, dexNumberLabel, types }: PokemonCardProps) {
   return (
     <Link
       href={href}
+      className="ps-card"
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '1rem',
-        padding: '1rem',
-        borderRadius: '0.75rem',
-        border: '1px solid var(--ps-color-border)',
-        background: 'var(--ps-color-bg-surface)',
+        gap: 'var(--ps-space-4)',
+        padding: 'var(--ps-space-4)',
         color: 'inherit',
         textDecoration: 'none',
       }}
     >
-      <PokemonVisualPlaceholder initial={name.charAt(0)} primaryType={types[0]!.type} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', minWidth: 0 }}>
-        <span style={{ color: 'var(--ps-color-text-muted)', fontSize: '0.8125rem' }}>
+      <PokemonVisualPlaceholder initial={name.charAt(0)} primaryType={types[0]!.type} size={56} />
+      <div
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-1)', minWidth: 0 }}
+      >
+        <span
+          style={{
+            color: 'var(--ps-color-text-muted)',
+            fontSize: 'var(--ps-font-size-xs)',
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
           {dexNumberLabel}
         </span>
-        <span style={{ fontSize: '1.0625rem', fontWeight: 600 }}>{name}</span>
-        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+        <span
+          style={{
+            fontSize: 'var(--ps-font-size-base)',
+            fontWeight: 600,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {name}
+        </span>
+        <div style={{ display: 'flex', gap: 'var(--ps-space-1)', flexWrap: 'wrap' }}>
           {types.map(({ type, label }) => (
             <PokemonTypeBadge key={type} type={type} label={label} />
           ))}

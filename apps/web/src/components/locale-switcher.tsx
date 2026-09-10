@@ -15,13 +15,15 @@ export function LocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
   }
 
   return (
-    <div role="group" aria-label="Language">
+    <div role="group" aria-label="Language" style={{ display: 'flex', gap: '0.25rem' }}>
       {locales.map((locale) => (
         <button
           key={locale}
           type="button"
           onClick={() => switchTo(locale)}
           aria-current={locale === currentLocale}
+          data-active={locale === currentLocale}
+          className="ps-btn"
         >
           {locale.toUpperCase()}
         </button>

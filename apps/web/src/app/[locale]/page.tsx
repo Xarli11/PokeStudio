@@ -2,8 +2,7 @@ import Link from 'next/link';
 import { type Locale, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 import { notFound } from 'next/navigation';
 
-import { LocaleSwitcher } from '@/components/locale-switcher';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { AppShell } from '@/components/app-shell';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -16,47 +15,37 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const dictionary = getDictionary(locale as Locale);
 
   return (
-    <main
-      style={{
-        maxWidth: 720,
-        margin: '0 auto',
-        padding: '4rem 1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem',
-      }}
-    >
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <nav style={{ display: 'flex', gap: '1rem', color: 'var(--ps-color-text-muted)' }}>
-          <Link href={`/${locale}/pokemon`} style={{ color: 'inherit' }}>
-            {dictionary.nav.explore}
-          </Link>
-          <span>{dictionary.nav.build}</span>
-          <span>{dictionary.nav.battleLab}</span>
-        </nav>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <LocaleSwitcher currentLocale={locale as Locale} />
-          <ThemeToggle labels={dictionary.theme} />
-        </div>
-      </header>
+    <AppShell locale={locale as Locale} dictionary={dictionary} active="explore">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 'var(--ps-font-size-3xl)',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
+          }}
+        >
+          {dictionary.home.title}
+        </h1>
+        <p
+          style={{
+            margin: 0,
+            color: 'var(--ps-color-text-muted)',
+            fontSize: 'var(--ps-font-size-lg)',
+          }}
+        >
+          {dictionary.home.tagline}
+        </p>
+        <p style={{ margin: 0 }}>{dictionary.home.status}</p>
 
-      <h1 style={{ fontSize: '2.5rem', margin: 0 }}>{dictionary.home.title}</h1>
-      <p style={{ color: 'var(--ps-color-text-muted)', fontSize: '1.125rem' }}>
-        {dictionary.home.tagline}
-      </p>
-      <p>{dictionary.home.status}</p>
-
-      <footer
-        style={{
-          marginTop: '2rem',
-          paddingTop: '1.5rem',
-          borderTop: '1px solid var(--ps-color-border)',
-          color: 'var(--ps-color-text-muted)',
-          fontSize: '0.875rem',
-        }}
-      >
-        {dictionary.footer.disclaimer}
-      </footer>
-    </main>
+        <Link
+          href={`/${locale}/pokemon`}
+          className="ps-btn ps-btn-primary"
+          style={{ alignSelf: 'flex-start', marginTop: 'var(--ps-space-2)' }}
+        >
+          {dictionary.nav.explore} →
+        </Link>
+      </div>
+    </AppShell>
   );
 }

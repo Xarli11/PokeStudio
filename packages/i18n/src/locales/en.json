@@ -2,7 +2,10 @@
   "nav": {
     "explore": "Explore",
     "build": "Build",
-    "battleLab": "Battle Lab"
+    "battleLab": "Battle Lab",
+    "soon": "Soon",
+    "skipToContent": "Skip to content",
+    "mainNavigation": "Main navigation"
   },
   "home": {
     "title": "PokeStudio",
@@ -17,6 +20,11 @@
   },
   "footer": {
     "disclaimer": "PokeStudio is an unofficial fan-made project and is not affiliated with, endorsed by, or sponsored by Nintendo, Game Freak, or The Pokémon Company."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "We couldn't find what you were looking for.",
+    "backLink": "Back to Pokédex"
   },
   "types": {
     "normal": "Normal",
@@ -49,10 +57,14 @@
     "baseStats": "Base stats",
     "forms": "Forms",
     "otherForms": "Other forms",
+    "cosmeticVariants": "Also appears as {count} cosmetic variants — same types, stats and abilities",
+    "showAllForms": "Show all {count}",
+    "hideForms": "Show fewer",
     "backToPokedex": "Back to Pokédex",
     "pageLabel": "Page {page} of {totalPages}",
     "previousPage": "Previous",
     "nextPage": "Next",
+    "loading": "Loading…",
     "stat": {
       "hp": "HP",
       "attack": "Attack",

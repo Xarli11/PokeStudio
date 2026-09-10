@@ -5,15 +5,20 @@ import { notFound } from 'next/navigation';
 import { getEvolutionFamily, getSpeciesBySlug, type SpeciesFormDetail } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
+import { AppShell } from '@/components/app-shell';
 import { PokemonEvolutionSection } from '@/components/pokemon/evolution-section';
 import { PokemonFormSection } from '@/components/pokemon/form-section';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
+import { partitionOtherForms } from '@/lib/form-grouping';
 
 // Reads live reference data per request — do not attempt to statically
 // prerender this at build time (CI has no Supabase instance during `next build`).
 export const dynamic = 'force-dynamic';
 
 type PageParams = { locale: string; slug: string };
+
+/** Cosmetic variants beyond this count collapse behind a native <details> (Alcremie: 63, Unown: 27). */
+const COSMETIC_VARIANTS_COLLAPSE_THRESHOLD = 8;
 
 function dexNumberLabel(dictionary: ReturnType<typeof getDictionary>, n: number): string {
   return formatMessage(dictionary.pokedex.dexNumber, { number: String(n).padStart(3, '0') });
@@ -23,11 +28,12 @@ function formSectionProps(
   form: SpeciesFormDetail,
   locale: 'en' | 'es',
   dictionary: ReturnType<typeof getDictionary>,
+  variant: 'primary' | 'secondary',
 ) {
   return {
     id: form.slug,
     name: form.name[locale],
-    categoryLabel: form.isDefault ? undefined : dictionary.pokedex.formCategory[form.category],
+    categoryLabel: dictionary.pokedex.formCategory[form.category],
     types: form.types.map((type) => ({ type, label: dictionary.types[type] })),
     stats: form.baseStats,
     statLabels: dictionary.pokedex.stat,
@@ -42,7 +48,8 @@ function formSectionProps(
     abilitiesLabel: dictionary.pokedex.abilities,
     hiddenAbilityLabel: dictionary.pokedex.hiddenAbility,
     noAbilityDescriptionLabel: dictionary.pokedex.noAbilityDescription,
-  };
+    variant,
+  } as const;
 }
 
 export async function generateMetadata({
@@ -97,79 +104,124 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
   const defaultForm = species.forms.find((form) => form.isDefault);
   if (!defaultForm) notFound();
   const otherForms = species.forms.filter((form) => !form.isDefault);
+  const { distinctForms, cosmeticVariants } = partitionOtherForms(defaultForm, otherForms);
+  const hasOtherForms = distinctForms.length > 0 || cosmeticVariants.length > 0;
 
   return (
-    <main
-      style={{
-        maxWidth: 720,
-        margin: '0 auto',
-        padding: '3rem 1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem',
-      }}
-    >
-      <Link href={`/${locale}/pokemon`} style={{ color: 'var(--ps-color-text-muted)' }}>
-        ← {dictionary.pokedex.backToPokedex}
-      </Link>
+    <AppShell locale={locale} dictionary={dictionary} active="explore">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-6)' }}>
+        <Link
+          href={`/${locale}/pokemon`}
+          style={{
+            color: 'var(--ps-color-text-muted)',
+            fontSize: 'var(--ps-font-size-sm)',
+            alignSelf: 'flex-start',
+          }}
+        >
+          ← {dictionary.pokedex.backToPokedex}
+        </Link>
 
-      <header style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        <span style={{ color: 'var(--ps-color-text-muted)', fontSize: '0.875rem' }}>
-          {dexNumberLabel(dictionary, species.nationalDexNumber)}
-        </span>
-        <h1 style={{ margin: 0, fontSize: '2rem' }}>{species.name[locale]}</h1>
-      </header>
+        <header style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-1)' }}>
+          <span
+            style={{
+              color: 'var(--ps-color-text-muted)',
+              fontSize: 'var(--ps-font-size-sm)',
+              fontVariantNumeric: 'tabular-nums',
+              fontWeight: 600,
+            }}
+          >
+            {dexNumberLabel(dictionary, species.nationalDexNumber)}
+          </span>
+          <h1 style={{ margin: 0, fontSize: 'var(--ps-font-size-3xl)', letterSpacing: '-0.02em' }}>
+            {species.name[locale]}
+          </h1>
+        </header>
 
-      <PokemonFormSection {...formSectionProps(defaultForm, locale, dictionary)} />
+        <PokemonFormSection {...formSectionProps(defaultForm, locale, dictionary, 'primary')} />
 
-      {evolutionFamily ? (
-        <PokemonEvolutionSection family={evolutionFamily} locale={locale} dictionary={dictionary} />
-      ) : null}
+        {evolutionFamily ? (
+          <PokemonEvolutionSection
+            family={evolutionFamily}
+            locale={locale}
+            dictionary={dictionary}
+          />
+        ) : null}
 
-      {otherForms.length > 0 ? (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.25rem' }}>
+        {hasOtherForms ? (
+          <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-4)' }}>
+            <h2 style={{ margin: 0, fontSize: 'var(--ps-font-size-lg)' }}>
               {dictionary.pokedex.otherForms}
             </h2>
-            <nav aria-label={dictionary.pokedex.otherForms}>
-              <ul
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                  margin: 0,
-                  padding: 0,
-                  listStyle: 'none',
-                }}
-              >
-                {otherForms.map((form) => (
-                  <li key={form.slug}>
-                    <a
-                      href={`#${form.slug}`}
-                      style={{
-                        display: 'inline-block',
-                        padding: '0.375rem 0.75rem',
-                        borderRadius: '9999px',
-                        border: '1px solid var(--ps-color-border)',
-                        color: 'var(--ps-color-text)',
-                        textDecoration: 'none',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      {form.name[locale]}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
 
-          {otherForms.map((form) => (
-            <PokemonFormSection key={form.slug} {...formSectionProps(form, locale, dictionary)} />
-          ))}
-        </section>
-      ) : null}
-    </main>
+            {distinctForms.length > 1 ? (
+              <nav aria-label={dictionary.pokedex.otherForms}>
+                <ul
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 'var(--ps-space-2)',
+                    margin: 0,
+                    padding: 0,
+                    listStyle: 'none',
+                  }}
+                >
+                  {distinctForms.map((form) => (
+                    <li key={form.slug}>
+                      <a href={`#${form.slug}`} className="ps-btn">
+                        {form.name[locale]}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ) : null}
+
+            {distinctForms.map((form) => (
+              <PokemonFormSection
+                key={form.slug}
+                {...formSectionProps(form, locale, dictionary, 'secondary')}
+              />
+            ))}
+
+            {cosmeticVariants.length > 0 ? (
+              <details
+                className="ps-card"
+                open={cosmeticVariants.length <= COSMETIC_VARIANTS_COLLAPSE_THRESHOLD || undefined}
+                style={{ padding: 'var(--ps-space-4) var(--ps-space-5)' }}
+              >
+                <summary
+                  style={{
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: 'var(--ps-font-size-base)',
+                    color: 'var(--ps-color-text-muted)',
+                  }}
+                >
+                  {formatMessage(dictionary.pokedex.cosmeticVariants, {
+                    count: cosmeticVariants.length,
+                  })}
+                </summary>
+                <ul
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 'var(--ps-space-2)',
+                    margin: 'var(--ps-space-3) 0 0',
+                    padding: 0,
+                    listStyle: 'none',
+                  }}
+                >
+                  {cosmeticVariants.map((form) => (
+                    <li key={form.slug} className="ps-tag">
+                      {form.name[locale]}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+          </section>
+        ) : null}
+      </div>
+    </AppShell>
   );
 }

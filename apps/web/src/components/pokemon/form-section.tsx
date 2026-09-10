@@ -9,8 +9,7 @@ export interface PokemonFormSectionProps {
   /** Anchor target for "other forms" navigation links. */
   id: string;
   name: string;
-  /** Omitted for the default form — only shown for non-default forms. */
-  categoryLabel?: string | undefined;
+  categoryLabel: string;
   types: { type: PokemonType; label: string }[];
   stats: BaseStats;
   statLabels: Record<keyof BaseStats, string>;
@@ -20,9 +19,27 @@ export interface PokemonFormSectionProps {
   abilitiesLabel: string;
   hiddenAbilityLabel: string;
   noAbilityDescriptionLabel: string;
+  /**
+   * `primary` — the form the page's own `<h1>` already names (the default
+   * form): no redundant name heading, and its Types/Stats/Abilities are
+   * top-level `h2` sections. `secondary` — any other form: its name is an
+   * `h3` (nested under the "Other forms" `h2`), with `h4` subsections.
+   * Keeps the document outline correct instead of skipping/duplicating
+   * levels (UX/UI 0.1 Part D).
+   */
+  variant: 'primary' | 'secondary';
 }
 
-/** One form's full detail block — used for both the default form and each other form. */
+const sectionHeadingStyle: React.CSSProperties = {
+  margin: '0 0 var(--ps-space-2)',
+  fontSize: 'var(--ps-font-size-sm)',
+  fontWeight: 600,
+  color: 'var(--ps-color-text-muted)',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+};
+
+/** One form's full detail block — used for both the default (primary) form and each other form. */
 export function PokemonFormSection({
   id,
   name,
@@ -36,47 +53,39 @@ export function PokemonFormSection({
   abilitiesLabel,
   hiddenAbilityLabel,
   noAbilityDescriptionLabel,
+  variant,
 }: PokemonFormSectionProps) {
+  const SectionHeading = variant === 'primary' ? 'h2' : 'h4';
+
   return (
     <section
       id={id}
+      className="ps-card"
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '1rem',
-        padding: '1.25rem',
-        borderRadius: '0.75rem',
-        border: '1px solid var(--ps-color-border)',
-        background: 'var(--ps-color-bg-surface)',
-        scrollMarginTop: '1rem',
+        gap: 'var(--ps-space-4)',
+        padding: 'var(--ps-space-5)',
+        scrollMarginTop: 'var(--ps-space-5)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <PokemonVisualPlaceholder initial={name.charAt(0)} primaryType={types[0]!.type} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          <h3 style={{ margin: 0, fontSize: '1.25rem' }}>{name}</h3>
-          {categoryLabel ? (
-            <span style={{ color: 'var(--ps-color-text-muted)', fontSize: '0.8125rem' }}>
-              {categoryLabel}
-            </span>
-          ) : null}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--ps-space-4)' }}>
+        <PokemonVisualPlaceholder initial={name.charAt(0)} primaryType={types[0]!.type} size={64} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-1)' }}>
+          {variant === 'secondary' ? (
+            <h3 style={{ margin: 0, fontSize: 'var(--ps-font-size-lg)' }}>{name}</h3>
+          ) : (
+            <p style={{ margin: 0, fontSize: 'var(--ps-font-size-lg)', fontWeight: 600 }}>{name}</p>
+          )}
+          <span className="ps-tag ps-tag-label" style={{ alignSelf: 'flex-start' }}>
+            {categoryLabel}
+          </span>
         </div>
       </div>
 
       <div>
-        <h4
-          style={{
-            margin: '0 0 0.5rem',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            color: 'var(--ps-color-text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.03em',
-          }}
-        >
-          {typesLabel}
-        </h4>
-        <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+        <SectionHeading style={sectionHeadingStyle}>{typesLabel}</SectionHeading>
+        <div style={{ display: 'flex', gap: 'var(--ps-space-1)', flexWrap: 'wrap' }}>
           {types.map(({ type, label }) => (
             <PokemonTypeBadge key={type} type={type} label={label} />
           ))}
@@ -84,35 +93,13 @@ export function PokemonFormSection({
       </div>
 
       <div>
-        <h4
-          style={{
-            margin: '0 0 0.5rem',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            color: 'var(--ps-color-text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.03em',
-          }}
-        >
-          {baseStatsLabel}
-        </h4>
+        <SectionHeading style={sectionHeadingStyle}>{baseStatsLabel}</SectionHeading>
         <PokemonStatBars stats={stats} labels={statLabels} />
       </div>
 
       {abilities.length > 0 ? (
         <div>
-          <h4
-            style={{
-              margin: '0 0 0.5rem',
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              color: 'var(--ps-color-text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.03em',
-            }}
-          >
-            {abilitiesLabel}
-          </h4>
+          <SectionHeading style={sectionHeadingStyle}>{abilitiesLabel}</SectionHeading>
           <PokemonAbilityList
             abilities={abilities}
             hiddenAbilityLabel={hiddenAbilityLabel}

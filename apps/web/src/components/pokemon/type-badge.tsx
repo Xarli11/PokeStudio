@@ -14,14 +14,14 @@ export function PokemonTypeBadge({ type, label }: { type: PokemonType; label: st
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.375rem',
-        padding: '0.25rem 0.625rem',
-        borderRadius: '9999px',
-        fontSize: '0.8125rem',
+        gap: 'var(--ps-space-1)',
+        padding: '0.25rem var(--ps-space-2)',
+        borderRadius: 'var(--ps-radius-pill)',
+        fontSize: 'var(--ps-font-size-sm)',
         fontWeight: 600,
         color: 'var(--ps-color-text)',
         border: '1px solid var(--ps-color-border)',
-        background: 'var(--ps-color-bg-surface)',
+        background: 'var(--ps-color-bg-elevated)',
       }}
     >
       <span
@@ -29,7 +29,7 @@ export function PokemonTypeBadge({ type, label }: { type: PokemonType; label: st
         style={{
           width: '0.625rem',
           height: '0.625rem',
-          borderRadius: '9999px',
+          borderRadius: 'var(--ps-radius-pill)',
           background: `var(${colorVar})`,
           flexShrink: 0,
         }}

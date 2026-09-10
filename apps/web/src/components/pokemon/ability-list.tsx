@@ -12,7 +12,7 @@ export interface PokemonAbilityListProps {
   noDescriptionLabel: string;
 }
 
-/** Regular abilities first, hidden ability visually distinguished last (Phase 1C.1, Part D). */
+/** Regular abilities first, hidden ability visually distinguished last (Phase 1C.1/UX 0.1). */
 export function PokemonAbilityList({
   abilities,
   hiddenAbilityLabel,
@@ -27,7 +27,7 @@ export function PokemonAbilityList({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '0.5rem',
+        gap: 'var(--ps-space-3)',
         margin: 0,
         padding: 0,
         listStyle: 'none',
@@ -35,29 +35,23 @@ export function PokemonAbilityList({
     >
       {ordered.map((ability) => (
         <li key={ability.slug}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 'var(--ps-space-2)',
+              flexWrap: 'wrap',
+            }}
+          >
             <span style={{ fontWeight: 600 }}>{ability.name}</span>
             {ability.isHidden ? (
-              <span
-                style={{
-                  fontSize: '0.6875rem',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.03em',
-                  color: 'var(--ps-color-text-muted)',
-                  border: '1px solid var(--ps-color-border)',
-                  borderRadius: '9999px',
-                  padding: '0.0625rem 0.5rem',
-                }}
-              >
-                {hiddenAbilityLabel}
-              </span>
+              <span className="ps-tag ps-tag-label ps-tag-accent">{hiddenAbilityLabel}</span>
             ) : null}
           </div>
           <p
             style={{
               margin: '0.125rem 0 0',
-              fontSize: '0.8125rem',
+              fontSize: 'var(--ps-font-size-sm)',
               color: 'var(--ps-color-text-muted)',
             }}
           >

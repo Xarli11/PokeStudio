@@ -11,13 +11,22 @@ export interface PokemonEvolutionSectionProps {
   dictionary: Dictionary;
 }
 
+const linkStyle: React.CSSProperties = {
+  color: 'var(--ps-color-text)',
+  fontWeight: 600,
+  fontSize: 'var(--ps-font-size-base)',
+  textDecoration: 'none',
+  borderRadius: 'var(--ps-radius-sm)',
+};
+
 /**
- * A simple row-per-edge evolution flow (Phase 1C.1, Part D) — not a
+ * A simple row-per-edge evolution flow (UX/UI 0.1, Part E) — not a
  * positioned node/graph diagram. Each row is `[from] → [to]` plus that
- * edge's condition(s); rows stack and wrap on narrow screens for free via
- * flexbox, which a from→to row list gets without any layout library.
- * Branching is just multiple rows sharing the same `from`; a species with
- * no evolution renders nothing (`getEvolutionFamily` returns zero edges).
+ * edge's condition(s) as small secondary chips below the names, so
+ * identities stay the visually dominant element and conditions stay
+ * readable but subordinate. Rows stack and wrap on narrow screens for free
+ * via flexbox. Branching is just multiple rows sharing the same `from`; a
+ * species with no evolution renders a plain "does not evolve" card.
  */
 export function PokemonEvolutionSection({
   family,
@@ -30,14 +39,15 @@ export function PokemonEvolutionSection({
     const soloName = family.members[0]!.name[locale];
     return (
       <section
+        className="ps-card"
         style={{
-          padding: '1.25rem',
-          borderRadius: '0.75rem',
-          border: '1px solid var(--ps-color-border)',
-          background: 'var(--ps-color-bg-surface)',
+          padding: 'var(--ps-space-5)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--ps-space-2)',
         }}
       >
-        <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.25rem' }}>
+        <h2 style={{ margin: 0, fontSize: 'var(--ps-font-size-lg)' }}>
           {dictionary.pokedex.evolution.title}
         </h2>
         <p style={{ margin: 0, color: 'var(--ps-color-text-muted)' }}>
@@ -60,23 +70,23 @@ export function PokemonEvolutionSection({
 
   return (
     <section
+      className="ps-card"
       style={{
+        padding: 'var(--ps-space-5)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '1rem',
-        padding: '1.25rem',
-        borderRadius: '0.75rem',
-        border: '1px solid var(--ps-color-border)',
-        background: 'var(--ps-color-bg-surface)',
+        gap: 'var(--ps-space-4)',
       }}
     >
-      <h2 style={{ margin: 0, fontSize: '1.25rem' }}>{dictionary.pokedex.evolution.title}</h2>
+      <h2 style={{ margin: 0, fontSize: 'var(--ps-font-size-lg)' }}>
+        {dictionary.pokedex.evolution.title}
+      </h2>
 
       <ul
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.75rem',
+          gap: 'var(--ps-space-3)',
           margin: 0,
           padding: 0,
           listStyle: 'none',
@@ -85,26 +95,58 @@ export function PokemonEvolutionSection({
         {groups.map((group) => (
           <li
             key={`${group.fromSpeciesSlug}->${group.toSpeciesSlug}`}
-            style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem' }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--ps-space-1)',
+              padding: 'var(--ps-space-3)',
+              borderRadius: 'var(--ps-radius-md)',
+              background: 'var(--ps-color-bg-elevated)',
+            }}
           >
-            <Link
-              href={`/${locale}/pokemon/${group.fromSpeciesSlug}`}
-              style={{ color: 'var(--ps-color-text)', fontWeight: 600, textDecoration: 'none' }}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 'var(--ps-space-2)',
+              }}
             >
-              {nameBySlug.get(group.fromSpeciesSlug) ?? group.fromSpeciesSlug}
-            </Link>
-            <span aria-hidden="true" style={{ color: 'var(--ps-color-text-muted)' }}>
-              →
-            </span>
-            <Link
-              href={`/${locale}/pokemon/${group.toSpeciesSlug}`}
-              style={{ color: 'var(--ps-color-text)', fontWeight: 600, textDecoration: 'none' }}
+              <Link href={`/${locale}/pokemon/${group.fromSpeciesSlug}`} style={linkStyle}>
+                {nameBySlug.get(group.fromSpeciesSlug) ?? group.fromSpeciesSlug}
+              </Link>
+              <span aria-hidden="true" style={{ color: 'var(--ps-color-text-muted)' }}>
+                →
+              </span>
+              <Link href={`/${locale}/pokemon/${group.toSpeciesSlug}`} style={linkStyle}>
+                {nameBySlug.get(group.toSpeciesSlug) ?? group.toSpeciesSlug}
+              </Link>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: 'var(--ps-space-2)',
+              }}
             >
-              {nameBySlug.get(group.toSpeciesSlug) ?? group.toSpeciesSlug}
-            </Link>
-            <span style={{ fontSize: '0.8125rem', color: 'var(--ps-color-text-muted)' }}>
-              {group.conditionDescriptions.join(` ${dictionary.pokedex.evolution.orSeparator} `)}
-            </span>
+              {group.conditionDescriptions.map((description, index) => (
+                <span key={description} style={{ display: 'contents' }}>
+                  {index > 0 ? (
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        fontSize: 'var(--ps-font-size-xs)',
+                        color: 'var(--ps-color-text-muted)',
+                      }}
+                    >
+                      {dictionary.pokedex.evolution.orSeparator}
+                    </span>
+                  ) : null}
+                  <span className="ps-tag">{description}</span>
+                </span>
+              ))}
+            </div>
           </li>
         ))}
       </ul>

@@ -15,11 +15,12 @@ const statLabels = {
 afterEach(cleanup);
 
 describe('PokemonFormSection', () => {
-  it('renders types/stats and omits a category label for the default form', () => {
+  it('renders types/stats for the primary (default) form without a redundant name heading', () => {
     render(
       <PokemonFormSection
         id="rotom"
         name="Rotom"
+        categoryLabel="Default form"
         types={[
           { type: 'electric', label: 'Electric' },
           { type: 'ghost', label: 'Ghost' },
@@ -39,17 +40,21 @@ describe('PokemonFormSection', () => {
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
         noAbilityDescriptionLabel="No description available."
+        variant="primary"
       />,
     );
 
-    expect(screen.queryByRole('heading', { level: 3, name: 'Rotom' })).not.toBeNull();
+    // The page's own <h1> already names the species — the primary form
+    // shows its name as plain text, not a redundant heading.
+    expect(screen.queryByRole('heading', { name: 'Rotom' })).toBeNull();
+    expect(screen.queryByText('Rotom')).not.toBeNull();
+    expect(screen.queryByText('Default form')).not.toBeNull();
     expect(screen.queryByText('Electric')).not.toBeNull();
     expect(screen.queryByText('Ghost')).not.toBeNull();
     expect(screen.queryByText('91')).not.toBeNull(); // speed
-    expect(screen.queryByText(/form/i)).toBeNull();
   });
 
-  it('shows a category label for a non-default form (regional Meowth shape)', () => {
+  it('shows a category label and a heading for a non-default (secondary) form (regional Meowth shape)', () => {
     render(
       <PokemonFormSection
         id="meowth-alola"
@@ -71,6 +76,7 @@ describe('PokemonFormSection', () => {
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
         noAbilityDescriptionLabel="No description available."
+        variant="secondary"
       />,
     );
 
@@ -84,6 +90,7 @@ describe('PokemonFormSection', () => {
       <PokemonFormSection
         id="bulbasaur"
         name="Bulbasaur"
+        categoryLabel="Default form"
         types={[{ type: 'grass', label: 'Grass' }]}
         stats={{
           hp: 45,
@@ -108,6 +115,7 @@ describe('PokemonFormSection', () => {
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
         noAbilityDescriptionLabel="No description available."
+        variant="primary"
       />,
     );
 
@@ -123,6 +131,7 @@ describe('PokemonFormSection', () => {
       <PokemonFormSection
         id="test-mon"
         name="Test Mon"
+        categoryLabel="Default form"
         types={[{ type: 'normal', label: 'Normal' }]}
         stats={{ hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 }}
         statLabels={statLabels}
@@ -132,6 +141,7 @@ describe('PokemonFormSection', () => {
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
         noAbilityDescriptionLabel="No description available."
+        variant="primary"
       />,
     );
 
