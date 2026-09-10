@@ -20,8 +20,8 @@ export function PokemonTypeBadge({ type, label }: { type: PokemonType; label: st
         fontSize: 'var(--ps-font-size-sm)',
         fontWeight: 600,
         color: 'var(--ps-color-text)',
-        border: '1px solid var(--ps-color-border)',
-        background: 'var(--ps-color-bg-elevated)',
+        border: `1px solid color-mix(in srgb, var(${colorVar}) 38%, var(--ps-color-border))`,
+        background: `color-mix(in srgb, var(${colorVar}) 14%, var(--ps-color-bg-elevated))`,
       }}
     >
       <span

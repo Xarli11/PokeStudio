@@ -28,7 +28,12 @@ export function ThemeToggle({
   }
 
   return (
-    <button type="button" onClick={toggle} aria-label={labels.toggle} className="ps-btn">
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={labels.toggle}
+      className="ps-btn ps-btn-ghost"
+    >
       {theme === 'dark' ? labels.light : labels.dark}
     </button>
   );

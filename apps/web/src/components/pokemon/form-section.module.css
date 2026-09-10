@@ -1,0 +1,61 @@
+/*
+ * The primary (currently viewed) form's desktop composition (UX/UI 0.2b
+ * Part B) — a single panel, not four stacked boxed cards. Mobile-first flex
+ * column that becomes a 2x2 grid (art+info / stats+abilities) once there's
+ * room, using spacing and thin dividers between groups rather than nested
+ * `.ps-card` boxes (Part D — "reduce box inside box").
+ */
+
+.heroGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ps-space-5);
+}
+
+.artArea {
+  display: flex;
+}
+
+.infoArea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ps-space-3);
+}
+
+.statsArea,
+.abilitiesArea {
+  padding-top: var(--ps-space-4);
+  border-top: 1px solid var(--ps-color-border-subtle);
+}
+
+@media (min-width: 880px) {
+  .heroGrid {
+    display: grid;
+    grid-template-columns: minmax(200px, 300px) 1fr;
+    grid-template-areas:
+      'art info'
+      'stats abilities';
+    column-gap: var(--ps-space-7);
+    row-gap: var(--ps-space-5);
+    align-items: start;
+  }
+
+  .artArea {
+    grid-area: art;
+  }
+
+  .infoArea {
+    grid-area: info;
+    justify-content: center;
+  }
+
+  .statsArea {
+    grid-area: stats;
+  }
+
+  .abilitiesArea {
+    grid-area: abilities;
+    padding-left: var(--ps-space-7);
+    border-left: 1px solid var(--ps-color-border-subtle);
+  }
+}

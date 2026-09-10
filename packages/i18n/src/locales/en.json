@@ -47,14 +47,16 @@
     "fairy": "Fairy"
   },
   "pokedex": {
+    "eyebrow": "National Pokédex",
     "title": "Pokédex",
-    "tagline": "PokeStudio's normalized Pokémon reference data.",
+    "tagline": "Every Pokémon, with clear types, stats, abilities and evolutions.",
     "indexDescription": "Browse types and base stats for {count} Pokémon in the PokeStudio Pokédex.",
     "detailDescription": "{name}: types, base stats{formsNote} in the PokeStudio Pokédex.",
     "detailDescriptionWithForms": " and {formCount} forms",
     "dexNumber": "#{number}",
     "types": "Types",
     "baseStats": "Base stats",
+    "baseStatTotal": "Base stat total",
     "forms": "Forms",
     "otherForms": "Other forms",
     "cosmeticVariants": "Also appears as {count} cosmetic variants — same types, stats and abilities",

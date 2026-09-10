@@ -76,10 +76,11 @@ export default async function PokemonIndexPage({
     <AppShell locale={locale} dictionary={dictionary} active="explore" contentWidth="wide">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-6)' }}>
         <header style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-2)' }}>
+          <span className="ps-eyebrow">{dictionary.pokedex.eyebrow}</span>
           <h1 style={{ margin: 0, fontSize: 'var(--ps-font-size-2xl)', letterSpacing: '-0.01em' }}>
             {dictionary.pokedex.title}
           </h1>
-          <p style={{ margin: 0, color: 'var(--ps-color-text-muted)' }}>
+          <p style={{ margin: 0, color: 'var(--ps-color-text-muted)', maxWidth: '36rem' }}>
             {dictionary.pokedex.tagline}
           </p>
         </header>

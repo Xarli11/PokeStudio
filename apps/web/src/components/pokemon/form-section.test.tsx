@@ -36,6 +36,7 @@ describe('PokemonFormSection', () => {
         statLabels={statLabels}
         typesLabel="Types"
         baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
         abilities={[]}
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
@@ -52,6 +53,9 @@ describe('PokemonFormSection', () => {
     expect(screen.queryByText('Electric')).not.toBeNull();
     expect(screen.queryByText('Ghost')).not.toBeNull();
     expect(screen.queryByText('91')).not.toBeNull(); // speed
+    // Base stat total is a derived sum (50+50+77+95+77+91), shown once for the primary form.
+    expect(screen.queryByText('440')).not.toBeNull();
+    expect(screen.queryByText('Base stat total')).not.toBeNull();
   });
 
   it('shows a category label and a heading for a non-default (secondary) form (regional Meowth shape)', () => {
@@ -72,6 +76,7 @@ describe('PokemonFormSection', () => {
         statLabels={statLabels}
         typesLabel="Types"
         baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
         abilities={[]}
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
@@ -83,6 +88,9 @@ describe('PokemonFormSection', () => {
     expect(screen.queryByRole('heading', { level: 3, name: 'Alolan Meowth' })).not.toBeNull();
     expect(screen.queryByText('Regional form')).not.toBeNull();
     expect(screen.queryByText('Dark')).not.toBeNull();
+    // The base stat total summary is primary-only — secondary (other form)
+    // cards stay compact and don't repeat it.
+    expect(screen.queryByText('Base stat total')).toBeNull();
   });
 
   it('renders regular abilities and visually distinguishes the hidden ability', () => {
@@ -103,6 +111,7 @@ describe('PokemonFormSection', () => {
         statLabels={statLabels}
         typesLabel="Types"
         baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
         abilities={[
           {
             slug: 'overgrow',
@@ -137,6 +146,7 @@ describe('PokemonFormSection', () => {
         statLabels={statLabels}
         typesLabel="Types"
         baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
         abilities={[]}
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
@@ -146,5 +156,41 @@ describe('PokemonFormSection', () => {
     );
 
     expect(screen.queryByText('Abilities')).toBeNull();
+  });
+
+  it('groups type badges under an accessible group label instead of a visible "Types" heading', () => {
+    render(
+      <PokemonFormSection
+        id="charizard"
+        name="Charizard"
+        categoryLabel="Default form"
+        types={[
+          { type: 'fire', label: 'Fire' },
+          { type: 'flying', label: 'Flying' },
+        ]}
+        stats={{
+          hp: 78,
+          attack: 84,
+          defense: 78,
+          specialAttack: 109,
+          specialDefense: 85,
+          speed: 100,
+        }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+        variant="primary"
+      />,
+    );
+
+    expect(screen.queryByRole('heading', { name: 'Types' })).toBeNull();
+    expect(screen.getByRole('group', { name: 'Types' })).not.toBeNull();
+    expect(screen.queryByText('Fire')).not.toBeNull();
+    expect(screen.queryByText('Flying')).not.toBeNull();
   });
 });

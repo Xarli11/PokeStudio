@@ -39,6 +39,7 @@ function formSectionProps(
     statLabels: dictionary.pokedex.stat,
     typesLabel: dictionary.pokedex.types,
     baseStatsLabel: dictionary.pokedex.baseStats,
+    baseStatTotalLabel: dictionary.pokedex.baseStatTotal,
     abilities: form.abilities.map((ability) => ({
       slug: ability.slug,
       name: locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn,
@@ -108,7 +109,7 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
   const hasOtherForms = distinctForms.length > 0 || cosmeticVariants.length > 0;
 
   return (
-    <AppShell locale={locale} dictionary={dictionary} active="explore">
+    <AppShell locale={locale} dictionary={dictionary} active="explore" contentWidth="detail">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-6)' }}>
         <Link
           href={`/${locale}/pokemon`}
@@ -121,15 +122,8 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
           ← {dictionary.pokedex.backToPokedex}
         </Link>
 
-        <header style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-1)' }}>
-          <span
-            style={{
-              color: 'var(--ps-color-text-muted)',
-              fontSize: 'var(--ps-font-size-sm)',
-              fontVariantNumeric: 'tabular-nums',
-              fontWeight: 600,
-            }}
-          >
+        <header style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-2)' }}>
+          <span className="ps-eyebrow" style={{ fontVariantNumeric: 'tabular-nums' }}>
             {dexNumberLabel(dictionary, species.nationalDexNumber)}
           </span>
           <h1 style={{ margin: 0, fontSize: 'var(--ps-font-size-3xl)', letterSpacing: '-0.02em' }}>
@@ -148,7 +142,15 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
         ) : null}
 
         {hasOtherForms ? (
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-4)' }}>
+          <section
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--ps-space-4)',
+              paddingTop: 'var(--ps-space-5)',
+              borderTop: '1px solid var(--ps-color-border-subtle)',
+            }}
+          >
             <h2 style={{ margin: 0, fontSize: 'var(--ps-font-size-lg)' }}>
               {dictionary.pokedex.otherForms}
             </h2>
@@ -190,8 +192,8 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
                 style={{ padding: 'var(--ps-space-4) var(--ps-space-5)' }}
               >
                 <summary
+                  className="ps-disclosure-summary"
                   style={{
-                    cursor: 'pointer',
                     fontWeight: 600,
                     fontSize: 'var(--ps-font-size-base)',
                     color: 'var(--ps-color-text-muted)',

@@ -237,10 +237,14 @@ For sprites/artwork/icons:
 ### Phase 1A decision: no sprite/artwork source yet
 
 No sprite/artwork source has been reviewed and approved for use. The Pokédex
-UI (`apps/web/src/components/pokemon/visual-placeholder.tsx`) renders a
-neutral, type-accented initial instead of any Pokémon sprite/artwork — not
-PokéAPI's bundled sprites, not a GitHub-hosted asset repo, nothing scraped.
-This is deliberate per this document's own principle ("do not assume an asset
-is safe to use merely because it is hosted by PokéAPI or on GitHub") and
-stays in place until a specific sprite/artwork source is reviewed, its
-license confirmed, and that review recorded here.
+UI (`apps/web/src/components/pokemon/art-slot.tsx`, redesigned in UX/UI 0.2 —
+previously `visual-placeholder.tsx`) renders a neutral, type-accented
+composition (gradient wash + monogram + ring accent) instead of any Pokémon
+sprite/artwork — not PokéAPI's bundled sprites, not a GitHub-hosted asset
+repo, nothing scraped. This is deliberate per this document's own principle
+("do not assume an asset is safe to use merely because it is hosted by
+PokéAPI or on GitHub") and stays in place until a specific sprite/artwork
+source is reviewed, its license confirmed, and that review recorded here.
+`art-slot.tsx`'s own doc comment records how a future approved image would
+slot in (replacing just the monogram `<span>`, same outer frame) so that
+day doesn't require a card/page redesign.

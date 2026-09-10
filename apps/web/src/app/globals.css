@@ -22,6 +22,32 @@ body {
     Roboto,
     sans-serif;
   min-height: 100vh;
+  position: relative;
+}
+
+/*
+ * A very quiet ambient wash behind the whole page (UX/UI 0.2 Part G/H) —
+ * fixed, decorative, ~5% opacity, dark mode only (a light background reads
+ * as "dirty" rather than "atmospheric" with the same treatment). This is
+ * the one deliberately "slightly futuristic" flourish; everything else in
+ * this pass stays flat/calm on purpose.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 1200px 700px at 50% -10%,
+    color-mix(in srgb, var(--ps-color-primary) 10%, transparent),
+    transparent 60%
+  );
+  opacity: 0;
+}
+
+:root:not([data-theme='light']) body::before {
+  opacity: 1;
 }
 
 a {
@@ -131,10 +157,33 @@ a {
   filter: brightness(0.95);
 }
 
+/* Secondary controls (locale, theme) — recede visually behind primary nav (Part D). */
+.ps-btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ps-color-text-muted);
+  font-size: var(--ps-font-size-xs);
+  font-weight: 700;
+  padding: var(--ps-space-1) var(--ps-space-2);
+}
+
+.ps-btn-ghost:hover {
+  background: var(--ps-color-bg-hover);
+  color: var(--ps-color-text);
+}
+
+.ps-btn-ghost[aria-current='true'],
+.ps-btn-ghost[data-active='true'] {
+  border-color: transparent;
+  background: var(--ps-color-primary-soft);
+  color: var(--ps-color-primary);
+}
+
 .ps-card {
-  border: 1px solid var(--ps-color-border);
+  border: 1px solid var(--ps-color-border-subtle);
   background: var(--ps-color-bg-surface);
   border-radius: var(--ps-radius-lg);
+  box-shadow: var(--ps-shadow-sm);
   transition:
     border-color var(--ps-motion-fast) var(--ps-motion-easing),
     box-shadow var(--ps-motion-fast) var(--ps-motion-easing),
@@ -143,9 +192,9 @@ a {
 
 a.ps-card:hover,
 a.ps-card:focus-visible {
-  border-color: var(--ps-color-primary);
-  box-shadow: var(--ps-shadow-md);
-  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--ps-color-primary) 45%, var(--ps-color-border-subtle));
+  box-shadow: var(--ps-shadow-glow);
+  transform: translateY(-3px) scale(1.01);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -200,5 +249,39 @@ a.ps-card:focus-visible {
 
 .ps-tag-accent {
   color: var(--ps-color-primary);
-  border-color: currentColor;
+  border-color: transparent;
+  background: var(--ps-color-primary-soft);
+}
+
+/* Small uppercase section kicker above a page title (Part E). */
+.ps-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ps-space-2);
+  font-size: var(--ps-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ps-color-primary);
+}
+
+.ps-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: var(--ps-radius-pill);
+  background: currentColor;
+}
+
+/* A native <summary> disclosure trigger (the cosmetic-variants "show all"
+   control) — was cursor:pointer with no other feedback; brings it in line
+   with every other interactive element's hover/focus treatment (0.2c Part F). */
+.ps-disclosure-summary {
+  cursor: pointer;
+  transition: color var(--ps-motion-fast) var(--ps-motion-easing);
+}
+
+.ps-disclosure-summary:hover {
+  color: var(--ps-color-text);
 }

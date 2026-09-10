@@ -23,7 +23,7 @@ export function LocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
           onClick={() => switchTo(locale)}
           aria-current={locale === currentLocale}
           data-active={locale === currentLocale}
-          className="ps-btn"
+          className="ps-btn ps-btn-ghost"
         >
           {locale.toUpperCase()}
         </button>

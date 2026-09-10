@@ -47,14 +47,16 @@
     "fairy": "Hada"
   },
   "pokedex": {
+    "eyebrow": "Pokédex Nacional",
     "title": "Pokédex",
-    "tagline": "La base de datos normalizada de Pokémon de PokeStudio.",
+    "tagline": "Todos los Pokémon, con tipos, estadísticas, habilidades y evoluciones claras.",
     "indexDescription": "Consulta tipos y estadísticas base de {count} Pokémon en la Pokédex de PokeStudio.",
     "detailDescription": "{name}: tipos, estadísticas base{formsNote} en la Pokédex de PokeStudio.",
     "detailDescriptionWithForms": " y {formCount} formas",
     "dexNumber": "N.º {number}",
     "types": "Tipos",
     "baseStats": "Estadísticas base",
+    "baseStatTotal": "Total de estadísticas base",
     "forms": "Formas",
     "otherForms": "Otras formas",
     "cosmeticVariants": "También aparece en {count} variantes cosméticas — mismos tipos, estadísticas y habilidades",

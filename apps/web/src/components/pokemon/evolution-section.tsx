@@ -5,19 +5,25 @@ import { formatMessage, type Dictionary, type Locale } from '@pokestudio/i18n';
 
 import { groupEvolutionEdges } from '@/lib/evolution-condition';
 
+import styles from './evolution-section.module.css';
+
 export interface PokemonEvolutionSectionProps {
   family: EvolutionFamily;
   locale: Locale;
   dictionary: Dictionary;
 }
 
-const linkStyle: React.CSSProperties = {
-  color: 'var(--ps-color-text)',
-  fontWeight: 600,
-  fontSize: 'var(--ps-font-size-base)',
-  textDecoration: 'none',
-  borderRadius: 'var(--ps-radius-sm)',
-};
+/** One linked family member — a small monogram + name, not a bare text link. */
+function MemberChip({ slug, name, locale }: { slug: string; name: string; locale: Locale }) {
+  return (
+    <Link href={`/${locale}/pokemon/${slug}`} className={styles.memberChip}>
+      <span aria-hidden="true" className={styles.memberMonogram}>
+        {name.charAt(0)}
+      </span>
+      <span>{name}</span>
+    </Link>
+  );
+}
 
 /**
  * A simple row-per-edge evolution flow (UX/UI 0.1, Part E) — not a
@@ -39,9 +45,9 @@ export function PokemonEvolutionSection({
     const soloName = family.members[0]!.name[locale];
     return (
       <section
-        className="ps-card"
         style={{
-          padding: 'var(--ps-space-5)',
+          paddingTop: 'var(--ps-space-5)',
+          borderTop: '1px solid var(--ps-color-border-subtle)',
           display: 'flex',
           flexDirection: 'column',
           gap: 'var(--ps-space-2)',
@@ -70,9 +76,9 @@ export function PokemonEvolutionSection({
 
   return (
     <section
-      className="ps-card"
       style={{
-        padding: 'var(--ps-space-5)',
+        paddingTop: 'var(--ps-space-5)',
+        borderTop: '1px solid var(--ps-color-border-subtle)',
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--ps-space-4)',
@@ -112,15 +118,19 @@ export function PokemonEvolutionSection({
                 gap: 'var(--ps-space-2)',
               }}
             >
-              <Link href={`/${locale}/pokemon/${group.fromSpeciesSlug}`} style={linkStyle}>
-                {nameBySlug.get(group.fromSpeciesSlug) ?? group.fromSpeciesSlug}
-              </Link>
+              <MemberChip
+                slug={group.fromSpeciesSlug}
+                name={nameBySlug.get(group.fromSpeciesSlug) ?? group.fromSpeciesSlug}
+                locale={locale}
+              />
               <span aria-hidden="true" style={{ color: 'var(--ps-color-text-muted)' }}>
                 →
               </span>
-              <Link href={`/${locale}/pokemon/${group.toSpeciesSlug}`} style={linkStyle}>
-                {nameBySlug.get(group.toSpeciesSlug) ?? group.toSpeciesSlug}
-              </Link>
+              <MemberChip
+                slug={group.toSpeciesSlug}
+                name={nameBySlug.get(group.toSpeciesSlug) ?? group.toSpeciesSlug}
+                locale={locale}
+              />
             </div>
             <div
               style={{

@@ -12,12 +12,38 @@
   --ps-color-bg-elevated: #14161d;
   --ps-color-bg-surface: #1b1e27;
   --ps-color-border: #2a2e3a;
+  /* A quieter divider than --ps-color-border, for internal separators
+     (stat rows, list items) that shouldn't read as another boxed card
+     (UX/UI 0.2 Part G — "avoid excessive border outlines around every element"). */
+  --ps-color-border-subtle: #20232c;
   --ps-color-text: #f4f5f7;
   --ps-color-text-muted: #a4a9b8;
 
-  /* Brand accent (not tied to any Pokémon type) */
-  --ps-color-primary: #6c8bff;
+  /*
+   * Brand accent — PROVISIONAL (UX/UI 0.2b Part A), not a final brand
+   * lock-in; revisit once real branding/logo work happens.
+   *
+   * A restrained, cool emerald/teal (hue ~170°) — chosen specifically to
+   * read as a distinct hue family from --ps-type-grass (hue ~127°, a
+   * warmer yellow-green) and from --ps-color-success (hue ~153°, a
+   * brighter grass-adjacent green already used for feedback states). This
+   * is PokeStudio's OWN accent — active nav, focus/emphasis, selected
+   * states, brand details — never reused as, or confusable with, a
+   * Pokémon type color. --ps-type-grass remains the only correct color
+   * for anything actually representing the Grass type (badges, gradients,
+   * etc.); do not substitute --ps-color-primary there, and vice versa.
+   * (Replaces UX/UI 0.2's indigo-violet provisional accent.)
+   */
+  --ps-color-primary: #2fbfa8;
   --ps-color-primary-contrast: #05060a;
+  /* Low-opacity accent wash/glow, derived from --ps-color-primary so both
+     themes stay in sync automatically — used for soft fills (hidden-ability
+     tag, active nav indicator) and hover glow shadows, never as a flat card
+     background (Part G/H). */
+  --ps-color-primary-soft: color-mix(in srgb, var(--ps-color-primary) 16%, transparent);
+  --ps-shadow-glow:
+    0 0 0 1px color-mix(in srgb, var(--ps-color-primary) 35%, transparent),
+    0 12px 32px -8px color-mix(in srgb, var(--ps-color-primary) 45%, transparent);
 
   /* Feedback */
   --ps-color-success: #3ecf8e;
@@ -44,6 +70,7 @@
   --ps-radius-sm: 0.375rem;
   --ps-radius-md: 0.625rem;
   --ps-radius-lg: 1rem;
+  --ps-radius-xl: 1.25rem;
   --ps-radius-pill: 9999px;
 
   /* Typography scale */
@@ -61,8 +88,13 @@
   --ps-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --ps-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45);
 
-  /* Content widths — text-reading measure vs. a wider data-grid measure. */
+  /* Content widths — text-reading measure, a wider data-grid measure (the
+     Pokédex index), and an intermediate measure for the detail page's
+     two-column composition (UX/UI 0.2b Part B) — wide enough to comfortably
+     fit an art+info / stats+abilities grid without going as wide as the
+     card grid, which would leave the page header looking sparse. */
   --ps-content-width-text: 42rem;
+  --ps-content-width-detail: 60rem;
   --ps-content-width-wide: 75rem;
 
   /* Interactive surface states (hover/active backgrounds for cards/buttons). */
@@ -97,10 +129,15 @@
   --ps-color-bg-elevated: #ffffff;
   --ps-color-bg-surface: #ffffff;
   --ps-color-border: #e1e3e8;
+  --ps-color-border-subtle: #edeef2;
   --ps-color-text: #14161d;
   --ps-color-text-muted: #565c6b;
 
-  --ps-color-primary: #3a5ceb;
+  /* Same provisional emerald/teal hue family as dark mode (~170°), deepened
+     for AA text contrast against a light surface (~5.2:1 against white,
+     reasoned via relative-luminance calculation — see ADR/commit notes;
+     not verified with a contrast-checker tool). */
+  --ps-color-primary: #0b7d68;
   --ps-color-primary-contrast: #ffffff;
 
   --ps-shadow-sm: 0 1px 2px rgba(20, 22, 29, 0.08);

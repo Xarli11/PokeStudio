@@ -12,8 +12,11 @@ export interface AppShellProps {
   locale: Locale;
   dictionary: Dictionary;
   active: AppShellActiveSection;
-  /** 'text' (default) for reading-width pages; 'wide' for the Pokédex grid. */
-  contentWidth?: 'text' | 'wide';
+  /**
+   * 'text' (default) for reading-width pages; 'detail' for the Pokémon
+   * detail page's two-column composition; 'wide' for the Pokédex grid.
+   */
+  contentWidth?: 'text' | 'detail' | 'wide';
   children: React.ReactNode;
 }
 
@@ -37,6 +40,12 @@ export function AppShell({
   contentWidth = 'text',
   children,
 }: AppShellProps) {
+  const mainWidthClass = {
+    text: styles.mainText,
+    detail: styles.mainDetail,
+    wide: styles.mainWide,
+  }[contentWidth];
+
   const navItems: { key: AppShellActiveSection; label: string; href: string | null }[] = [
     { key: 'explore', label: dictionary.nav.explore, href: `/${locale}/pokemon` },
     { key: 'build', label: dictionary.nav.build, href: null },
@@ -67,7 +76,7 @@ export function AppShell({
               <Link
                 key={item.key}
                 href={item.href}
-                className={`ps-btn ${styles.navItem}`}
+                className={styles.navItem}
                 aria-current={item.key === active ? 'page' : undefined}
               >
                 {item.label}
@@ -75,7 +84,7 @@ export function AppShell({
             ) : (
               <span
                 key={item.key}
-                className={`ps-btn ${styles.navItem}`}
+                className={`${styles.navItem} ${styles.navItemDisabled}`}
                 aria-disabled="true"
                 role="link"
               >
@@ -87,10 +96,7 @@ export function AppShell({
         </nav>
       </header>
 
-      <main
-        id="main-content"
-        className={`${styles.main} ${contentWidth === 'wide' ? styles.mainWide : styles.mainText}`}
-      >
+      <main id="main-content" className={`${styles.main} ${mainWidthClass}`}>
         {children}
       </main>
 
