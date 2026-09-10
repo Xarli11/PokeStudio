@@ -6,16 +6,19 @@ PokeStudio owns a normalized runtime data model while respecting source licenses
 
 External sources are inputs, not runtime truth APIs.
 
-## Implementation status (Phase 1B)
+## Implementation status (Phase 1C.1)
 
 The real ingestion path is `packages/pokemon-data/scripts/ingest.ts`: fetches the _complete_
 PokéAPI species/form dataset — every species (~1025), every variety (~1351: default + regional +
-battle-only forms), every cosmetic sub-form under each variety (~1579 forms total) — normalizes
-into the species/form model (ADR-0010), validates dataset invariants, and upserts directly into
-Postgres by upstream identity (idempotent). Run via `pnpm --filter @pokestudio/pokemon-data ingest`;
-`pnpm --filter @pokestudio/pokemon-data audit` runs the same fetch/normalize/validate pipeline
-report-only, without touching the database. See `packages/pokemon-data/README.md` for the full
-pipeline shape, fetch/cache strategy and idempotency guarantee.
+battle-only forms), every cosmetic sub-form under each variety (~1579 forms total) — plus every
+unique ability referenced (313) and every unique evolution chain (339, 553 edges) — normalizes into
+the species/form/ability/evolution model (ADR-0010, ADR-0011), validates dataset invariants, and
+upserts directly into Postgres by upstream identity (idempotent — species/forms/abilities by
+`(source_id, external_id)`; the two join tables, which have no independent upstream identity, by
+full replacement per source_id — ADR-0011 decision 3). Run via `pnpm --filter @pokestudio/pokemon-data
+ingest`; `pnpm --filter @pokestudio/pokemon-data audit` runs the same fetch/normalize/validate
+pipeline report-only, without touching the database. See `packages/pokemon-data/README.md` for the
+full pipeline shape, fetch/cache strategy and idempotency guarantee.
 
 Phase 1A's small hand-mirrored 3-species sample (`seed.sql`) has been fully superseded — see
 DATABASE.md "Seed vs. ingestion."
@@ -77,6 +80,41 @@ form's short English-only `form_name` field (e.g. "Charizard (gmax)") because _n
 these 227 — `pnpm --filter @pokestudio/pokemon-data audit` lists them for future review; a
 centralized override table would be the right mechanism if any of these need a hand-authored name,
 not scattered fixes.
+
+## Abilities — a worse PokéAPI Spanish-localization gap than forms (Phase 1C.1)
+
+`packages/pokemon-data/src/normalize.ts` (`normalizeAbility`) leaves `nameEs`/`effectEs`
+`undefined` — never invented — when PokéAPI has no entry, same principle as form names above. The
+actual gap is more severe here than for form names: at full-dataset scale, PokéAPI provides a
+Spanish ability **name** for 310 of 313 abilities (only 3 missing), but a Spanish ability
+**effect** for **zero** of them — `effect_entries` in this dataset never contains an `es` entry at
+all, only `en`. The web UI falls back to "no description available" in Spanish rather than showing
+the English effect mislabeled as Spanish, or leaving it blank with no explanation
+(`apps/web/src/components/pokemon/ability-list.tsx`). This is a real, current upstream gap, not a
+transient one — a future improvement here would need either a different/supplementary source for
+Spanish ability effect text or a hand-authored translation table, not a PokéAPI fallback field
+(there isn't one).
+
+## Evolution conditions — not version-group-scoped, so "alternative methods" can over-count
+
+`packages/pokemon-data/src/normalize.ts` (`normalizeEvolutionChain`) produces one `species_evolution`
+edge per entry in PokéAPI's `evolution_details` array, preserving every entry rather than picking
+"the" canonical one — correct per ADR-0011 (an edge/graph model, not a lossy simplification). But
+PokéAPI does not scope `evolution_details` entries by game version in the API response: when a
+species' evolution method differs by game generation only in _which special location_ triggers it
+(not in the underlying method), each game's location surfaces as its own `evolution_details` entry.
+At full-dataset scale this is common — e.g. Magneton -> Magnezone has 7 stored condition entries
+(6 "level up at a specific location" variants across different games, plus the modern "use Thunder
+Stone" alternative added later), and Eevee -> Leafeon has 6 (5 location variants + the Leaf Stone
+item alternative). Naively surfacing all 7/6 as "7 ways to evolve" / "6 ways to evolve" would
+overstate genuine mechanical diversity. PokeStudio does not lose this data (every row is kept, with
+its `raw_condition` preserved verbatim) but the web UI's evolution-condition formatter deliberately
+never renders the location's actual value (only a fixed "at a special location" phrase — see
+`apps/web/src/lib/evolution-condition.ts`), which lets location-only variants collapse to one
+displayed line by comparing rendered strings, while item/trade/happiness-based alternatives (which
+render distinctly) still show separately. A real, structural fix — storing/filtering by version
+group — was deliberately not built for Phase 1C.1 (Part B explicitly scopes out "a perfect
+universal rule engine"); this display-level workaround is the documented, honest interim answer.
 
 ## Candidate sources
 

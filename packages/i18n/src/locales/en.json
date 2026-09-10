@@ -66,6 +66,40 @@
       "regional": "Regional form",
       "battle": "Battle-relevant form",
       "cosmetic": "Cosmetic form"
+    },
+    "abilities": "Abilities",
+    "hiddenAbility": "Hidden Ability",
+    "noAbilityDescription": "No description available.",
+    "evolution": {
+      "title": "Evolution",
+      "noEvolution": "{name} does not evolve.",
+      "orSeparator": "or",
+      "trigger": {
+        "level-up": "Level up",
+        "trade": "Trade",
+        "use-item": "Use item",
+        "shed": "Shed",
+        "other": "Special method"
+      },
+      "condition": {
+        "minLevel": "at level {level}",
+        "item": "using {item}",
+        "heldItem": "holding {item}",
+        "minHappiness": "friendship {value}+",
+        "minBeauty": "Beauty {value}+",
+        "minAffection": "affection {value}+",
+        "timeOfDayDay": "during the day",
+        "timeOfDayNight": "at night",
+        "knownMove": "knowing {move}",
+        "knownMoveType": "knowing a {type}-type move",
+        "location": "at a special location",
+        "genderFemale": "female only",
+        "genderMale": "male only",
+        "tradeFor": "trading for {species}",
+        "partySpecies": "with {species} in the party",
+        "needsOverworldRain": "while raining",
+        "turnUpsideDown": "holding the console upside down"
+      }
     }
   }
 }

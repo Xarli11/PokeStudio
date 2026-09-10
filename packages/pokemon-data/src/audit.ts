@@ -24,6 +24,27 @@ export interface AuditReport {
     composedFallback: number;
     fallbackFormSlugs: string[];
   };
+  abilities: {
+    totalAbilities: number;
+    totalFormAbilityLinks: number;
+    hiddenAbilityLinks: number;
+    /** Abilities missing a Spanish name/effect entirely from PokéAPI — never invented. */
+    missingSpanishName: number;
+    missingSpanishEffect: number;
+    /** Abilities referenced by more than one form — proves the join, not per-form duplication. */
+    sharedAcrossMultipleForms: number;
+  };
+  evolutions: {
+    totalEdges: number;
+    totalChains: number;
+    speciesWithNoEvolution: number;
+    branchingSpecies: { speciesSlug: string; branchCount: number }[];
+    multiConditionEdges: {
+      fromSpeciesSlug: string;
+      toSpeciesSlug: string;
+      conditionCount: number;
+    }[];
+  };
   validationIssueCount: number;
   validationIssuesSample: ValidationIssue[];
 }
@@ -59,6 +80,49 @@ export function buildAuditReport(params: {
   ).length;
   const composedFallback = localizationNotes.filter((n) => n.esSource === 'composed-fallback');
 
+  const formCountByAbility = new Map<string, number>();
+  let hiddenAbilityLinks = 0;
+  for (const formAbility of dataset.formAbilities) {
+    formCountByAbility.set(
+      formAbility.abilitySlug,
+      (formCountByAbility.get(formAbility.abilitySlug) ?? 0) + 1,
+    );
+    if (formAbility.isHidden) hiddenAbilityLinks++;
+  }
+
+  const speciesTouchedByEvolution = new Set<string>();
+  const branchCountBySpecies = new Map<string, number>();
+  const edgeGroupCounts = new Map<string, number>();
+  const chainIds = new Set<string>();
+  for (const evolution of dataset.evolutions) {
+    chainIds.add(evolution.chainExternalId);
+    speciesTouchedByEvolution.add(evolution.fromSpeciesSlug);
+    speciesTouchedByEvolution.add(evolution.toSpeciesSlug);
+    const edgeKey = `${evolution.fromSpeciesSlug}->${evolution.toSpeciesSlug}`;
+    edgeGroupCounts.set(edgeKey, (edgeGroupCounts.get(edgeKey) ?? 0) + 1);
+  }
+  const distinctToSpeciesByFrom = new Map<string, Set<string>>();
+  for (const evolution of dataset.evolutions) {
+    const set = distinctToSpeciesByFrom.get(evolution.fromSpeciesSlug) ?? new Set<string>();
+    set.add(evolution.toSpeciesSlug);
+    distinctToSpeciesByFrom.set(evolution.fromSpeciesSlug, set);
+  }
+  for (const [speciesSlug, targets] of distinctToSpeciesByFrom) {
+    branchCountBySpecies.set(speciesSlug, targets.size);
+  }
+  const branchingSpecies = [...branchCountBySpecies.entries()]
+    .filter(([, branchCount]) => branchCount > 1)
+    .map(([speciesSlug, branchCount]) => ({ speciesSlug, branchCount }))
+    .sort((a, b) => b.branchCount - a.branchCount)
+    .slice(0, MAX_LISTED);
+  const multiConditionEdges = [...edgeGroupCounts.entries()]
+    .filter(([, conditionCount]) => conditionCount > 1)
+    .map(([edgeKey, conditionCount]) => {
+      const [fromSpeciesSlug, toSpeciesSlug] = edgeKey.split('->');
+      return { fromSpeciesSlug: fromSpeciesSlug!, toSpeciesSlug: toSpeciesSlug!, conditionCount };
+    })
+    .slice(0, MAX_LISTED);
+
   return {
     totalSpecies: dataset.species.length,
     totalForms: dataset.forms.length,
@@ -71,6 +135,23 @@ export function buildAuditReport(params: {
       composedRegional,
       composedFallback: composedFallback.length,
       fallbackFormSlugs: composedFallback.slice(0, MAX_LISTED).map((n) => n.formSlug),
+    },
+    abilities: {
+      totalAbilities: dataset.abilities.length,
+      totalFormAbilityLinks: dataset.formAbilities.length,
+      hiddenAbilityLinks,
+      missingSpanishName: dataset.abilities.filter((a) => !a.nameEs).length,
+      missingSpanishEffect: dataset.abilities.filter((a) => !a.effectEs).length,
+      sharedAcrossMultipleForms: [...formCountByAbility.values()].filter((count) => count > 1)
+        .length,
+    },
+    evolutions: {
+      totalEdges: dataset.evolutions.length,
+      totalChains: chainIds.size,
+      speciesWithNoEvolution: dataset.species.filter((s) => !speciesTouchedByEvolution.has(s.slug))
+        .length,
+      branchingSpecies,
+      multiConditionEdges,
     },
     validationIssueCount: validationIssues.length,
     validationIssuesSample: validationIssues.slice(0, MAX_LISTED),
@@ -104,6 +185,33 @@ export function formatAuditReport(report: AuditReport): string {
   );
   if (report.localization.fallbackFormSlugs.length > 0) {
     lines.push(`    e.g. ${report.localization.fallbackFormSlugs.join(', ')}`);
+  }
+  lines.push('');
+  lines.push('Abilities:');
+  lines.push(`  total abilities: ${report.abilities.totalAbilities}`);
+  lines.push(`  form/ability links: ${report.abilities.totalFormAbilityLinks}`);
+  lines.push(`  hidden-ability links: ${report.abilities.hiddenAbilityLinks}`);
+  lines.push(`  abilities shared across >1 form: ${report.abilities.sharedAcrossMultipleForms}`);
+  lines.push(`  abilities missing a Spanish name: ${report.abilities.missingSpanishName}`);
+  lines.push(`  abilities missing a Spanish effect: ${report.abilities.missingSpanishEffect}`);
+  lines.push('');
+  lines.push('Evolutions:');
+  lines.push(`  total edges: ${report.evolutions.totalEdges}`);
+  lines.push(`  total chains: ${report.evolutions.totalChains}`);
+  lines.push(`  species with no evolution (isolated): ${report.evolutions.speciesWithNoEvolution}`);
+  lines.push(`  branching species (top ${report.evolutions.branchingSpecies.length}):`);
+  for (const { speciesSlug, branchCount } of report.evolutions.branchingSpecies) {
+    lines.push(`    ${speciesSlug}: ${branchCount} branches`);
+  }
+  if (report.evolutions.multiConditionEdges.length > 0) {
+    lines.push(
+      `  edges with multiple alternative conditions (top ${report.evolutions.multiConditionEdges.length}):`,
+    );
+    for (const edge of report.evolutions.multiConditionEdges) {
+      lines.push(
+        `    ${edge.fromSpeciesSlug} -> ${edge.toSpeciesSlug}: ${edge.conditionCount} methods`,
+      );
+    }
   }
   lines.push('');
   lines.push(`Validation issues: ${report.validationIssueCount}`);

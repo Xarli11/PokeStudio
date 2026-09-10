@@ -1,10 +1,22 @@
 import { assertValidSlug, classifyForm, detectRegionLabel, pickPrimaryForm } from './classify';
-import type { PokeApiPokemon, PokeApiPokemonForm, PokeApiPokemonSpecies } from './pokeapi-client';
+import type {
+  PokeApiAbility,
+  PokeApiEffectEntry,
+  PokeApiEvolutionChain,
+  PokeApiEvolutionChainLink,
+  PokeApiPokemon,
+  PokeApiPokemonAbility,
+  PokeApiPokemonForm,
+  PokeApiPokemonSpecies,
+} from './pokeapi-client';
 import type {
   BaseStats,
   FormCategory,
   LocalizedName,
+  NormalizedAbility,
+  NormalizedEvolution,
   NormalizedForm,
+  NormalizedFormAbility,
   NormalizedSpecies,
   PokemonType,
 } from './types';
@@ -149,9 +161,15 @@ export interface LocalizationNote {
 export function normalizeSpeciesGroup(
   group: RawSpeciesGroup,
   sourceId: string,
-): { species: NormalizedSpecies; forms: NormalizedForm[]; localizationNotes: LocalizationNote[] } {
+): {
+  species: NormalizedSpecies;
+  forms: NormalizedForm[];
+  formAbilities: NormalizedFormAbility[];
+  localizationNotes: LocalizationNote[];
+} {
   const species = normalizeSpecies({ species: group.species, sourceId });
   const localizationNotes: LocalizationNote[] = [];
+  const formAbilities: NormalizedFormAbility[] = [];
 
   const varietyShapes = group.varieties.map((variety) => {
     const types = [...variety.pokemon.types]
@@ -212,9 +230,121 @@ export function normalizeSpeciesGroup(
         baseStats,
         source: { sourceId, externalId: String(form.id) },
       };
+      formAbilities.push(...normalizeFormAbilities(slug, variety.pokemon.abilities));
       return normalized;
     });
   });
 
-  return { species, forms, localizationNotes };
+  return { species, forms, formAbilities, localizationNotes };
+}
+
+/**
+ * Abilities are a per-variety (`pokemon`) attribute in PokéAPI, not
+ * per-`pokemon-form` — every cosmetic sub-form under one variety shares its
+ * variety's abilities, same as it shares its variety's types/base stats.
+ */
+export function normalizeFormAbilities(
+  formSlug: string,
+  abilities: readonly PokeApiPokemonAbility[],
+): NormalizedFormAbility[] {
+  return abilities.map((entry) => ({
+    formSlug,
+    abilitySlug: entry.ability.name,
+    slot: entry.slot,
+    isHidden: entry.is_hidden,
+  }));
+}
+
+function findEffectText(
+  entries: readonly PokeApiEffectEntry[],
+  language: string,
+): string | undefined {
+  const entry = entries.find((e) => e.language.name === language);
+  if (!entry) return undefined;
+  return entry.short_effect.trim() || entry.effect.trim() || undefined;
+}
+
+/**
+ * Normalizes one canonical ability (Phase 1C.1, Part A). Spanish name/effect
+ * are left `undefined` — never invented — when PokéAPI doesn't provide them;
+ * see DATA_SOURCES.md for how common that gap is at full-dataset scale.
+ */
+export function normalizeAbility(params: {
+  ability: PokeApiAbility;
+  sourceId: string;
+}): NormalizedAbility {
+  const slug = params.ability.name;
+  assertValidSlug(slug, `ability #${params.ability.id}`);
+  const nameEn = findLocalized(params.ability.names, 'en');
+  if (!nameEn) throw new Error(`Missing en name for ability "${slug}"`);
+
+  return {
+    slug,
+    nameEn,
+    nameEs: findLocalized(params.ability.names, 'es'),
+    effectEn: findEffectText(params.ability.effect_entries, 'en'),
+    effectEs: findEffectText(params.ability.effect_entries, 'es'),
+    source: { sourceId: params.sourceId, externalId: String(params.ability.id) },
+  };
+}
+
+function timeOfDayFrom(value: string): 'day' | 'night' | undefined {
+  return value === 'day' || value === 'night' ? value : undefined;
+}
+
+/**
+ * Walks one PokéAPI evolution-chain tree into flat edges (Phase 1C.1, Part B
+ * — a graph/edge model, never a fixed 3-stage structure; see
+ * docs/adr/0011-abilities-evolutions-schema.md). The chain's root node
+ * produces no edge (nothing evolves into it); every other node produces one
+ * edge per entry in its `evolution_details` — usually one, but several for a
+ * species with more than one valid evolution method (e.g. Feebas: max Beauty
+ * *or* trade holding Prism Scale).
+ */
+export function normalizeEvolutionChain(params: {
+  chain: PokeApiEvolutionChain;
+  sourceId: string;
+}): NormalizedEvolution[] {
+  const chainExternalId = String(params.chain.id);
+  const edges: NormalizedEvolution[] = [];
+
+  function walk(link: PokeApiEvolutionChainLink, fromSpeciesSlug: string | undefined): void {
+    const toSpeciesSlug = link.species.name;
+    if (fromSpeciesSlug) {
+      link.evolution_details.forEach((detail, index) => {
+        edges.push({
+          chainExternalId,
+          fromSpeciesSlug,
+          toSpeciesSlug,
+          trigger: detail.trigger.name,
+          minLevel: detail.min_level ?? undefined,
+          itemSlug: detail.item?.name,
+          heldItemSlug: detail.held_item?.name,
+          minHappiness: detail.min_happiness ?? undefined,
+          minBeauty: detail.min_beauty ?? undefined,
+          minAffection: detail.min_affection ?? undefined,
+          timeOfDay: timeOfDayFrom(detail.time_of_day),
+          knownMoveSlug: detail.known_move?.name,
+          knownMoveTypeSlug: detail.known_move_type?.name,
+          locationSlug: detail.location?.name,
+          gender: detail.gender ?? undefined,
+          tradeSpeciesSlug: detail.trade_species?.name,
+          partySpeciesSlug: detail.party_species?.name,
+          partyTypeSlug: detail.party_type?.name,
+          relativePhysicalStats: detail.relative_physical_stats ?? undefined,
+          needsOverworldRain: detail.needs_overworld_rain,
+          turnUpsideDown: detail.turn_upside_down,
+          raw: detail as unknown as Record<string, unknown>,
+          source: {
+            sourceId: params.sourceId,
+            externalId: `${chainExternalId}:${toSpeciesSlug}:${index}`,
+          },
+        });
+      });
+    }
+    for (const child of link.evolves_to) walk(child, toSpeciesSlug);
+  }
+
+  walk(params.chain.chain, undefined);
+  return edges;
 }

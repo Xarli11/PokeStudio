@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DataProvenance, NormalizedDataset, SourceRef } from './types';
 
 /**
- * Minimal write-side schema shape for the 3 tables this module upserts.
+ * Minimal write-side schema shape for the 6 tables this module writes to.
  *
  * Deliberately local rather than importing `@pokestudio/database`'s
  * `Database` type: `packages/database` already depends on this package for
@@ -58,6 +58,68 @@ export interface IngestSchema {
         Update: never;
         Relationships: [];
       };
+      ability: {
+        Row: { id: string; slug: string; source_id: string; external_id: string };
+        Insert: {
+          slug: string;
+          name_en: string;
+          name_es: string | null;
+          effect_en: string | null;
+          effect_es: string | null;
+          source_id: string;
+          external_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      pokemon_form_ability: {
+        Row: {
+          id: string;
+          pokemon_form_id: string;
+          ability_id: string;
+          slot: number;
+          source_id: string;
+        };
+        Insert: {
+          pokemon_form_id: string;
+          ability_id: string;
+          slot: number;
+          is_hidden: boolean;
+          source_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      species_evolution: {
+        Row: { id: string; from_species_id: string; to_species_id: string; source_id: string };
+        Insert: {
+          from_species_id: string;
+          to_species_id: string;
+          evolution_chain_external_id: string;
+          trigger: string;
+          min_level: number | null;
+          item_slug: string | null;
+          held_item_slug: string | null;
+          min_happiness: number | null;
+          min_beauty: number | null;
+          min_affection: number | null;
+          time_of_day: string | null;
+          known_move_slug: string | null;
+          known_move_type_slug: string | null;
+          location_slug: string | null;
+          gender: number | null;
+          trade_species_slug: string | null;
+          party_species_slug: string | null;
+          party_type_slug: string | null;
+          relative_physical_stats: number | null;
+          needs_overworld_rain: boolean;
+          turn_upside_down: boolean;
+          raw_condition: Record<string, unknown>;
+          source_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -72,6 +134,9 @@ export interface PersistResult {
   dataSourceUpserted: boolean;
   speciesUpserted: number;
   formsUpserted: number;
+  abilitiesUpserted: number;
+  formAbilitiesWritten: number;
+  evolutionsWritten: number;
   batches: number;
 }
 
@@ -231,10 +296,141 @@ export async function persistDataset(
     batches++;
   }
 
+  // Abilities: identity-based upsert, same slug-preserving pattern as
+  // species/pokemon_form above — an ability's slug is stable public
+  // identity too, once anything (a future ability page) links to it.
+  const existingAbilityRows = await selectAllRows((from, to) =>
+    client.from('ability').select('slug, source_id, external_id').range(from, to),
+  );
+  const existingAbilitySlugByKey = new Map(
+    existingAbilityRows.map((row) => [`${row.source_id}:${row.external_id}`, row.slug]),
+  );
+
+  const abilitiesPayload = dataset.abilities.map((ability) => ({
+    slug: existingAbilitySlugByKey.get(sourceKey(ability.source)) ?? ability.slug,
+    name_en: ability.nameEn,
+    name_es: ability.nameEs ?? null,
+    effect_en: ability.effectEn ?? null,
+    effect_es: ability.effectEs ?? null,
+    source_id: ability.source.sourceId,
+    external_id: ability.source.externalId,
+  }));
+
+  for (const batch of chunk(abilitiesPayload, BATCH_SIZE)) {
+    const { error } = await client
+      .from('ability')
+      .upsert(batch, { onConflict: 'source_id,external_id' });
+    if (error) throw new Error(`Failed to upsert ability batch: ${error.message}`);
+    batches++;
+  }
+
+  // pokemon_form_ability / species_evolution have no stable identity of
+  // their own upstream (PokéAPI's abilities[]/evolution_details[] are array
+  // positions, not addressable resources — ADR-0011 decision 3), so each is
+  // fully replaced per source_id per run rather than upserted by identity.
+  // Both are small tables; this keeps idempotency trivially correct without
+  // a synthetic key that could silently drift if PokéAPI ever reorders
+  // either array.
+  const formIdRows = await selectAllRows((from, to) =>
+    client.from('pokemon_form').select('id, slug').range(from, to),
+  );
+  const formIdBySlug = new Map(formIdRows.map((row) => [row.slug, row.id]));
+
+  const abilityIdRows = await selectAllRows((from, to) =>
+    client.from('ability').select('id, slug').range(from, to),
+  );
+  const abilityIdBySlug = new Map(abilityIdRows.map((row) => [row.slug, row.id]));
+
+  const formAbilitiesPayload = dataset.formAbilities.map((formAbility) => {
+    const formId = formIdBySlug.get(formAbility.formSlug);
+    if (!formId) throw new Error(`Orphan form ability: unknown form "${formAbility.formSlug}"`);
+    const abilityId = abilityIdBySlug.get(formAbility.abilitySlug);
+    if (!abilityId) {
+      throw new Error(`Orphan form ability: unknown ability "${formAbility.abilitySlug}"`);
+    }
+    return {
+      pokemon_form_id: formId,
+      ability_id: abilityId,
+      slot: formAbility.slot,
+      is_hidden: formAbility.isHidden,
+      source_id: dataset.provenance.sourceId,
+    };
+  });
+
+  const { error: deleteFormAbilityError } = await client
+    .from('pokemon_form_ability')
+    .delete()
+    .eq('source_id', dataset.provenance.sourceId);
+  if (deleteFormAbilityError) {
+    throw new Error(`Failed to clear pokemon_form_ability: ${deleteFormAbilityError.message}`);
+  }
+  for (const batch of chunk(formAbilitiesPayload, BATCH_SIZE)) {
+    const { error } = await client.from('pokemon_form_ability').insert(batch);
+    if (error) throw new Error(`Failed to insert pokemon_form_ability batch: ${error.message}`);
+    batches++;
+  }
+
+  const speciesIdRowsForEvolutions = await selectAllRows((from, to) =>
+    client.from('species').select('id, slug').range(from, to),
+  );
+  const speciesIdBySlug = new Map(speciesIdRowsForEvolutions.map((row) => [row.slug, row.id]));
+
+  const evolutionsPayload = dataset.evolutions.map((evolution) => {
+    const fromSpeciesId = speciesIdBySlug.get(evolution.fromSpeciesSlug);
+    if (!fromSpeciesId) {
+      throw new Error(`Orphan evolution: unknown species "${evolution.fromSpeciesSlug}"`);
+    }
+    const toSpeciesId = speciesIdBySlug.get(evolution.toSpeciesSlug);
+    if (!toSpeciesId) {
+      throw new Error(`Orphan evolution: unknown species "${evolution.toSpeciesSlug}"`);
+    }
+    return {
+      from_species_id: fromSpeciesId,
+      to_species_id: toSpeciesId,
+      evolution_chain_external_id: evolution.chainExternalId,
+      trigger: evolution.trigger,
+      min_level: evolution.minLevel ?? null,
+      item_slug: evolution.itemSlug ?? null,
+      held_item_slug: evolution.heldItemSlug ?? null,
+      min_happiness: evolution.minHappiness ?? null,
+      min_beauty: evolution.minBeauty ?? null,
+      min_affection: evolution.minAffection ?? null,
+      time_of_day: evolution.timeOfDay ?? null,
+      known_move_slug: evolution.knownMoveSlug ?? null,
+      known_move_type_slug: evolution.knownMoveTypeSlug ?? null,
+      location_slug: evolution.locationSlug ?? null,
+      gender: evolution.gender ?? null,
+      trade_species_slug: evolution.tradeSpeciesSlug ?? null,
+      party_species_slug: evolution.partySpeciesSlug ?? null,
+      party_type_slug: evolution.partyTypeSlug ?? null,
+      relative_physical_stats: evolution.relativePhysicalStats ?? null,
+      needs_overworld_rain: evolution.needsOverworldRain,
+      turn_upside_down: evolution.turnUpsideDown,
+      raw_condition: evolution.raw,
+      source_id: evolution.source.sourceId,
+    };
+  });
+
+  const { error: deleteEvolutionError } = await client
+    .from('species_evolution')
+    .delete()
+    .eq('source_id', dataset.provenance.sourceId);
+  if (deleteEvolutionError) {
+    throw new Error(`Failed to clear species_evolution: ${deleteEvolutionError.message}`);
+  }
+  for (const batch of chunk(evolutionsPayload, BATCH_SIZE)) {
+    const { error } = await client.from('species_evolution').insert(batch);
+    if (error) throw new Error(`Failed to insert species_evolution batch: ${error.message}`);
+    batches++;
+  }
+
   return {
     dataSourceUpserted: true,
     speciesUpserted: speciesPayload.length,
     formsUpserted: formsPayload.length,
+    abilitiesUpserted: abilitiesPayload.length,
+    formAbilitiesWritten: formAbilitiesPayload.length,
+    evolutionsWritten: evolutionsPayload.length,
     batches,
   };
 }

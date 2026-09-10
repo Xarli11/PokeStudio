@@ -66,6 +66,40 @@
       "regional": "Forma regional",
       "battle": "Forma relevante en combate",
       "cosmetic": "Forma cosmética"
+    },
+    "abilities": "Habilidades",
+    "hiddenAbility": "Habilidad Oculta",
+    "noAbilityDescription": "Descripción no disponible.",
+    "evolution": {
+      "title": "Evolución",
+      "noEvolution": "{name} no evoluciona.",
+      "orSeparator": "o",
+      "trigger": {
+        "level-up": "Subir de nivel",
+        "trade": "Intercambio",
+        "use-item": "Usar objeto",
+        "shed": "Muda",
+        "other": "Método especial"
+      },
+      "condition": {
+        "minLevel": "en el nivel {level}",
+        "item": "usando {item}",
+        "heldItem": "portando {item}",
+        "minHappiness": "amistad {value}+",
+        "minBeauty": "Belleza {value}+",
+        "minAffection": "cariño {value}+",
+        "timeOfDayDay": "durante el día",
+        "timeOfDayNight": "de noche",
+        "knownMove": "conociendo {move}",
+        "knownMoveType": "conociendo un movimiento de tipo {type}",
+        "location": "en una ubicación especial",
+        "genderFemale": "solo hembra",
+        "genderMale": "solo macho",
+        "tradeFor": "intercambiando por {species}",
+        "partySpecies": "con {species} en el equipo",
+        "needsOverworldRain": "mientras llueve",
+        "turnUpsideDown": "con la consola boca abajo"
+      }
     }
   }
 }

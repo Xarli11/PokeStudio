@@ -6,6 +6,48 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Phase 1C.1 — Abilities and evolutions (2026-09-10)
+
+Extends the Pokédex vertical slice with abilities and evolution relationships (ADR-0011) —
+**313 abilities, 3369 form/ability links, 553 evolution edges** across the full 1025-species dataset.
+
+- **Abilities schema**: `ability` (canonical — slug, English/Spanish name, English/Spanish effect
+  where available, provenance) and `pokemon_form_ability` (join: which ability, which slot, hidden
+  or not). One row per real ability, never duplicated per Pokémon — proved against Bulbasaur/Ivysaur/
+  Venusaur all sharing one `overgrow` row. Public-read/service-write RLS, same pattern as
+  `species`/`pokemon_form`.
+- **Evolutions schema**: `species_evolution`, a graph of edges (`from_species_id -> to_species_id`
+  plus condition) rather than fixed stage columns — required to represent Eevee's 8-way branch and
+  Feebas' two independently valid evolution methods to the same target (max Beauty, or trade
+  holding Prism Scale) without hacks. See ADR-0011 for the full rationale (including why the two
+  join tables have no independent external identity and are replaced-per-run instead of upserted
+  by identity).
+- **Ingestion extended, not re-architected**: two new bounded-concurrency fetch phases (unique
+  ability URLs, unique evolution-chain URLs — each fetched once regardless of how many
+  species/varieties reference it), normalized alongside species/forms, validated (new invariants:
+  ability slug/external-id collisions, orphan form/ability and evolution references, self-
+  referencing edges), persisted idempotently. A warm-cache full re-run touches the network 0 times
+  and reproduces byte-identical row counts.
+- **Real data-quality findings** (`pnpm --filter @pokestudio/pokemon-data audit`, DATA_SOURCES.md):
+  PokéAPI provides a Spanish ability name for all but 3 of 313 abilities, but a Spanish ability
+  _effect_ for **none** of them — every `effect_es` is null, never invented. Evolution
+  `evolution_details` also isn't version-group-scoped in this model: some evolutions (Magneton ->
+  Magnezone, Eevee -> Leafeon) list the same conceptual "level up in a special location" method
+  once per game's location, surfacing as several near-duplicate edges rather than one — the UI
+  collapses these for display (edges rendering to an identical description string are deduplicated;
+  see `apps/web/src/lib/evolution-condition.ts`) without losing the underlying rows.
+- **Explore UI**: each form's card now lists its abilities (hidden ability visually distinguished,
+  localized name, concise effect where available, "no description available" rather than a blank
+  or an invented one). A new evolution section renders the species' full family as simple
+  `[from] → [to] (condition)` rows — supports branching and multiple alternative conditions per
+  edge, links every species to its own detail page, no diagramming dependency.
+- **Query layer** (`packages/database/src/queries.ts`): `getSpeciesBySlug` now includes each form's
+  abilities; new `getEvolutionFamily` resolves a species' whole family via two small indexed
+  queries (find any edge touching the species to learn its PokéAPI evolution-chain id, then fetch
+  every edge sharing it) rather than a recursive SQL walk or a full-table scan.
+- New migrations: `20260910120000_pokemon_abilities.sql`, `20260910130000_pokemon_evolutions.sql`.
+  `generated-database-types.ts` regenerated.
+
 ### Phase 1B.2 — Cloudflare Workers readiness (2026-09-09)
 
 Prepared `apps/web` to deploy to Cloudflare Workers (ADR-0005) — not deployed yet.

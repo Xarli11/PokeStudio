@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import type { NormalizedDataset, NormalizedForm, NormalizedSpecies } from './types';
+import type {
+  NormalizedAbility,
+  NormalizedDataset,
+  NormalizedEvolution,
+  NormalizedForm,
+  NormalizedFormAbility,
+  NormalizedSpecies,
+} from './types';
 import { validateExploreDataset } from './validate';
 
 function makeSpecies(overrides: Partial<NormalizedSpecies> = {}): NormalizedSpecies {
@@ -34,7 +41,51 @@ function makeForm(overrides: Partial<NormalizedForm> = {}): NormalizedForm {
   };
 }
 
-function makeDataset(species: NormalizedSpecies[], forms: NormalizedForm[]): NormalizedDataset {
+function makeAbility(overrides: Partial<NormalizedAbility> = {}): NormalizedAbility {
+  return {
+    slug: 'overgrow',
+    nameEn: 'Overgrow',
+    nameEs: 'Espesura',
+    effectEn: 'Powers up Grass-type moves when the Pokémon is in trouble.',
+    source: { sourceId: 'pokeapi', externalId: '65' },
+    ...overrides,
+  };
+}
+
+function makeFormAbility(overrides: Partial<NormalizedFormAbility> = {}): NormalizedFormAbility {
+  return {
+    formSlug: 'bulbasaur',
+    abilitySlug: 'overgrow',
+    slot: 1,
+    isHidden: false,
+    ...overrides,
+  };
+}
+
+function makeEvolution(overrides: Partial<NormalizedEvolution> = {}): NormalizedEvolution {
+  return {
+    chainExternalId: '1',
+    fromSpeciesSlug: 'bulbasaur',
+    toSpeciesSlug: 'ivysaur',
+    trigger: 'level-up',
+    minLevel: 16,
+    needsOverworldRain: false,
+    turnUpsideDown: false,
+    raw: {},
+    source: { sourceId: 'pokeapi', externalId: '1:ivysaur:0' },
+    ...overrides,
+  };
+}
+
+function makeDataset(
+  species: NormalizedSpecies[],
+  forms: NormalizedForm[],
+  options: {
+    abilities?: NormalizedAbility[];
+    formAbilities?: NormalizedFormAbility[];
+    evolutions?: NormalizedEvolution[];
+  } = {},
+): NormalizedDataset {
   return {
     provenance: {
       sourceId: 'pokeapi',
@@ -45,6 +96,9 @@ function makeDataset(species: NormalizedSpecies[], forms: NormalizedForm[]): Nor
     },
     species,
     forms,
+    abilities: options.abilities ?? [],
+    formAbilities: options.formAbilities ?? [],
+    evolutions: options.evolutions ?? [],
   };
 }
 
@@ -187,6 +241,328 @@ describe('validateExploreDataset', () => {
       ),
     );
     expect(issues.some((issue) => issue.message.includes('External identity collision'))).toBe(
+      true,
+    );
+  });
+
+  it('accepts a well-formed ability shared by two forms', () => {
+    const dataset = makeDataset(
+      [
+        makeSpecies(),
+        makeSpecies({
+          slug: 'ivysaur',
+          nationalDexNumber: 2,
+          source: { sourceId: 'pokeapi', externalId: '2' },
+        }),
+      ],
+      [
+        makeForm(),
+        makeForm({
+          slug: 'ivysaur',
+          speciesSlug: 'ivysaur',
+          source: { sourceId: 'pokeapi', externalId: '2' },
+        }),
+      ],
+      {
+        abilities: [makeAbility()],
+        formAbilities: [
+          makeFormAbility({ formSlug: 'bulbasaur' }),
+          makeFormAbility({ formSlug: 'ivysaur' }),
+        ],
+      },
+    );
+    expect(validateExploreDataset(dataset)).toEqual([]);
+  });
+
+  it('accepts a hidden ability alongside two regular abilities', () => {
+    const dataset = makeDataset([makeSpecies()], [makeForm()], {
+      abilities: [
+        makeAbility(),
+        makeAbility({
+          slug: 'chlorophyll',
+          nameEn: 'Chlorophyll',
+          source: { sourceId: 'pokeapi', externalId: '34' },
+        }),
+        makeAbility({
+          slug: 'leaf-guard',
+          nameEn: 'Leaf Guard',
+          source: { sourceId: 'pokeapi', externalId: '102' },
+        }),
+      ],
+      formAbilities: [
+        makeFormAbility({ abilitySlug: 'overgrow', slot: 1, isHidden: false }),
+        makeFormAbility({ abilitySlug: 'chlorophyll', slot: 2, isHidden: false }),
+        makeFormAbility({ abilitySlug: 'leaf-guard', slot: 3, isHidden: true }),
+      ],
+    });
+    expect(validateExploreDataset(dataset)).toEqual([]);
+  });
+
+  it('flags a duplicate ability slug', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        abilities: [
+          makeAbility(),
+          makeAbility({ source: { sourceId: 'pokeapi', externalId: '99' } }),
+        ],
+      }),
+    );
+    expect(issues.some((issue) => issue.message.includes('Duplicate ability slug'))).toBe(true);
+  });
+
+  it('flags a form ability referencing an unknown ability', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        formAbilities: [makeFormAbility({ abilitySlug: 'does-not-exist' })],
+      }),
+    );
+    expect(
+      issues.some((issue) => issue.message.includes('unknown ability slug "does-not-exist"')),
+    ).toBe(true);
+  });
+
+  it('flags a form ability referencing an unknown form', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        abilities: [makeAbility()],
+        formAbilities: [makeFormAbility({ formSlug: 'does-not-exist' })],
+      }),
+    );
+    expect(
+      issues.some((issue) => issue.message.includes('unknown form slug "does-not-exist"')),
+    ).toBe(true);
+  });
+
+  it('flags two abilities claiming the same slot on one form', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        abilities: [
+          makeAbility(),
+          makeAbility({ slug: 'chlorophyll', source: { sourceId: 'pokeapi', externalId: '34' } }),
+        ],
+        formAbilities: [
+          makeFormAbility({ abilitySlug: 'overgrow', slot: 1 }),
+          makeFormAbility({ abilitySlug: 'chlorophyll', slot: 1 }),
+        ],
+      }),
+    );
+    expect(issues.some((issue) => issue.message.includes('Duplicate ability slot'))).toBe(true);
+  });
+
+  it('accepts a species with no evolution (Ditto shape — zero edges)', () => {
+    const dataset = makeDataset(
+      [makeSpecies({ slug: 'ditto', nationalDexNumber: 132 })],
+      [makeForm({ slug: 'ditto', speciesSlug: 'ditto' })],
+      { evolutions: [] },
+    );
+    expect(validateExploreDataset(dataset)).toEqual([]);
+  });
+
+  it('accepts a linear evolution chain', () => {
+    const dataset = makeDataset(
+      [
+        makeSpecies(),
+        makeSpecies({
+          slug: 'ivysaur',
+          nationalDexNumber: 2,
+          source: { sourceId: 'pokeapi', externalId: '2' },
+        }),
+        makeSpecies({
+          slug: 'venusaur',
+          nationalDexNumber: 3,
+          source: { sourceId: 'pokeapi', externalId: '3' },
+        }),
+      ],
+      [
+        makeForm(),
+        makeForm({
+          slug: 'ivysaur',
+          speciesSlug: 'ivysaur',
+          source: { sourceId: 'pokeapi', externalId: '2' },
+        }),
+        makeForm({
+          slug: 'venusaur',
+          speciesSlug: 'venusaur',
+          source: { sourceId: 'pokeapi', externalId: '3' },
+        }),
+      ],
+      {
+        evolutions: [
+          makeEvolution(),
+          makeEvolution({
+            fromSpeciesSlug: 'ivysaur',
+            toSpeciesSlug: 'venusaur',
+            minLevel: 32,
+            source: { sourceId: 'pokeapi', externalId: '1:venusaur:0' },
+          }),
+        ],
+      },
+    );
+    expect(validateExploreDataset(dataset)).toEqual([]);
+  });
+
+  it('accepts a branching evolution (Eevee shape)', () => {
+    const dataset = makeDataset(
+      [
+        makeSpecies({
+          slug: 'eevee',
+          nationalDexNumber: 133,
+          source: { sourceId: 'pokeapi', externalId: '133' },
+        }),
+        makeSpecies({
+          slug: 'vaporeon',
+          nationalDexNumber: 134,
+          source: { sourceId: 'pokeapi', externalId: '134' },
+        }),
+        makeSpecies({
+          slug: 'jolteon',
+          nationalDexNumber: 135,
+          source: { sourceId: 'pokeapi', externalId: '135' },
+        }),
+        makeSpecies({
+          slug: 'flareon',
+          nationalDexNumber: 136,
+          source: { sourceId: 'pokeapi', externalId: '136' },
+        }),
+      ],
+      [
+        makeForm({
+          slug: 'eevee',
+          speciesSlug: 'eevee',
+          source: { sourceId: 'pokeapi', externalId: '133' },
+        }),
+        makeForm({
+          slug: 'vaporeon',
+          speciesSlug: 'vaporeon',
+          source: { sourceId: 'pokeapi', externalId: '134' },
+        }),
+        makeForm({
+          slug: 'jolteon',
+          speciesSlug: 'jolteon',
+          source: { sourceId: 'pokeapi', externalId: '135' },
+        }),
+        makeForm({
+          slug: 'flareon',
+          speciesSlug: 'flareon',
+          source: { sourceId: 'pokeapi', externalId: '136' },
+        }),
+      ],
+      {
+        evolutions: [
+          makeEvolution({
+            chainExternalId: '67',
+            fromSpeciesSlug: 'eevee',
+            toSpeciesSlug: 'vaporeon',
+            trigger: 'use-item',
+            minLevel: undefined,
+            itemSlug: 'water-stone',
+            source: { sourceId: 'pokeapi', externalId: '67:vaporeon:0' },
+          }),
+          makeEvolution({
+            chainExternalId: '67',
+            fromSpeciesSlug: 'eevee',
+            toSpeciesSlug: 'jolteon',
+            trigger: 'use-item',
+            minLevel: undefined,
+            itemSlug: 'thunder-stone',
+            source: { sourceId: 'pokeapi', externalId: '67:jolteon:0' },
+          }),
+          makeEvolution({
+            chainExternalId: '67',
+            fromSpeciesSlug: 'eevee',
+            toSpeciesSlug: 'flareon',
+            trigger: 'use-item',
+            minLevel: undefined,
+            itemSlug: 'fire-stone',
+            source: { sourceId: 'pokeapi', externalId: '67:flareon:0' },
+          }),
+        ],
+      },
+    );
+    expect(validateExploreDataset(dataset)).toEqual([]);
+  });
+
+  it('accepts a multi-condition evolution edge (Feebas -> Milotic shape)', () => {
+    const dataset = makeDataset(
+      [
+        makeSpecies({
+          slug: 'feebas',
+          nationalDexNumber: 349,
+          source: { sourceId: 'pokeapi', externalId: '349' },
+        }),
+        makeSpecies({
+          slug: 'milotic',
+          nationalDexNumber: 350,
+          source: { sourceId: 'pokeapi', externalId: '350' },
+        }),
+      ],
+      [
+        makeForm({
+          slug: 'feebas',
+          speciesSlug: 'feebas',
+          source: { sourceId: 'pokeapi', externalId: '349' },
+        }),
+        makeForm({
+          slug: 'milotic',
+          speciesSlug: 'milotic',
+          source: { sourceId: 'pokeapi', externalId: '350' },
+        }),
+      ],
+      {
+        evolutions: [
+          makeEvolution({
+            chainExternalId: '160',
+            fromSpeciesSlug: 'feebas',
+            toSpeciesSlug: 'milotic',
+            trigger: 'level-up',
+            minLevel: undefined,
+            minBeauty: 170,
+            source: { sourceId: 'pokeapi', externalId: '160:milotic:0' },
+          }),
+          makeEvolution({
+            chainExternalId: '160',
+            fromSpeciesSlug: 'feebas',
+            toSpeciesSlug: 'milotic',
+            trigger: 'trade',
+            minLevel: undefined,
+            heldItemSlug: 'prism-scale',
+            source: { sourceId: 'pokeapi', externalId: '160:milotic:1' },
+          }),
+        ],
+      },
+    );
+    expect(validateExploreDataset(dataset)).toEqual([]);
+  });
+
+  it('flags an evolution edge referencing an unknown species', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        evolutions: [makeEvolution({ toSpeciesSlug: 'does-not-exist' })],
+      }),
+    );
+    expect(
+      issues.some((issue) => issue.message.includes('unknown species slug "does-not-exist"')),
+    ).toBe(true);
+  });
+
+  it('flags an evolution edge with a missing trigger', () => {
+    const issues = validateExploreDataset(
+      makeDataset(
+        [makeSpecies(), makeSpecies({ slug: 'ivysaur', nationalDexNumber: 2 })],
+        [makeForm(), makeForm({ slug: 'ivysaur', speciesSlug: 'ivysaur' })],
+        { evolutions: [makeEvolution({ trigger: '' })] },
+      ),
+    );
+    expect(issues.some((issue) => issue.message.includes('Missing evolution trigger'))).toBe(true);
+  });
+
+  it('flags a self-referencing evolution edge', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        evolutions: [makeEvolution({ fromSpeciesSlug: 'bulbasaur', toSpeciesSlug: 'bulbasaur' })],
+      }),
+    );
+    expect(issues.some((issue) => issue.message.includes('cannot point a species to itself'))).toBe(
       true,
     );
   });

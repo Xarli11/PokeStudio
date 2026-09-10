@@ -42,6 +42,20 @@ const dataset: NormalizedDataset = {
     form({ slug: 'rotom-heat', speciesSlug: 'rotom', isDefault: false, category: 'battle' }),
     form({ slug: 'rotom-wash', speciesSlug: 'rotom', isDefault: false, category: 'battle' }),
   ],
+  abilities: [
+    {
+      slug: 'overgrow',
+      nameEn: 'Overgrow',
+      nameEs: 'Espesura',
+      effectEn: 'Powers up Grass-type moves in a pinch.',
+      source: { sourceId: 'pokeapi', externalId: '65' },
+    },
+  ],
+  formAbilities: [
+    { formSlug: 'bulbasaur', abilitySlug: 'overgrow', slot: 1, isHidden: false },
+    { formSlug: 'rotom', abilitySlug: 'overgrow', slot: 1, isHidden: false },
+  ],
+  evolutions: [],
 };
 
 describe('buildAuditReport', () => {

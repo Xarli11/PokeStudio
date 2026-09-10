@@ -1,9 +1,9 @@
 # @pokestudio/pokemon-data
 
-Full Pokédex ingestion pipeline (Phase 1B, ADR-0010): fetch/cache → normalize → validate → persist.
-Not a runtime PokéAPI client — the web app never imports this package or calls PokéAPI at request
-time (CLAUDE.md §10); it only reads what this pipeline already wrote to Postgres, via
-`@pokestudio/database`.
+Full Pokédex ingestion pipeline (Phase 1B/1C.1, ADR-0010, ADR-0011): fetch/cache → normalize →
+validate → persist. Not a runtime PokéAPI client — the web app never imports this package or calls
+PokéAPI at request time (CLAUDE.md §10); it only reads what this pipeline already wrote to
+Postgres, via `@pokestudio/database`.
 
 ## Commands
 
@@ -25,35 +25,67 @@ Both accept:
 - `--concurrency=N` — requests in flight per fetch phase (default 12)
 - `--no-cache` — bypass the on-disk raw-response cache and hit PokéAPI directly
 
-`ingest` prints a classification/localization audit and a performance report (request count, fetch/
-persist duration, species/form counts) on completion. Non-zero exit and no DB writes if validation
-fails.
+`ingest` prints a classification/localization/abilities/evolutions audit and a performance report
+(request count, fetch/persist duration, species/form/ability/evolution counts) on completion.
+Non-zero exit and no DB writes if validation fails.
 
 ## Pipeline shape
 
 ```text
-fetch (species list -> species detail -> variety/pokemon detail -> per-form detail)
+fetch (species list -> species detail -> variety/pokemon detail -> per-form detail
+       -> unique ability detail -> unique evolution-chain detail)
     ↓  (bounded concurrency, on-disk cache — packages/pokemon-data/.cache/, gitignored)
-normalize (species + form, classified — packages/pokemon-data/src/classify.ts)
+normalize (species + form + ability + form/ability link + evolution edge —
+           packages/pokemon-data/src/classify.ts, src/normalize.ts)
     ↓
 validate (invariants — packages/pokemon-data/src/validate.ts; failure blocks persist entirely)
     ↓
-persist (batched upsert by (source_id, external_id) identity — packages/pokemon-data/src/persist.ts)
+persist (species/forms/abilities: batched upsert by (source_id, external_id) identity;
+         form/ability links + evolution edges: batched full replacement per source_id —
+         packages/pokemon-data/src/persist.ts, ADR-0011 decision 3)
 ```
 
 Fetch and normalize are pure/testable independently: `src/normalize.ts`'s tests use literal
-fixture JSON, never a live network call. The three fetch phases (species → varieties → forms) each
-run through one flat, globally-bounded-concurrency pool (`src/concurrency.ts`) rather than nested
-per-species concurrency, so total requests in flight never exceeds `--concurrency` regardless of
-how large one species' form family is (Alcremie: 64 forms under a single species).
+fixture JSON, never a live network call. Each fetch phase (species → varieties → forms → unique
+abilities → unique evolution chains) runs through one flat, globally-bounded-concurrency pool
+(`src/concurrency.ts`) rather than nested per-species concurrency, so total requests in flight never
+exceeds `--concurrency` regardless of how large one species' form family is (Alcremie: 64 forms
+under a single species) or how many species reference the same ability/chain (abilities and
+evolution chains are each fetched once per unique URL, not once per reference — most abilities are
+shared by dozens of Pokémon, and every stage of a chain points at the same chain resource).
 
 ## Idempotency
 
-Re-running `ingest` never duplicates species/forms: rows are matched by upstream identity
+Re-running `ingest` never duplicates species/forms/abilities: rows are matched by upstream identity
 (`source_id` + `external_id`, not slug), and an existing row's `slug` is always preserved verbatim
-on update — only other fields (name, types, stats, category) refresh. See `src/persist.ts`'s
-top comment for the full write strategy, and `tests/persist.integration.test.ts` for the
-executable proof.
+on update — only other fields (name, types, stats, category, effect text) refresh. The two join
+tables without an independent upstream identity (`pokemon_form_ability`, `species_evolution`) are
+instead fully replaced per `source_id` on each run — still idempotent (identical row set, never
+duplicated), just not identity-preserving since there is no stable identity to preserve (ADR-0011
+decision 3). See `src/persist.ts`'s top comment for the full write strategy, and
+`tests/persist.integration.test.ts` for the executable proof (species/forms/abilities upsert
+in place; form/ability links and evolution edges never accumulate across runs, and correctly
+shrink when a re-fetch drops a row).
+
+## Abilities and evolutions (Phase 1C.1, ADR-0011)
+
+`src/normalize.ts` adds three functions alongside `normalizeSpeciesGroup`:
+
+- `normalizeFormAbilities(formSlug, abilities)` — abilities are a per-_variety_ PokéAPI attribute,
+  not per-`pokemon-form`, so every cosmetic sub-form under one variety gets the same ability links
+  as its variety (same rule already applied to types/base stats).
+- `normalizeAbility({ability, sourceId})` — canonical ability row; leaves Spanish name/effect
+  `undefined` (never invented) when PokéAPI has no entry — see DATA_SOURCES.md for how often that
+  happens (effect: always; name: rarely).
+- `normalizeEvolutionChain({chain, sourceId})` — walks one PokéAPI evolution-chain tree into flat
+  edges. The chain's root produces no edge; every other node produces one edge per entry in its
+  `evolution_details` (branching = multiple edges sharing `fromSpeciesSlug`; multiple valid methods
+  to the same target, e.g. Feebas -> Milotic, = multiple edges sharing both `fromSpeciesSlug` and
+  `toSpeciesSlug`).
+
+See its tests for representative real families: a plain linear 3-stage chain (Bulbasaur), an
+8-way branch with a mix of item/friendship/time-of-day conditions (Eevee), a species-vs-defense
+stat branch (Tyrogue), and a genuinely multi-method single edge (Feebas -> Milotic).
 
 ## Form classification
 

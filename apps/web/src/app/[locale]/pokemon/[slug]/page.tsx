@@ -2,9 +2,10 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getSpeciesBySlug, type SpeciesFormSummary } from '@pokestudio/database';
+import { getEvolutionFamily, getSpeciesBySlug, type SpeciesFormDetail } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
+import { PokemonEvolutionSection } from '@/components/pokemon/evolution-section';
 import { PokemonFormSection } from '@/components/pokemon/form-section';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 
@@ -19,7 +20,7 @@ function dexNumberLabel(dictionary: ReturnType<typeof getDictionary>, n: number)
 }
 
 function formSectionProps(
-  form: SpeciesFormSummary,
+  form: SpeciesFormDetail,
   locale: 'en' | 'es',
   dictionary: ReturnType<typeof getDictionary>,
 ) {
@@ -32,6 +33,15 @@ function formSectionProps(
     statLabels: dictionary.pokedex.stat,
     typesLabel: dictionary.pokedex.types,
     baseStatsLabel: dictionary.pokedex.baseStats,
+    abilities: form.abilities.map((ability) => ({
+      slug: ability.slug,
+      name: locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn,
+      description: locale === 'es' ? ability.effectEs : ability.effectEn,
+      isHidden: ability.isHidden,
+    })),
+    abilitiesLabel: dictionary.pokedex.abilities,
+    hiddenAbilityLabel: dictionary.pokedex.hiddenAbility,
+    noAbilityDescriptionLabel: dictionary.pokedex.noAbilityDescription,
   };
 }
 
@@ -77,7 +87,11 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
   if (!isLocale(locale)) notFound();
 
   const dictionary = getDictionary(locale);
-  const species = await getSpeciesBySlug(getPokemonDatabaseClient(), slug);
+  const client = getPokemonDatabaseClient();
+  const [species, evolutionFamily] = await Promise.all([
+    getSpeciesBySlug(client, slug),
+    getEvolutionFamily(client, slug),
+  ]);
   if (!species) notFound();
 
   const defaultForm = species.forms.find((form) => form.isDefault);
@@ -107,6 +121,10 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
       </header>
 
       <PokemonFormSection {...formSectionProps(defaultForm, locale, dictionary)} />
+
+      {evolutionFamily ? (
+        <PokemonEvolutionSection family={evolutionFamily} locale={locale} dictionary={dictionary} />
+      ) : null}
 
       {otherForms.length > 0 ? (
         <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

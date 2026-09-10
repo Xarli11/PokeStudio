@@ -57,6 +57,9 @@ async function main() {
     },
     species: result.species,
     forms: result.forms,
+    abilities: result.abilities,
+    formAbilities: result.formAbilities,
+    evolutions: result.evolutions,
   };
 
   const issues = validateExploreDataset(dataset);

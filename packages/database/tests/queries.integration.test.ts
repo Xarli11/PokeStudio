@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createPublicDatabaseClient } from '../src/client';
-import { getSpeciesBySlug, listSpecies } from '../src/queries';
+import { getEvolutionFamily, getSpeciesBySlug, listSpecies } from '../src/queries';
 
 /**
  * Proves the domain-shaped query layer against the real, fully-ingested
@@ -84,6 +84,81 @@ describe.skipIf(!hasLocalSupabase)('species/form queries against the full ingest
     const active = xerneas!.forms.find((f) => f.slug === 'xerneas-active')!;
     expect(active.category).toBe('battle');
     expect(active.isDefault).toBe(false);
+  });
+
+  it('Bulbasaur has a regular ability, plus a distinct hidden ability', async () => {
+    const bulbasaur = await getSpeciesBySlug(client(), 'bulbasaur');
+    const abilities = bulbasaur!.forms[0]!.abilities;
+    expect(abilities.length).toBeGreaterThanOrEqual(2);
+    const regular = abilities.filter((a) => !a.isHidden);
+    const hidden = abilities.filter((a) => a.isHidden);
+    expect(regular.length).toBeGreaterThanOrEqual(1);
+    expect(hidden).toHaveLength(1);
+    expect(regular.some((a) => a.slug === 'overgrow')).toBe(true);
+    expect(hidden[0]!.slug).toBe('chlorophyll');
+  });
+
+  it('Wormadam-plant and Wormadam-sandy (regional-adjacent battle forms) can have multiple regular abilities', async () => {
+    const wormadam = await getSpeciesBySlug(client(), 'wormadam');
+    const plant = wormadam!.forms.find((f) => f.isDefault)!;
+    expect(plant.abilities.filter((a) => !a.isHidden).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('the same canonical ability (Overgrow) is shared across an evolution family, not duplicated per row', async () => {
+    const bulbasaur = await getSpeciesBySlug(client(), 'bulbasaur');
+    const venusaur = await getSpeciesBySlug(client(), 'venusaur');
+    const bulbasaurOvergrow = bulbasaur!.forms[0]!.abilities.find((a) => a.slug === 'overgrow');
+    const venusaurOvergrow = venusaur!.forms[0]!.abilities.find((a) => a.slug === 'overgrow');
+    expect(bulbasaurOvergrow).toBeDefined();
+    expect(venusaurOvergrow).toBeDefined();
+    // Same canonical ability row's fields (name/effect), not a coincidence of two independent rows.
+    expect(bulbasaurOvergrow!.nameEn).toBe(venusaurOvergrow!.nameEn);
+  });
+
+  it('getEvolutionFamily returns just the species itself when it has no evolution (Ditto)', async () => {
+    const family = await getEvolutionFamily(client(), 'ditto');
+    expect(family).not.toBeNull();
+    expect(family!.members).toHaveLength(1);
+    expect(family!.members[0]!.slug).toBe('ditto');
+    expect(family!.edges).toHaveLength(0);
+  });
+
+  it('getEvolutionFamily returns null for an unknown species slug', async () => {
+    expect(await getEvolutionFamily(client(), 'does-not-exist')).toBeNull();
+  });
+
+  it('getEvolutionFamily returns a linear 3-stage family (Bulbasaur/Ivysaur/Venusaur)', async () => {
+    const family = await getEvolutionFamily(client(), 'ivysaur');
+    expect(family!.members.map((m) => m.slug)).toEqual(['bulbasaur', 'ivysaur', 'venusaur']);
+    expect(family!.edges).toHaveLength(2);
+    const toIvysaur = family!.edges.find((e) => e.toSpeciesSlug === 'ivysaur')!;
+    expect(toIvysaur.fromSpeciesSlug).toBe('bulbasaur');
+    expect(toIvysaur.condition.trigger).toBe('level-up');
+    expect(toIvysaur.condition.minLevel).toBe(16);
+  });
+
+  it("getEvolutionFamily returns Eevee's branching family regardless of which member is queried", async () => {
+    const fromEevee = await getEvolutionFamily(client(), 'eevee');
+    const fromUmbreon = await getEvolutionFamily(client(), 'umbreon');
+    expect(fromEevee!.members.map((m) => m.slug).sort()).toEqual(
+      fromUmbreon!.members.map((m) => m.slug).sort(),
+    );
+    expect(fromEevee!.members.length).toBeGreaterThanOrEqual(9); // Eevee + at least 8 eeveelutions
+    const branchesFromEevee = fromEevee!.edges.filter((e) => e.fromSpeciesSlug === 'eevee');
+    expect(branchesFromEevee.length).toBeGreaterThanOrEqual(8);
+    const umbreonEdge = branchesFromEevee.find((e) => e.toSpeciesSlug === 'umbreon')!;
+    expect(umbreonEdge.condition).toMatchObject({ trigger: 'level-up', timeOfDay: 'night' });
+  });
+
+  it('getEvolutionFamily preserves multiple alternative conditions for the same edge (Feebas -> Milotic)', async () => {
+    const family = await getEvolutionFamily(client(), 'feebas');
+    const toMilotic = family!.edges.filter(
+      (e) => e.fromSpeciesSlug === 'feebas' && e.toSpeciesSlug === 'milotic',
+    );
+    expect(toMilotic.length).toBeGreaterThanOrEqual(2);
+    expect(toMilotic.some((e) => e.condition.trigger === 'trade' && e.condition.heldItemSlug)).toBe(
+      true,
+    );
   });
 });
 

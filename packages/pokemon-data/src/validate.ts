@@ -161,6 +161,92 @@ export function validateExploreDataset(dataset: NormalizedDataset): ValidationIs
     }
   }
 
+  const seenAbilitySlugs = new Set<string>();
+  const seenAbilityExternalIds = new Set<string>();
+  for (const ability of dataset.abilities) {
+    if (seenAbilitySlugs.has(ability.slug)) {
+      issues.push({ recordId: ability.slug, message: 'Duplicate ability slug.' });
+    }
+    seenAbilitySlugs.add(ability.slug);
+
+    if (!ability.nameEn.trim()) {
+      issues.push({ recordId: ability.slug, message: 'Missing English ability name.' });
+    }
+
+    if (!ability.source.sourceId || !ability.source.externalId) {
+      issues.push({ recordId: ability.slug, message: 'Missing provenance (source/external id).' });
+    } else {
+      const externalKey = `${ability.source.sourceId}:${ability.source.externalId}`;
+      if (seenAbilityExternalIds.has(externalKey)) {
+        issues.push({
+          recordId: ability.slug,
+          message: `External identity collision: another ability already uses ${externalKey}.`,
+        });
+      }
+      seenAbilityExternalIds.add(externalKey);
+    }
+  }
+
+  const seenFormAbilitySlots = new Set<string>();
+  for (const formAbility of dataset.formAbilities) {
+    const recordId = `${formAbility.formSlug}:${formAbility.abilitySlug}`;
+
+    if (!seenFormSlugs.has(formAbility.formSlug)) {
+      issues.push({
+        recordId,
+        message: `Orphan form ability: references unknown form slug "${formAbility.formSlug}".`,
+      });
+    }
+    if (!seenAbilitySlugs.has(formAbility.abilitySlug)) {
+      issues.push({
+        recordId,
+        message: `Orphan form ability: references unknown ability slug "${formAbility.abilitySlug}".`,
+      });
+    }
+
+    const slotKey = `${formAbility.formSlug}:${formAbility.slot}`;
+    if (seenFormAbilitySlots.has(slotKey)) {
+      issues.push({
+        recordId,
+        message: `Duplicate ability slot ${formAbility.slot} for form "${formAbility.formSlug}".`,
+      });
+    }
+    seenFormAbilitySlots.add(slotKey);
+
+    if (!Number.isInteger(formAbility.slot) || formAbility.slot < 1) {
+      issues.push({ recordId, message: `Invalid ability slot ${formAbility.slot}.` });
+    }
+  }
+
+  for (const evolution of dataset.evolutions) {
+    const recordId = `${evolution.fromSpeciesSlug}->${evolution.toSpeciesSlug}`;
+
+    if (!seenSpeciesSlugs.has(evolution.fromSpeciesSlug)) {
+      issues.push({
+        recordId,
+        message: `Orphan evolution: references unknown species slug "${evolution.fromSpeciesSlug}".`,
+      });
+    }
+    if (!seenSpeciesSlugs.has(evolution.toSpeciesSlug)) {
+      issues.push({
+        recordId,
+        message: `Orphan evolution: references unknown species slug "${evolution.toSpeciesSlug}".`,
+      });
+    }
+    if (evolution.fromSpeciesSlug === evolution.toSpeciesSlug) {
+      issues.push({ recordId, message: 'Evolution edge cannot point a species to itself.' });
+    }
+    if (!evolution.trigger.trim()) {
+      issues.push({ recordId, message: 'Missing evolution trigger.' });
+    }
+    if (!evolution.chainExternalId.trim()) {
+      issues.push({ recordId, message: 'Missing evolution chain id.' });
+    }
+    if (!evolution.source.sourceId) {
+      issues.push({ recordId, message: 'Missing provenance (source id).' });
+    }
+  }
+
   if (!dataset.provenance.sourceId || !dataset.provenance.sourceUrl) {
     issues.push({ recordId: '<dataset>', message: 'Dataset provenance is incomplete.' });
   }

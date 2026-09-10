@@ -16,7 +16,7 @@ PokeStudio must remain PostgreSQL-centric rather than spreading Supabase-specifi
 - provenance/versioning exists for imported datasets,
 - do not design tables for hypothetical features years away.
 
-## Implementation status (Phase 1B)
+## Implementation status (Phase 1C.1)
 
 `species` and `pokemon_form` are implemented (`supabase/migrations/20260909150000_pokemon_species_forms.sql`,
 `20260909160000_pokemon_identity_upsert_constraints.sql`), superseding the Phase 0 flattened
@@ -25,9 +25,21 @@ PokeStudio must remain PostgreSQL-centric rather than spreading Supabase-specifi
 are separate tables, per ADR-0010. Reference data is public-read (`anon`/`authenticated`) via RLS
 policy; writes are service-role only, same pattern as `data_sources`. Fully populated: the complete
 PokéAPI species/form dataset (~1025 species, ~1580 forms) via `pnpm --filter @pokestudio/pokemon-data
-ingest`, not a hand-picked sample. Not yet implemented from "Likely early domains" below:
-generations/games as their own tables, abilities, moves, items, evolutions, learnsets — deferred
-until a real feature needs them (YAGNI).
+ingest`, not a hand-picked sample.
+
+**Abilities and evolutions** (Phase 1C.1, ADR-0011) are implemented too:
+`supabase/migrations/20260910120000_pokemon_abilities.sql` adds `ability` (canonical — one row per
+real ability, never duplicated per Pokémon) and `pokemon_form_ability` (join: which ability, which
+slot, hidden or not); `supabase/migrations/20260910130000_pokemon_evolutions.sql` adds
+`species_evolution`, a graph of edges between species rather than fixed stage columns — required to
+represent branching (Eevee, 8 targets) and multiple independently valid methods to the same target
+(Feebas -> Milotic) without hacks. See ADR-0011 for the full rationale, including why the two join
+tables (`pokemon_form_ability`, `species_evolution`) have no independent external identity of their
+own and are fully replaced per `source_id` on each ingestion run instead of upserted by identity.
+Fully populated: 313 abilities, 3369 form/ability links, 553 evolution edges.
+
+Not yet implemented from "Likely early domains" below: generations/games as their own tables,
+moves, items, learnsets — deferred until a real feature needs them (YAGNI).
 
 ### Seed vs. ingestion
 
@@ -55,6 +67,13 @@ resumes/completes correctly rather than duplicating anything. A bespoke Postgres
 true single-transaction, all-or-nothing ingestion was deliberately not built: for a dev ingestion
 tool, "resumable via idempotent re-run" is a materially simpler correct answer to the same failure
 mode (a mid-run crash) than the RPC would be. See `packages/pokemon-data/src/persist.ts`.
+
+`ability` follows the same identity-based upsert. `pokemon_form_ability` and `species_evolution`
+(Phase 1C.1) use a different strategy — every row for a given `source_id` is deleted and
+re-inserted on each run, rather than upserted by identity — because neither has a stable external
+id of its own (PokéAPI's `abilities[]`/`evolution_details[]` entries are array positions, not
+addressable resources). Still idempotent (re-running produces the identical row set, not
+duplicates); see ADR-0011 decision 3.
 
 ### Generated database types
 

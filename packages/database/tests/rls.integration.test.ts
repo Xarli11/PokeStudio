@@ -73,6 +73,94 @@ describe.skipIf(!hasLocalSupabase)('species/pokemon_form reference data RLS', ()
   });
 });
 
+describe.skipIf(!hasLocalSupabase)(
+  'ability/pokemon_form_ability/species_evolution reference data RLS',
+  () => {
+    it('ability is readable by the anonymous role', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data, error } = await client.from('ability').select('id').limit(1);
+      expect(error).toBeNull();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('rejects anonymous writes to ability', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { error } = await client.from('ability').insert({
+        slug: 'should-fail',
+        name_en: 'x',
+        name_es: null,
+        effect_en: null,
+        effect_es: null,
+        source_id: 'pokeapi',
+        external_id: '999999',
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it('pokemon_form_ability is readable by the anonymous role', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data, error } = await client.from('pokemon_form_ability').select('id').limit(1);
+      expect(error).toBeNull();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('rejects anonymous writes to pokemon_form_ability', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data: form } = await client.from('pokemon_form').select('id').limit(1).single();
+      const { data: ability } = await client.from('ability').select('id').limit(1).single();
+      const { error } = await client.from('pokemon_form_ability').insert({
+        pokemon_form_id: form!.id,
+        ability_id: ability!.id,
+        slot: 99,
+        is_hidden: false,
+        source_id: 'pokeapi',
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it('species_evolution is readable by the anonymous role', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data, error } = await client.from('species_evolution').select('id').limit(1);
+      expect(error).toBeNull();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('rejects anonymous writes to species_evolution', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data: species } = await client.from('species').select('id').limit(2);
+      const { error } = await client.from('species_evolution').insert({
+        from_species_id: species![0]!.id,
+        to_species_id: species![1]!.id,
+        evolution_chain_external_id: 'should-fail',
+        trigger: 'level-up',
+        needs_overworld_rain: false,
+        turn_upside_down: false,
+        raw_condition: {},
+        source_id: 'pokeapi',
+      });
+      expect(error).not.toBeNull();
+    });
+  },
+);
+
 describe.skipIf(hasLocalSupabase)(
   'species/pokemon_form reference data RLS (no local Supabase)',
   () => {

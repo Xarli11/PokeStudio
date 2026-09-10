@@ -34,6 +34,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      ability: {
+        Row: {
+          created_at: string
+          effect_en: string | null
+          effect_es: string | null
+          external_id: string
+          id: string
+          name_en: string
+          name_es: string | null
+          slug: string
+          source_id: string
+        }
+        Insert: {
+          created_at?: string
+          effect_en?: string | null
+          effect_es?: string | null
+          external_id: string
+          id?: string
+          name_en: string
+          name_es?: string | null
+          slug: string
+          source_id: string
+        }
+        Update: {
+          created_at?: string
+          effect_en?: string | null
+          effect_es?: string | null
+          external_id?: string
+          id?: string
+          name_en?: string
+          name_es?: string | null
+          slug?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ability_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
       data_sources: {
         Row: {
           fetched_at: string
@@ -118,6 +162,58 @@ export type Database = {
           },
         ]
       }
+      pokemon_form_ability: {
+        Row: {
+          ability_id: string
+          created_at: string
+          id: string
+          is_hidden: boolean
+          pokemon_form_id: string
+          slot: number
+          source_id: string
+        }
+        Insert: {
+          ability_id: string
+          created_at?: string
+          id?: string
+          is_hidden?: boolean
+          pokemon_form_id: string
+          slot: number
+          source_id: string
+        }
+        Update: {
+          ability_id?: string
+          created_at?: string
+          id?: string
+          is_hidden?: boolean
+          pokemon_form_id?: string
+          slot?: number
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pokemon_form_ability_ability_id_fkey"
+            columns: ["ability_id"]
+            isOneToOne: false
+            referencedRelation: "ability"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pokemon_form_ability_pokemon_form_id_fkey"
+            columns: ["pokemon_form_id"]
+            isOneToOne: false
+            referencedRelation: "pokemon_form"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pokemon_form_ability_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
       species: {
         Row: {
           created_at: string
@@ -156,6 +252,112 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "data_sources"
             referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      species_evolution: {
+        Row: {
+          created_at: string
+          evolution_chain_external_id: string
+          from_species_id: string
+          gender: number | null
+          held_item_slug: string | null
+          id: string
+          item_slug: string | null
+          known_move_slug: string | null
+          known_move_type_slug: string | null
+          location_slug: string | null
+          min_affection: number | null
+          min_beauty: number | null
+          min_happiness: number | null
+          min_level: number | null
+          needs_overworld_rain: boolean
+          party_species_slug: string | null
+          party_type_slug: string | null
+          raw_condition: Json
+          relative_physical_stats: number | null
+          source_id: string
+          time_of_day: string | null
+          to_species_id: string
+          trade_species_slug: string | null
+          trigger: string
+          turn_upside_down: boolean
+        }
+        Insert: {
+          created_at?: string
+          evolution_chain_external_id: string
+          from_species_id: string
+          gender?: number | null
+          held_item_slug?: string | null
+          id?: string
+          item_slug?: string | null
+          known_move_slug?: string | null
+          known_move_type_slug?: string | null
+          location_slug?: string | null
+          min_affection?: number | null
+          min_beauty?: number | null
+          min_happiness?: number | null
+          min_level?: number | null
+          needs_overworld_rain?: boolean
+          party_species_slug?: string | null
+          party_type_slug?: string | null
+          raw_condition?: Json
+          relative_physical_stats?: number | null
+          source_id: string
+          time_of_day?: string | null
+          to_species_id: string
+          trade_species_slug?: string | null
+          trigger: string
+          turn_upside_down?: boolean
+        }
+        Update: {
+          created_at?: string
+          evolution_chain_external_id?: string
+          from_species_id?: string
+          gender?: number | null
+          held_item_slug?: string | null
+          id?: string
+          item_slug?: string | null
+          known_move_slug?: string | null
+          known_move_type_slug?: string | null
+          location_slug?: string | null
+          min_affection?: number | null
+          min_beauty?: number | null
+          min_happiness?: number | null
+          min_level?: number | null
+          needs_overworld_rain?: boolean
+          party_species_slug?: string | null
+          party_type_slug?: string | null
+          raw_condition?: Json
+          relative_physical_stats?: number | null
+          source_id?: string
+          time_of_day?: string | null
+          to_species_id?: string
+          trade_species_slug?: string | null
+          trigger?: string
+          turn_upside_down?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "species_evolution_from_species_id_fkey"
+            columns: ["from_species_id"]
+            isOneToOne: false
+            referencedRelation: "species"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "species_evolution_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+          {
+            foreignKeyName: "species_evolution_to_species_id_fkey"
+            columns: ["to_species_id"]
+            isOneToOne: false
+            referencedRelation: "species"
+            referencedColumns: ["id"]
           },
         ]
       }

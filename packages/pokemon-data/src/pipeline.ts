@@ -1,16 +1,27 @@
 import { mapWithConcurrency } from './concurrency';
 import {
+  normalizeAbility,
+  normalizeEvolutionChain,
   normalizeSpeciesGroup,
   type LocalizationNote,
   type RawSpeciesGroup,
   type RawVarietyGroup,
 } from './normalize';
 import type { PokeApiClient, PokeApiPokemon, PokeApiPokemonForm } from './pokeapi-client';
-import type { NormalizedForm, NormalizedSpecies } from './types';
+import type {
+  NormalizedAbility,
+  NormalizedEvolution,
+  NormalizedForm,
+  NormalizedFormAbility,
+  NormalizedSpecies,
+} from './types';
 
 export interface FetchAndNormalizeResult {
   species: NormalizedSpecies[];
   forms: NormalizedForm[];
+  abilities: NormalizedAbility[];
+  formAbilities: NormalizedFormAbility[];
+  evolutions: NormalizedEvolution[];
   localizationNotes: LocalizationNote[];
   normalizationFailures: { speciesName: string; error: string }[];
   varietyCount: number;
@@ -65,6 +76,25 @@ export async function fetchAndNormalize(
     (job) => api.fetchPokemonForm(job.formUrl),
   );
 
+  // Abilities and evolution chains are each referenced by many
+  // species/varieties (most abilities are shared across dozens of Pokémon;
+  // every stage of a chain points at the same chain resource) — fetched once
+  // per unique URL, not once per reference, same "flat, globally-bounded"
+  // shape as the three phases above (Phase 1B §7 applies equally here).
+  const abilityUrls = [
+    ...new Set(pokemonDetails.flatMap((pokemon) => pokemon.abilities.map((a) => a.ability.url))),
+  ];
+  const abilityDetails = await mapWithConcurrency(abilityUrls, options.concurrency, (url) =>
+    api.fetchAbility(url),
+  );
+
+  const evolutionChainUrls = [
+    ...new Set(speciesDetails.map((species) => species.evolution_chain.url)),
+  ];
+  const evolutionChains = await mapWithConcurrency(evolutionChainUrls, options.concurrency, (url) =>
+    api.fetchEvolutionChain(url),
+  );
+
   const fetchDurationMs = Date.now() - startedAt;
 
   const formsByVarietyJobIndex = new Map<number, PokeApiPokemonForm[]>();
@@ -92,6 +122,7 @@ export async function fetchAndNormalize(
 
   const species: NormalizedSpecies[] = [];
   const forms: NormalizedForm[] = [];
+  const formAbilities: NormalizedFormAbility[] = [];
   const localizationNotes: LocalizationNote[] = [];
   const normalizationFailures: { speciesName: string; error: string }[] = [];
   for (const group of rawGroups) {
@@ -99,6 +130,7 @@ export async function fetchAndNormalize(
       const normalized = normalizeSpeciesGroup(group, SOURCE_ID);
       species.push(normalized.species);
       forms.push(...normalized.forms);
+      formAbilities.push(...normalized.formAbilities);
       localizationNotes.push(...normalized.localizationNotes);
     } catch (error) {
       normalizationFailures.push({
@@ -108,9 +140,28 @@ export async function fetchAndNormalize(
     }
   }
 
+  const abilities: NormalizedAbility[] = [];
+  for (const ability of abilityDetails) {
+    try {
+      abilities.push(normalizeAbility({ ability, sourceId: SOURCE_ID }));
+    } catch (error) {
+      normalizationFailures.push({
+        speciesName: `ability:${ability.name}`,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const evolutions: NormalizedEvolution[] = evolutionChains.flatMap((chain) =>
+    normalizeEvolutionChain({ chain, sourceId: SOURCE_ID }),
+  );
+
   return {
     species,
     forms,
+    abilities,
+    formAbilities,
+    evolutions,
     localizationNotes,
     normalizationFailures,
     varietyCount: varietyJobs.length,

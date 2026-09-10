@@ -82,10 +82,13 @@ async function main() {
   const cache = args.noCache ? undefined : createFileCache(cacheDir);
   const api = createPokeApiClient({ cache });
 
-  console.warn('[ingest] Fetching + normalizing (species -> varieties -> forms)...');
+  console.warn(
+    '[ingest] Fetching + normalizing (species -> varieties -> forms -> abilities/evolution chains)...',
+  );
   const result = await fetchAndNormalize(api, { limit: args.limit, concurrency: args.concurrency });
   console.warn(
-    `[ingest]   ${result.species.length} species, ${result.varietyCount} varieties, ${result.formJobCount} forms.`,
+    `[ingest]   ${result.species.length} species, ${result.varietyCount} varieties, ${result.formJobCount} forms, ` +
+      `${result.abilities.length} abilities, ${result.evolutions.length} evolution edges.`,
   );
 
   if (result.normalizationFailures.length > 0) {
@@ -107,6 +110,9 @@ async function main() {
     },
     species: result.species,
     forms: result.forms,
+    abilities: result.abilities,
+    formAbilities: result.formAbilities,
+    evolutions: result.evolutions,
   };
 
   console.warn('[ingest] Validating...');
@@ -149,6 +155,10 @@ async function main() {
   console.warn(`Total duration: ${(totalDurationMs / 1000).toFixed(1)}s`);
   console.warn(
     `Species upserted: ${persistResult.speciesUpserted}, forms upserted: ${persistResult.formsUpserted}`,
+  );
+  console.warn(
+    `Abilities upserted: ${persistResult.abilitiesUpserted}, form/ability links written: ` +
+      `${persistResult.formAbilitiesWritten}, evolution edges written: ${persistResult.evolutionsWritten}`,
   );
 }
 

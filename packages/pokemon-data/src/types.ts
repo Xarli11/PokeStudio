@@ -96,9 +96,80 @@ export interface DataProvenance {
   importerVersion: string;
 }
 
+/**
+ * A canonical ability, independent of any Pokémon (Phase 1C.1). Referenced
+ * by `NormalizedFormAbility`, never duplicated per form. Spanish name/effect
+ * are optional because PokéAPI doesn't reliably provide them for every
+ * ability — never invented when absent (CLAUDE.md §14 "no fake completeness").
+ */
+export interface NormalizedAbility {
+  /** Stable PokeStudio identity — PokéAPI's ability name is already kebab-case. */
+  slug: string;
+  nameEn: string;
+  nameEs?: string | undefined;
+  /** Concise effect text (PokéAPI `short_effect`, falling back to `effect`). */
+  effectEn?: string | undefined;
+  effectEs?: string | undefined;
+  source: SourceRef;
+}
+
+/** Which ability belongs to which form, in which slot — the join PokeStudio owns (ADR-0010 decision #4). */
+export interface NormalizedFormAbility {
+  formSlug: string;
+  abilitySlug: string;
+  /** PokéAPI's 1-based ability slot (1-2 normal, 3 hidden by convention — `isHidden` is the authoritative signal, not the slot number). */
+  slot: number;
+  isHidden: boolean;
+}
+
+/**
+ * One evolution edge (`fromSpeciesSlug -> toSpeciesSlug`) plus the condition(s)
+ * that trigger it — a graph/edge model, not a fixed stage structure (see
+ * docs/adr/0011-abilities-evolutions-schema.md). A species with no evolution
+ * has zero edges referencing it; branching/multi-condition evolutions are
+ * simply multiple edges sharing the same `fromSpeciesSlug` (branching) or the
+ * same `(fromSpeciesSlug, toSpeciesSlug)` pair (alternate methods, e.g. Feebas).
+ *
+ * `fromSpeciesSlug` is undefined only for a chain's root node, which has no
+ * incoming edge — that case never produces a row at all (see `normalizeEvolutionChain`).
+ */
+export interface NormalizedEvolution {
+  /** PokéAPI's evolution-chain id — groups every edge belonging to the same family. */
+  chainExternalId: string;
+  fromSpeciesSlug: string;
+  toSpeciesSlug: string;
+  /** Free-form (PokéAPI's trigger list has grown across generations) — e.g. "level-up", "trade", "use-item", "shed". */
+  trigger: string;
+  minLevel?: number | undefined;
+  itemSlug?: string | undefined;
+  heldItemSlug?: string | undefined;
+  minHappiness?: number | undefined;
+  minBeauty?: number | undefined;
+  minAffection?: number | undefined;
+  timeOfDay?: 'day' | 'night' | undefined;
+  knownMoveSlug?: string | undefined;
+  knownMoveTypeSlug?: string | undefined;
+  locationSlug?: string | undefined;
+  /** PokéAPI's raw gender index: 1 = female, 2 = male. Absent = no gender requirement. */
+  gender?: number | undefined;
+  tradeSpeciesSlug?: string | undefined;
+  partySpeciesSlug?: string | undefined;
+  partyTypeSlug?: string | undefined;
+  /** Tyrogue-style: -1 (attack < defense), 0 (equal), 1 (attack > defense). */
+  relativePhysicalStats?: number | undefined;
+  needsOverworldRain: boolean;
+  turnUpsideDown: boolean;
+  /** The complete raw PokéAPI evolution-details entry — preserves anything not modeled above (Phase 1C.1 §B6). */
+  raw: Record<string, unknown>;
+  source: SourceRef;
+}
+
 /** A normalized, provenance-tagged import batch — species and their forms together. */
 export interface NormalizedDataset {
   provenance: DataProvenance;
   species: NormalizedSpecies[];
   forms: NormalizedForm[];
+  abilities: NormalizedAbility[];
+  formAbilities: NormalizedFormAbility[];
+  evolutions: NormalizedEvolution[];
 }

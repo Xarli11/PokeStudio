@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { PokemonFormSection } from './form-section';
 
@@ -11,6 +11,8 @@ const statLabels = {
   specialDefense: 'Sp. Def',
   speed: 'Speed',
 };
+
+afterEach(cleanup);
 
 describe('PokemonFormSection', () => {
   it('renders types/stats and omits a category label for the default form', () => {
@@ -33,6 +35,10 @@ describe('PokemonFormSection', () => {
         statLabels={statLabels}
         typesLabel="Types"
         baseStatsLabel="Base stats"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
       />,
     );
 
@@ -61,11 +67,74 @@ describe('PokemonFormSection', () => {
         statLabels={statLabels}
         typesLabel="Types"
         baseStatsLabel="Base stats"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
       />,
     );
 
     expect(screen.queryByRole('heading', { level: 3, name: 'Alolan Meowth' })).not.toBeNull();
     expect(screen.queryByText('Regional form')).not.toBeNull();
     expect(screen.queryByText('Dark')).not.toBeNull();
+  });
+
+  it('renders regular abilities and visually distinguishes the hidden ability', () => {
+    render(
+      <PokemonFormSection
+        id="bulbasaur"
+        name="Bulbasaur"
+        types={[{ type: 'grass', label: 'Grass' }]}
+        stats={{
+          hp: 45,
+          attack: 49,
+          defense: 49,
+          specialAttack: 65,
+          specialDefense: 65,
+          speed: 45,
+        }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        abilities={[
+          {
+            slug: 'overgrow',
+            name: 'Overgrow',
+            description: 'Powers up Grass moves.',
+            isHidden: false,
+          },
+          { slug: 'chlorophyll', name: 'Chlorophyll', description: undefined, isHidden: true },
+        ]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+      />,
+    );
+
+    expect(screen.queryByText('Overgrow')).not.toBeNull();
+    expect(screen.queryByText('Powers up Grass moves.')).not.toBeNull();
+    expect(screen.queryByText('Chlorophyll')).not.toBeNull();
+    expect(screen.queryByText('Hidden Ability')).not.toBeNull();
+    expect(screen.queryByText('No description available.')).not.toBeNull();
+  });
+
+  it('omits the abilities heading entirely when a form has no abilities', () => {
+    render(
+      <PokemonFormSection
+        id="test-mon"
+        name="Test Mon"
+        types={[{ type: 'normal', label: 'Normal' }]}
+        stats={{ hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+      />,
+    );
+
+    expect(screen.queryByText('Abilities')).toBeNull();
   });
 });

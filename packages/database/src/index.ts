@@ -5,5 +5,16 @@ export type {
   SupabaseSecretConfig,
 } from './client';
 export type { Database } from './types';
-export { getSpeciesBySlug, listSpecies, listSpeciesPage } from './queries';
-export type { SpeciesDetail, SpeciesFormSummary, SpeciesListItem, SpeciesPage } from './queries';
+export { getEvolutionFamily, getSpeciesBySlug, listSpecies, listSpeciesPage } from './queries';
+export type {
+  AbilitySummary,
+  EvolutionCondition,
+  EvolutionEdge,
+  EvolutionFamily,
+  EvolutionFamilyMember,
+  SpeciesDetail,
+  SpeciesFormDetail,
+  SpeciesFormSummary,
+  SpeciesListItem,
+  SpeciesPage,
+} from './queries';

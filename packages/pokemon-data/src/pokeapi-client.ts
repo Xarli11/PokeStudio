@@ -27,6 +27,8 @@ export interface PokeApiPokemonSpecies {
   name: string;
   names: PokeApiLocalizedName[];
   varieties: { is_default: boolean; pokemon: PokeApiNamedResource }[];
+  /** Always present — even a species with no evolution belongs to a (single-node) chain. */
+  evolution_chain: { url: string };
 }
 
 export interface PokeApiPokemonType {
@@ -39,12 +41,65 @@ export interface PokeApiPokemonStat {
   stat: PokeApiNamedResource;
 }
 
+export interface PokeApiPokemonAbility {
+  ability: PokeApiNamedResource;
+  is_hidden: boolean;
+  slot: number;
+}
+
 export interface PokeApiPokemon {
   id: number;
   name: string;
   types: PokeApiPokemonType[];
   stats: PokeApiPokemonStat[];
   forms: PokeApiNamedResource[];
+  abilities: PokeApiPokemonAbility[];
+}
+
+export interface PokeApiEffectEntry {
+  effect: string;
+  short_effect: string;
+  language: PokeApiNamedResource;
+}
+
+export interface PokeApiAbility {
+  id: number;
+  name: string;
+  names: PokeApiLocalizedName[];
+  effect_entries: PokeApiEffectEntry[];
+}
+
+/** One alternative condition set for one evolution edge (an evolution can have several — e.g. Feebas). */
+export interface PokeApiEvolutionDetail {
+  trigger: PokeApiNamedResource;
+  item: PokeApiNamedResource | null;
+  held_item: PokeApiNamedResource | null;
+  min_level: number | null;
+  min_happiness: number | null;
+  min_beauty: number | null;
+  min_affection: number | null;
+  time_of_day: string;
+  known_move: PokeApiNamedResource | null;
+  known_move_type: PokeApiNamedResource | null;
+  location: PokeApiNamedResource | null;
+  gender: number | null;
+  trade_species: PokeApiNamedResource | null;
+  party_species: PokeApiNamedResource | null;
+  party_type: PokeApiNamedResource | null;
+  relative_physical_stats: number | null;
+  needs_overworld_rain: boolean;
+  turn_upside_down: boolean;
+}
+
+export interface PokeApiEvolutionChainLink {
+  species: PokeApiNamedResource;
+  evolution_details: PokeApiEvolutionDetail[];
+  evolves_to: PokeApiEvolutionChainLink[];
+}
+
+export interface PokeApiEvolutionChain {
+  id: number;
+  chain: PokeApiEvolutionChainLink;
 }
 
 export interface PokeApiPokemonForm {
@@ -66,6 +121,8 @@ export interface PokeApiClient {
   fetchPokemonSpecies: (idOrUrl: number | string) => Promise<PokeApiPokemonSpecies>;
   fetchPokemon: (idOrUrl: number | string) => Promise<PokeApiPokemon>;
   fetchPokemonForm: (url: string) => Promise<PokeApiPokemonForm>;
+  fetchAbility: (url: string) => Promise<PokeApiAbility>;
+  fetchEvolutionChain: (url: string) => Promise<PokeApiEvolutionChain>;
   requestCount: () => number;
 }
 
@@ -109,6 +166,8 @@ export function createPokeApiClient(options: { cache?: RawCache | undefined } = 
     fetchPokemonSpecies: (idOrUrl) => fetchJson(toUrl(idOrUrl, 'pokemon-species')),
     fetchPokemon: (idOrUrl) => fetchJson(toUrl(idOrUrl, 'pokemon')),
     fetchPokemonForm: (url) => fetchJson(url),
+    fetchAbility: (url) => fetchJson(url),
+    fetchEvolutionChain: (url) => fetchJson(url),
     requestCount: () => requestCount,
   };
 }
