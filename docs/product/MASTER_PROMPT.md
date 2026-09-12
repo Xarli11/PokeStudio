@@ -1,5 +1,10 @@
 # PokeStudio.app — Master Prompt for Claude Code
 
+> **Historical record, not an active instruction set.** This was the original Phase 0 bootstrap
+> prompt. `CLAUDE.md` (repository root) is the current mandatory operating context and execution
+> entry point — it supersedes this document for any ongoing decision. Kept here for the historical
+> record of original intent (Phase 1C.2b documentation reorganization).
+
 You are the principal software engineer and product engineer responsible for building **PokeStudio.app**.
 
 PokeStudio is intended to become the definitive Pokémon companion for both casual and competitive players.
@@ -21,10 +26,10 @@ The core differentiator is the **integration** of Pokémon knowledge, teambuildi
 Before creating code:
 
 1. Read `CLAUDE.md` in full.
-2. Read `PRODUCT_SPEC.md`.
+2. Read `docs/product/PRODUCT_SPEC.md`.
 3. Read all accepted ADRs under `docs/adr/`.
-4. Read `ARCHITECTURE.md`, `DATABASE.md`, `DATA_SOURCES.md`, `BATTLE_ENGINE.md`, `AI_SPEC.md`, `DESIGN_SYSTEM.md`, `TESTING.md`, `DEPENDENCY_POLICY.md`, `SECURITY.md` and `OBSERVABILITY.md`.
-5. Read `ROADMAP.md`.
+4. Read `docs/architecture/ARCHITECTURE.md`, `docs/engineering/DATABASE.md`, `docs/engineering/DATA_SOURCES.md`, `docs/architecture/BATTLE_ENGINE.md`, `docs/architecture/AI_SPEC.md`, `docs/product/DESIGN_SYSTEM.md`, `docs/engineering/TESTING.md`, `docs/engineering/DEPENDENCY_POLICY.md`, `docs/engineering/SECURITY.md` and `docs/engineering/OBSERVABILITY.md`.
+5. Read `docs/product/ROADMAP.md`.
 6. Identify contradictions, outdated assumptions or technically invalid requirements before scaffolding.
 
 Do not redesign the product from scratch. The project owner has already made the primary product decisions.
@@ -136,4 +141,4 @@ When Phase 0 is complete, report:
 - known risks/debt,
 - recommended next vertical slice.
 
-The next recommended product slice should be chosen from `ROADMAP.md`, not invented ad hoc.
+The next recommended product slice should be chosen from `docs/product/ROADMAP.md`, not invented ad hoc.

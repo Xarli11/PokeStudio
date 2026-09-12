@@ -1,7 +1,11 @@
 import { getDictionary } from '@pokestudio/i18n';
 import { describe, expect, it } from 'vitest';
 
-import { describeEvolutionCondition, groupEvolutionEdges } from './evolution-condition';
+import {
+  describeEvolutionCondition,
+  groupEvolutionEdges,
+  groupEvolutionsByParent,
+} from './evolution-condition';
 import type { EvolutionCondition, EvolutionEdge } from '@pokestudio/database';
 
 const dictionary = getDictionary('en');
@@ -124,5 +128,70 @@ describe('groupEvolutionEdges', () => {
     expect(new Set(groups.map((g) => g.toSpeciesSlug))).toEqual(
       new Set(['vaporeon', 'jolteon', 'flareon']),
     );
+  });
+});
+
+describe('groupEvolutionsByParent', () => {
+  function edge(overrides: Partial<EvolutionEdge> = {}): EvolutionEdge {
+    return {
+      fromSpeciesSlug: 'bulbasaur',
+      toSpeciesSlug: 'ivysaur',
+      condition: condition({ minLevel: 16 }),
+      ...overrides,
+    };
+  }
+
+  it('collapses a branching family (Eevee) into one parent group with every branch as a child', () => {
+    const edges: EvolutionEdge[] = [
+      edge({ fromSpeciesSlug: 'eevee', toSpeciesSlug: 'vaporeon' }),
+      edge({ fromSpeciesSlug: 'eevee', toSpeciesSlug: 'jolteon' }),
+      edge({ fromSpeciesSlug: 'eevee', toSpeciesSlug: 'flareon' }),
+    ];
+    const groups = groupEvolutionsByParent(edges, evolutionDictionary);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.fromSpeciesSlug).toBe('eevee');
+    expect(new Set(groups[0]!.children.map((c) => c.toSpeciesSlug))).toEqual(
+      new Set(['vaporeon', 'jolteon', 'flareon']),
+    );
+  });
+
+  it('keeps a linear chain (Bulbasaur -> Ivysaur -> Venusaur) as two separate single-child parent groups', () => {
+    const edges: EvolutionEdge[] = [
+      edge({ fromSpeciesSlug: 'bulbasaur', toSpeciesSlug: 'ivysaur' }),
+      edge({
+        fromSpeciesSlug: 'ivysaur',
+        toSpeciesSlug: 'venusaur',
+        condition: condition({ minLevel: 32 }),
+      }),
+    ];
+    const groups = groupEvolutionsByParent(edges, evolutionDictionary);
+    expect(groups).toHaveLength(2);
+    const bulbasaurGroup = groups.find((g) => g.fromSpeciesSlug === 'bulbasaur')!;
+    expect(bulbasaurGroup.children).toEqual([
+      { toSpeciesSlug: 'ivysaur', conditionDescriptions: ['Level up (at level 16)'] },
+    ]);
+    const ivysaurGroup = groups.find((g) => g.fromSpeciesSlug === 'ivysaur')!;
+    expect(ivysaurGroup.children).toEqual([
+      { toSpeciesSlug: 'venusaur', conditionDescriptions: ['Level up (at level 32)'] },
+    ]);
+  });
+
+  it('keeps a multi-condition edge (Feebas -> Milotic) as one child with both alternative conditions', () => {
+    const edges: EvolutionEdge[] = [
+      edge({
+        fromSpeciesSlug: 'feebas',
+        toSpeciesSlug: 'milotic',
+        condition: condition({ minBeauty: 170 }),
+      }),
+      edge({
+        fromSpeciesSlug: 'feebas',
+        toSpeciesSlug: 'milotic',
+        condition: condition({ trigger: 'trade', heldItemSlug: 'prism-scale' }),
+      }),
+    ];
+    const groups = groupEvolutionsByParent(edges, evolutionDictionary);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.children).toHaveLength(1);
+    expect(groups[0]!.children[0]!.conditionDescriptions).toHaveLength(2);
   });
 });

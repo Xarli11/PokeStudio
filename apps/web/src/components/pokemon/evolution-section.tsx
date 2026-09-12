@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { EvolutionFamily } from '@pokestudio/database';
 import { formatMessage, type Dictionary, type Locale } from '@pokestudio/i18n';
 
-import { groupEvolutionEdges } from '@/lib/evolution-condition';
+import { groupEvolutionsByParent } from '@/lib/evolution-condition';
 import { tagClass } from '@/lib/ui-classes';
 
 export interface PokemonEvolutionSectionProps {
@@ -31,13 +31,15 @@ function MemberChip({ slug, name, locale }: { slug: string; name: string; locale
 }
 
 /**
- * A simple row-per-edge evolution flow (UX/UI 0.1, Part E) — not a
- * positioned node/graph diagram. Each row is `[from] → [to]` plus that
- * edge's condition(s) as small secondary chips below the names, so
- * identities stay the visually dominant element and conditions stay
- * readable but subordinate. Rows stack and wrap on narrow screens for free
- * via flexbox. Branching is just multiple rows sharing the same `from`; a
- * species with no evolution renders a plain "does not evolve" card.
+ * A parent-fans-out-to-children evolution flow (Phase 1C.2b, superseding UX/UI
+ * 0.1 Part E's row-per-edge layout) — not a positioned node/graph diagram,
+ * still plain CSS grid/flex. Each parent renders once (`groupEvolutionsByParent`)
+ * with every one of its evolution targets listed as a branch below/beside
+ * it, so a branching family (Eevee: 8 targets) reads as one "Eevee" fanning
+ * out rather than eight rows each repeating "Eevee →". A linear chain still
+ * renders as a natural top-to-bottom sequence, because each stage is its own
+ * parent group with exactly one child. A species with no evolution renders a
+ * plain "does not evolve" card.
  */
 export function PokemonEvolutionSection({
   family,
@@ -58,54 +60,67 @@ export function PokemonEvolutionSection({
     );
   }
 
-  const groups = groupEvolutionEdges(family.edges, dictionary.pokedex.evolution).sort((a, b) => {
-    const fromCompare = (nameBySlug.get(a.fromSpeciesSlug) ?? '').localeCompare(
-      nameBySlug.get(b.fromSpeciesSlug) ?? '',
-    );
-    return fromCompare !== 0
-      ? fromCompare
-      : (nameBySlug.get(a.toSpeciesSlug) ?? '').localeCompare(
+  const parentGroups = groupEvolutionsByParent(family.edges, dictionary.pokedex.evolution, locale)
+    .map((group) => ({
+      ...group,
+      children: [...group.children].sort((a, b) =>
+        (nameBySlug.get(a.toSpeciesSlug) ?? '').localeCompare(
           nameBySlug.get(b.toSpeciesSlug) ?? '',
-        );
-  });
+        ),
+      ),
+    }))
+    .sort((a, b) =>
+      (nameBySlug.get(a.fromSpeciesSlug) ?? '').localeCompare(
+        nameBySlug.get(b.fromSpeciesSlug) ?? '',
+      ),
+    );
 
   return (
     <section className="flex flex-col gap-4 border-t border-border-subtle pt-6">
       <h2 className="m-0 text-lg">{dictionary.pokedex.evolution.title}</h2>
 
-      <ul className="m-0 flex list-none flex-col gap-3 p-0">
-        {groups.map((group) => (
+      <ul className="m-0 flex list-none flex-col gap-4 p-0">
+        {parentGroups.map((group) => (
           <li
-            key={`${group.fromSpeciesSlug}->${group.toSpeciesSlug}`}
-            className="flex flex-col gap-1 rounded-md bg-surface-raised p-3"
+            key={group.fromSpeciesSlug}
+            className="grid grid-cols-1 gap-3 rounded-md bg-surface-raised p-3 sm:grid-cols-[auto_1fr] sm:items-start"
           >
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex sm:pt-1">
               <MemberChip
                 slug={group.fromSpeciesSlug}
                 name={nameBySlug.get(group.fromSpeciesSlug) ?? group.fromSpeciesSlug}
                 locale={locale}
               />
-              <span aria-hidden="true" className="text-muted">
-                →
-              </span>
-              <MemberChip
-                slug={group.toSpeciesSlug}
-                name={nameBySlug.get(group.toSpeciesSlug) ?? group.toSpeciesSlug}
-                locale={locale}
-              />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {group.conditionDescriptions.map((description, index) => (
-                <span key={description} className="contents">
-                  {index > 0 ? (
-                    <span aria-hidden="true" className="text-xs text-muted">
-                      {dictionary.pokedex.evolution.orSeparator}
+
+            <ul className="m-0 flex list-none flex-col gap-2 border-l border-border-subtle p-0 pl-4 sm:border-l">
+              {group.children.map((child) => (
+                <li key={child.toSpeciesSlug} className="flex flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span aria-hidden="true" className="text-muted">
+                      →
                     </span>
-                  ) : null}
-                  <span className={tagClass()}>{description}</span>
-                </span>
+                    <MemberChip
+                      slug={child.toSpeciesSlug}
+                      name={nameBySlug.get(child.toSpeciesSlug) ?? child.toSpeciesSlug}
+                      locale={locale}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pl-1">
+                    {child.conditionDescriptions.map((description, index) => (
+                      <span key={description} className="contents">
+                        {index > 0 ? (
+                          <span aria-hidden="true" className="text-xs text-muted">
+                            {dictionary.pokedex.evolution.orSeparator}
+                          </span>
+                        ) : null}
+                        <span className={tagClass()}>{description}</span>
+                      </span>
+                    ))}
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </li>
         ))}
       </ul>

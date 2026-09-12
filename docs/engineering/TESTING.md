@@ -93,6 +93,23 @@ Every pull request should run relevant:
 - build,
 - E2E for affected critical workflows where feasible.
 
+## Local validation commands (CLAUDE.md §12)
+
+Two tiers, both backed by the same Turborepo task graph — never a separate, hand-maintained
+"changed files" heuristic:
+
+- **`pnpm validate:changed`** — during active implementation. Format check (repo-wide; Prettier
+  has no cross-file effect, so scoping it isn't worth the risk of missing a file) plus
+  lint/typecheck/test scoped to changed packages _and their dependents_ via Turborepo's built-in
+  git-aware `--filter='...[HEAD]'`. This is dependency-graph-correct, not a guess: it's the same
+  graph `pnpm build` uses, just filtered by what git says changed.
+- **`pnpm validate:full`** — mandatory before declaring a phase or a significant commit complete.
+  Format, lint, typecheck, all tests, `next build`, and the Cloudflare/OpenNext build
+  (`build:cf`) — the complete gate, every package, unconditionally.
+
+Never substitute `validate:changed` for `validate:full` at a phase/commit boundary — the full gate
+exists specifically to catch cross-package effects incremental validation isn't scoped to see.
+
 ## Flaky tests
 
 Do not accept permanent flaky tests as normal.

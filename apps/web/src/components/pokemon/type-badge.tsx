@@ -4,7 +4,7 @@ import { pokemonTypeColorVar } from '@pokestudio/ui';
 /**
  * A Pokémon type indicator. Color is a decorative accent only — the
  * localized label is always shown, so the indicator never relies on color
- * alone (DESIGN_SYSTEM.md accessibility requirements).
+ * alone (docs/product/DESIGN_SYSTEM.md accessibility requirements).
  *
  * The type is chosen at runtime from data, so its color can't be a static
  * Tailwind class (`bg-type-grass` etc. don't exist as a fixed set in the

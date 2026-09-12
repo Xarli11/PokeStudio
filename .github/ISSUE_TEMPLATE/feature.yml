@@ -20,4 +20,4 @@ body:
   - type: markdown
     attributes:
       value: |
-        PokeStudio is community-informed but owner-led (COMMUNITY.md). Feedback is weighted heavily but roadmap decisions remain with the project owner.
+        PokeStudio is community-informed but owner-led (docs/community/COMMUNITY.md). Feedback is weighted heavily but roadmap decisions remain with the project owner.

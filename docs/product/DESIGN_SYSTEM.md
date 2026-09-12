@@ -113,8 +113,8 @@ geometry in code** — only reference their file paths, via the small registry a
 | Logo – Dark            | `pokestudio-symbol-on-dark.svg`          | Reserved                                      |
 | Monochrome Light       | `pokestudio-symbol-mono-on-light.svg`    | Reserved                                      |
 | Monochrome Dark        | `pokestudio-symbol-mono-on-dark.svg`     | Reserved                                      |
-| Wordmark / Light       | `pokestudio-wordmark-on-light.svg`       | AppShell header, light theme                  |
-| Wordmark / Dark        | `pokestudio-wordmark-on-dark.svg`        | AppShell header, dark theme                   |
+| Wordmark / Light       | `pokestudio-wordmark-on-light.svg`       | PersistentShell header, light theme           |
+| Wordmark / Dark        | `pokestudio-wordmark-on-dark.svg`        | PersistentShell header, dark theme            |
 | Lockup / Compact Light | `pokestudio-lockup-compact-on-light.svg` | Reserved for a narrower header if ever needed |
 | Lockup / Compact Dark  | `pokestudio-lockup-compact-on-dark.svg`  | Reserved for a narrower header if ever needed |
 | Favicon / 16           | `pokestudio-favicon-16.svg`              | Browser tab icon / metadata icon (16×16)      |

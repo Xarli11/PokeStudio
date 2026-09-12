@@ -21,7 +21,7 @@ pipeline report-only, without touching the database. See `packages/pokemon-data/
 full pipeline shape, fetch/cache strategy and idempotency guarantee.
 
 Phase 1A's small hand-mirrored 3-species sample (`seed.sql`) has been fully superseded — see
-DATABASE.md "Seed vs. ingestion."
+docs/engineering/DATABASE.md "Seed vs. ingestion."
 
 ## Moves and learnsets (Phase 1C.2)
 
@@ -122,11 +122,17 @@ not scattered fixes.
 actual gap is more severe here than for form names: at full-dataset scale, PokéAPI provides a
 Spanish ability **name** for 310 of 313 abilities (only 3 missing), but a Spanish ability
 **effect** for **zero** of them — `effect_entries` in this dataset never contains an `es` entry at
-all, only `en`. The web UI falls back to "no description available" in Spanish rather than showing
-the English effect mislabeled as Spanish, or leaving it blank with no explanation
-(`apps/web/src/components/pokemon/ability-list.tsx`). This is a real, current upstream gap, not a
-transient one — a future improvement here would need either a different/supplementary source for
-Spanish ability effect text or a hand-authored translation table, not a PokéAPI fallback field
+all, only `en`, and critically, **every** ability has an English one (0 of 313 are missing both).
+Phase 1C.1 had the web UI fall back to "no description available" in Spanish rather than show the
+English effect mislabeled as Spanish; Phase 1C.2b reversed that (an explicit owner decision, not a
+bug fix) once the "zero missing both" fact made the tradeoff clear: the Spanish UI now shows the
+English effect text with a small, honest "English" tag next to it
+(`apps/web/src/components/pokemon/ability-list.tsx`'s `descriptionIsFallback`) rather than
+withholding a real description the user could otherwise read. "No description available" is now
+reserved for the (currently non-existent, but structurally still possible) case where neither
+language has one. This is a real, current upstream gap, not a transient one — a future improvement
+here would need either a different/supplementary source for Spanish ability effect text or a
+hand-authored translation table, not a PokéAPI fallback field
 (there isn't one).
 
 ## Evolution conditions — not version-group-scoped, so "alternative methods" can over-count

@@ -41,7 +41,7 @@ Not called at runtime by the web app (CLAUDE.md §10).
 
 No sprite/artwork/icon assets from PokéAPI or any other source have been
 introduced — Pokédex visuals use a neutral placeholder pending a reviewed,
-license-cleared asset source (DATA_SOURCES.md "Asset policy").
+license-cleared asset source (docs/engineering/DATA_SOURCES.md "Asset policy").
 
 License: BSD-3-Clause (confirmed via the repository's `LICENSE.md`). Requires
 retaining the copyright notice; Pokémon names/characters remain Nintendo

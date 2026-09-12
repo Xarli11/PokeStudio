@@ -20,7 +20,7 @@ create table public.ability (
   -- Concise effect text (PokéAPI's short_effect, falling back to effect).
   effect_en text,
   -- Nullable, and left null far more often than name_es — PokéAPI rarely
-  -- publishes a Spanish ability effect_entries entry at all (see DATA_SOURCES.md).
+  -- publishes a Spanish ability effect_entries entry at all (see docs/engineering/DATA_SOURCES.md).
   effect_es text,
   source_id text not null references public.data_sources (source_id),
   external_id text not null,

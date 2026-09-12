@@ -21,7 +21,7 @@ would duplicate the same English/Spanish text hundreds of times and make a futur
 by more than N Pokémon" or "search by ability" query need string matching instead of a join.
 
 Spanish name/effect are nullable, not backfilled — PokéAPI does not reliably provide either for
-every ability (recorded in DATA_SOURCES.md, matching the same real gap already documented for
+every ability (recorded in docs/engineering/DATA_SOURCES.md, matching the same real gap already documented for
 form names). Inventing a translation would violate CLAUDE.md §14 ("no fake completeness").
 
 ## Decision 2 — evolutions are edges between species, not stage columns

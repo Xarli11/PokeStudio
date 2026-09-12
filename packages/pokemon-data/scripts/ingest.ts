@@ -17,9 +17,9 @@
  * Requires SUPABASE_URL and SUPABASE_SECRET_KEY (the secret key bypasses
  * RLS — only publishable/anon reads are allowed on these tables otherwise,
  * and ingestion writes need to bypass that, same as any other write path in
- * this repo, SECURITY.md). Accepts either Supabase's current secret-key
+ * this repo, docs/engineering/SECURITY.md). Accepts either Supabase's current secret-key
  * format (`sb_secret_...`) or a legacy `service_role` JWT — both are valid
- * bearer tokens here; see DATABASE.md "Supabase API keys".
+ * bearer tokens here; see docs/engineering/DATABASE.md "Supabase API keys".
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

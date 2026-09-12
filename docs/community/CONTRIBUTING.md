@@ -7,10 +7,10 @@ PokeStudio is currently establishing its foundational architecture.
 Read:
 
 - `CLAUDE.md`
-- `PRODUCT_SPEC.md`
-- `ARCHITECTURE.md`
+- `docs/product/PRODUCT_SPEC.md`
+- `docs/architecture/ARCHITECTURE.md`
 - relevant ADRs
-- `LICENSING_STRATEGY.md`
+- `docs/legal/LICENSING_STRATEGY.md`
 
 ## Contribution model
 

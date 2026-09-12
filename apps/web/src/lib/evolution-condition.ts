@@ -1,12 +1,17 @@
 import type { EvolutionCondition, EvolutionEdge } from '@pokestudio/database';
 import { formatMessage, type Dictionary } from '@pokestudio/i18n';
 
+import { localizedItemName } from './evolution-item-label';
+
 /**
  * PokeStudio doesn't model items/moves/locations as their own localized
  * entities yet (CLAUDE.md non-goals, ADR-0010 §4 deferred) — evolution
  * conditions only store their PokéAPI slug. Humanizing the slug (kebab-case
  * -> Title Case) is an honest, English-only stand-in until those become real
- * reference tables; it is not a translation (Part D, DATA_SOURCES.md).
+ * reference tables; it is not a translation (Part D, docs/engineering/DATA_SOURCES.md).
+ * `evolution-item-label.ts`'s small, hand-verified table of classic
+ * evolution stones is the one deliberate exception (Phase 1C.2b) — real,
+ * confidently-known official names, not this fallback.
  */
 function humanizeSlug(slug: string): string {
   return slug
@@ -32,19 +37,23 @@ type EvolutionDictionary = Dictionary['pokedex']['evolution'];
 export function describeEvolutionCondition(
   condition: EvolutionCondition,
   evolutionDictionary: EvolutionDictionary,
+  locale: 'en' | 'es' = 'en',
 ): string {
   const c = evolutionDictionary.condition;
   const triggerLabels = evolutionDictionary.trigger as Record<string, string>;
   const triggerLabel = triggerLabels[condition.trigger] ?? evolutionDictionary.trigger.other;
 
+  function itemName(slug: string): string {
+    return localizedItemName(slug, locale) ?? humanizeSlug(slug);
+  }
+
   const parts: string[] = [];
   if (condition.minLevel !== undefined) {
     parts.push(formatMessage(c.minLevel, { level: condition.minLevel }));
   }
-  if (condition.itemSlug)
-    parts.push(formatMessage(c.item, { item: humanizeSlug(condition.itemSlug) }));
+  if (condition.itemSlug) parts.push(formatMessage(c.item, { item: itemName(condition.itemSlug) }));
   if (condition.heldItemSlug) {
-    parts.push(formatMessage(c.heldItem, { item: humanizeSlug(condition.heldItemSlug) }));
+    parts.push(formatMessage(c.heldItem, { item: itemName(condition.heldItemSlug) }));
   }
   if (condition.minHappiness !== undefined) {
     parts.push(formatMessage(c.minHappiness, { value: condition.minHappiness }));
@@ -97,6 +106,7 @@ export interface EvolutionEdgeGroup {
 export function groupEvolutionEdges(
   edges: readonly EvolutionEdge[],
   evolutionDictionary: EvolutionDictionary,
+  locale: 'en' | 'es' = 'en',
 ): EvolutionEdgeGroup[] {
   const groupByKey = new Map<string, EvolutionEdgeGroup>();
   for (const edge of edges) {
@@ -106,11 +116,46 @@ export function groupEvolutionEdges(
       toSpeciesSlug: edge.toSpeciesSlug,
       conditionDescriptions: [],
     };
-    const description = describeEvolutionCondition(edge.condition, evolutionDictionary);
+    const description = describeEvolutionCondition(edge.condition, evolutionDictionary, locale);
     if (!group.conditionDescriptions.includes(description)) {
       group.conditionDescriptions.push(description);
     }
     groupByKey.set(key, group);
   }
   return [...groupByKey.values()];
+}
+
+export interface EvolutionParentGroup {
+  fromSpeciesSlug: string;
+  children: { toSpeciesSlug: string; conditionDescriptions: string[] }[];
+}
+
+/**
+ * One level up from `groupEvolutionEdges`: groups every (from,to) edge group
+ * sharing the same `fromSpeciesSlug` under one parent (Phase 1C.2b) — so a
+ * branching family (Eevee: 8 targets) renders as one "Eevee" node fanning
+ * out to 8 children, instead of repeating "Eevee →" once per row. A linear
+ * chain (Bulbasaur -> Ivysaur -> Venusaur) is unaffected: each stage is
+ * still its own parent group with exactly one child, because each has a
+ * different `fromSpeciesSlug`.
+ */
+export function groupEvolutionsByParent(
+  edges: readonly EvolutionEdge[],
+  evolutionDictionary: EvolutionDictionary,
+  locale: 'en' | 'es' = 'en',
+): EvolutionParentGroup[] {
+  const edgeGroups = groupEvolutionEdges(edges, evolutionDictionary, locale);
+  const byParent = new Map<string, EvolutionParentGroup>();
+  for (const edgeGroup of edgeGroups) {
+    const parent = byParent.get(edgeGroup.fromSpeciesSlug) ?? {
+      fromSpeciesSlug: edgeGroup.fromSpeciesSlug,
+      children: [],
+    };
+    parent.children.push({
+      toSpeciesSlug: edgeGroup.toSpeciesSlug,
+      conditionDescriptions: edgeGroup.conditionDescriptions,
+    });
+    byParent.set(edgeGroup.fromSpeciesSlug, parent);
+  }
+  return [...byParent.values()];
 }

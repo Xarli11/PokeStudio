@@ -1,10 +1,10 @@
 /**
- * PokeStudio battle-domain boundary (BATTLE_ENGINE.md, ADR-0003).
+ * PokeStudio battle-domain boundary (docs/architecture/BATTLE_ENGINE.md, ADR-0003).
  *
  * This Phase 0 spike proves the boundary works end-to-end (headless,
  * deterministic, structured trace) around Pokémon Showdown's simulator.
  * The full interactive `BattleEngine` interface described in
- * BATTLE_ENGINE.md (createBattle/submitChoice/getLegalChoices) is Phase 4
+ * docs/architecture/BATTLE_ENGINE.md (createBattle/submitChoice/getLegalChoices) is Phase 4
  * scope and will be built on top of this same boundary.
  */
 
@@ -31,6 +31,6 @@ export type StructuredBattleEvent =
 export interface HeadlessBattleResult {
   winner: string | null;
   turnCount: number;
-  /** Structured subset of the protocol log (BATTLE_ENGINE.md "Structured battle trace"). */
+  /** Structured subset of the protocol log (docs/architecture/BATTLE_ENGINE.md "Structured battle trace"). */
   events: StructuredBattleEvent[];
 }

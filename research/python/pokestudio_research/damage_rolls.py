@@ -1,7 +1,7 @@
 """Minimal statistical spike: summarize a damage roll distribution.
 
 Proves the research lane can consume structured battle/damage data and run
-statistical analysis independent of the TypeScript runtime (AI_SPEC.md
+statistical analysis independent of the TypeScript runtime (docs/architecture/AI_SPEC.md
 "Python research lane"). Not a reimplementation of the damage formula itself —
 that authority stays in packages/damage (ADR-0004).
 """

@@ -1,6 +1,7 @@
 import type { BaseStats, PokemonType } from '@pokestudio/pokemon-data';
 import { pokemonTypeColorVar } from '@pokestudio/ui';
 
+import { STAT_TIER_TEXT_CLASS, totalStatTier, type StatTier } from '@/lib/stat-quality';
 import { cardClass, tagClass } from '@/lib/ui-classes';
 
 import { PokemonAbilityList, type AbilityListItem } from './ability-list';
@@ -20,10 +21,12 @@ export interface PokemonFormSectionProps {
   baseStatsLabel: string;
   /** Shown only for the primary form — a derived sum of the six base stats already rendered below, not a duplicate figure. */
   baseStatTotalLabel: string;
+  statTierLabels: Record<StatTier, string>;
   abilities: AbilityListItem[];
   abilitiesLabel: string;
   hiddenAbilityLabel: string;
   noAbilityDescriptionLabel: string;
+  fallbackLanguageLabel: string;
   /**
    * `primary` — the form the page's own `<h1>` already names (the default
    * form): no redundant name heading, a composed desktop panel (art+info
@@ -66,10 +69,12 @@ export function PokemonFormSection({
   typesLabel,
   baseStatsLabel,
   baseStatTotalLabel,
+  statTierLabels,
   abilities,
   abilitiesLabel,
   hiddenAbilityLabel,
   noAbilityDescriptionLabel,
+  fallbackLanguageLabel,
   variant,
 }: PokemonFormSectionProps) {
   const primaryTypeVar = pokemonTypeColorVar[types[0]!.type];
@@ -80,12 +85,14 @@ export function PokemonFormSection({
     stats.specialAttack +
     stats.specialDefense +
     stats.speed;
+  const baseStatTotalTier = totalStatTier(baseStatTotal);
   const abilitiesBlock =
     abilities.length > 0 ? (
       <PokemonAbilityList
         abilities={abilities}
         hiddenAbilityLabel={hiddenAbilityLabel}
         noDescriptionLabel={noAbilityDescriptionLabel}
+        fallbackLanguageLabel={fallbackLanguageLabel}
       />
     ) : null;
 
@@ -120,8 +127,11 @@ export function PokemonFormSection({
                 duplicate — fills the identity column with real signal when
                 a form otherwise has little else to say (0.2c Part C). */}
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl leading-none font-bold text-brand tabular-nums">
+              <span
+                className={`text-2xl leading-none font-bold tabular-nums ${STAT_TIER_TEXT_CLASS[baseStatTotalTier]}`}
+              >
                 {baseStatTotal}
+                <span className="sr-only"> ({statTierLabels[baseStatTotalTier]})</span>
               </span>
               <span className="text-xs font-semibold text-muted uppercase tracking-wide">
                 {baseStatTotalLabel}
@@ -131,7 +141,7 @@ export function PokemonFormSection({
 
           <div className="border-t border-border-subtle pt-4 md:col-start-1 md:row-start-2">
             <h2 className={SECTION_HEADING_CLASS}>{baseStatsLabel}</h2>
-            <PokemonStatBars stats={stats} labels={statLabels} />
+            <PokemonStatBars stats={stats} labels={statLabels} tierLabels={statTierLabels} />
           </div>
 
           {abilitiesBlock ? (
@@ -160,7 +170,7 @@ export function PokemonFormSection({
 
       <div>
         <h4 className={SECTION_HEADING_CLASS}>{baseStatsLabel}</h4>
-        <PokemonStatBars stats={stats} labels={statLabels} />
+        <PokemonStatBars stats={stats} labels={statLabels} tierLabels={statTierLabels} />
       </div>
 
       {abilitiesBlock ? (

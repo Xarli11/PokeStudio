@@ -13,7 +13,7 @@ create table public.move (
   name_en text not null,
   -- Nullable: not yet verified at full-dataset scale whether PokéAPI
   -- guarantees a Spanish move name for every move (ability names had a
-  -- small real gap — see DATA_SOURCES.md). Never invented if absent.
+  -- small real gap — see docs/engineering/DATA_SOURCES.md). Never invented if absent.
   name_es text,
   -- Free text, not a checked enum — same reasoning as species_evolution.trigger:
   -- reuses the same 18-value domain pokemon_form.types already uses without a

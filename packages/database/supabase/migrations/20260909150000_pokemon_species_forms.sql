@@ -17,7 +17,7 @@ create table public.species (
   national_dex_number integer not null unique,
   name_en text not null,
   name_es text not null,
-  -- Provenance (DATA_SOURCES.md): which import produced this row, and this
+  -- Provenance (docs/engineering/DATA_SOURCES.md): which import produced this row, and this
   -- row's id within that source. Never used as this row's identity.
   source_id text not null references public.data_sources (source_id),
   external_id text not null,

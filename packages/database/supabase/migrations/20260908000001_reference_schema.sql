@@ -2,9 +2,9 @@
 --
 -- Scope is intentionally small: enough to prove the migration workflow and
 -- the public-read / service-write RLS pattern for reference data
--- (DATABASE.md, SECURITY.md). Full Explore data model arrives in Phase 1.
+-- (docs/engineering/DATABASE.md, docs/engineering/SECURITY.md). Full Explore data model arrives in Phase 1.
 
--- Provenance for every imported reference dataset (DATA_SOURCES.md).
+-- Provenance for every imported reference dataset (docs/engineering/DATA_SOURCES.md).
 create table if not exists public.data_sources (
   source_id text primary key,
   source_url text not null,
@@ -14,7 +14,7 @@ create table if not exists public.data_sources (
 );
 
 comment on table public.data_sources is
-  'Provenance record for each imported external dataset. See DATA_SOURCES.md.';
+  'Provenance record for each imported external dataset. See docs/engineering/DATA_SOURCES.md.';
 
 -- Minimal species reference table (subset of the eventual normalized model).
 create table if not exists public.species (
@@ -56,4 +56,4 @@ create policy "Species reference data is publicly readable"
 -- No insert/update/delete policies are defined for anon/authenticated:
 -- writes are only possible via the service role (ingestion pipeline),
 -- matching the "service-only operations are not accidentally available
--- client-side" requirement in DATABASE.md.
+-- client-side" requirement in docs/engineering/DATABASE.md.

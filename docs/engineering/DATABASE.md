@@ -6,6 +6,57 @@ Initial managed database/auth platform: **Supabase**, using PostgreSQL as the du
 
 PokeStudio must remain PostgreSQL-centric rather than spreading Supabase-specific assumptions throughout domain code.
 
+## Raspberry Pi local development
+
+Normal PokeStudio development runs the web app on the Mac but talks to a self-hosted Supabase
+instance on a Raspberry Pi over the LAN. That Pi is the canonical local-development database —
+**not** a Supabase stack started on the Mac (CLAUDE.md §21 "Local Development Database"). The
+deployed Cloudflare Worker DEV environment is a separate, unrelated target:
+
+```text
+LOCAL DEVELOPMENT
+
+Mac
+├── Next.js localhost:3000
+│
+└── LAN
+    └── Raspberry Pi 192.168.1.236 (/home/xarli11/supabase-pokestudio, Docker Compose)
+        ├── Supabase API Gateway :8002   ← app/runtime reads, ingestion pipeline
+        ├── PostgreSQL :5434              ← migrations, DB admin (db:pi:migrate, db:pi:check)
+        └── Supavisor :5433 / :6543       ← exists, not the preferred migration path
+
+DEPLOYED DEV
+
+Cloudflare Worker
+└── Supabase Cloud "PokeStudio Dev"
+```
+
+- **App/runtime access** (`apps/web`, `NEXT_PUBLIC_SUPABASE_URL`) and the **ingestion pipeline**
+  (`SUPABASE_URL`) go through the API gateway on `:8002`.
+- **Migrations and direct DB administration** (`POKESTUDIO_PI_DB_URL`) use PostgreSQL on `:5434`
+  directly — this is what `pnpm db:pi:check`/`db:pi:migrate`/`db:pi:types` target.
+- Supavisor (`:5433`/`:6543`, connection pooling) is reachable on the Pi but is not used by any
+  current PokeStudio tooling; direct Postgres is simpler for a single-developer local-dev target.
+- `supabase start` on the Mac is **not** part of normal PokeStudio development — the Pi's stack is
+  Docker-Compose-managed directly (`setup.sh`/`run.sh` on the Pi), not `supabase`-CLI-managed. A
+  Mac-local Supabase CLI stack remains available only as an isolated test environment
+  (`packages/database/README.md` "Isolated local Supabase (exceptional)") — never the default.
+- The Cloudflare Worker DEV deployment must keep using Supabase Cloud; never point it at the Pi's
+  LAN address (unreachable from Cloudflare's network regardless).
+
+Commands (root `package.json`, `scripts/db-pi-*.sh`/`dev-pi.sh`/`ingest-pi.sh`):
+
+| Command              | Target                           | Guards against                            |
+| -------------------- | -------------------------------- | ----------------------------------------- |
+| `pnpm dev:pi`        | `NEXT_PUBLIC_SUPABASE_URL`       | a leftover localhost URL                  |
+| `pnpm db:pi:check`   | `POKESTUDIO_PI_DB_URL` (`:5434`) | wrong host/port/database; read-only       |
+| `pnpm db:pi:migrate` | `POKESTUDIO_PI_DB_URL` (`:5434`) | wrong host/port/database, before applying |
+| `pnpm db:pi:types`   | `POKESTUDIO_PI_DB_URL` (`:5434`) | wrong host/port/database                  |
+| `pnpm ingest:pi`     | `SUPABASE_URL` (`:8002`)         | localhost or Supabase Cloud               |
+
+Each guard aborts with a clear error (never printing the connection string/key) if the target
+doesn't match `192.168.1.236` on the expected port — see `scripts/db-pi-guard.sh`.
+
 ## Principles
 
 - migrations live in source control,
@@ -65,9 +116,9 @@ which upserts its own `data_sources` provenance row too. Phase 1A briefly hand-m
 sample into `seed.sql`; that stopped being viable once the dataset became the real ~1025-species
 Pokédex (see `packages/pokemon-data/README.md`) and was deliberately not continued at scale.
 
-Local workflow is therefore two steps: `db:reset` (schema only) then `pnpm --filter
-@pokestudio/pokemon-data ingest` (data). `db:reset` alone no longer produces a Pokédex-ready
-database — this is intentional, not a regression from Phase 1A.
+Local workflow is therefore two steps: `pnpm db:pi:migrate` (schema only, against the Raspberry
+Pi — see "Raspberry Pi local development" above) then `pnpm ingest:pi` (data). Schema alone never
+produces a Pokédex-ready database — this is intentional, not a regression from Phase 1A.
 
 ### Ingestion write strategy
 
@@ -210,6 +261,24 @@ Tests should prove:
 - destructive migrations require explicit review,
 - backfills separated from schema changes when operationally safer,
 - seed data is deterministic and clearly distinguished from production imports.
+
+### Before repeating an expensive operation (CLAUDE.md §22)
+
+Migrations, full Pokémon ingestion, and large audits are not free — check state before rerunning:
+
+- **Migration state**: `pnpm db:pi:migrate`'s dry-run (or `supabase migration list --db-url`)
+  shows exactly what's pending; don't assume, check.
+- **Ingestion**: a UI-only or documentation-only change never needs a rerun. A normalization/schema
+  change needs targeted unit tests first (`packages/pokemon-data`'s fixture-based tests, no network
+  call) — only run `pnpm ingest:pi` once those pass and a real schema/data change needs verifying
+  end-to-end. `pnpm --filter @pokestudio/pokemon-data audit` (report-only, no writes) is often
+  enough to confirm a normalization change behaves correctly without writing anything.
+- **Row counts/evidence**: a prior session's ingestion report (species/form/move counts, "N
+  validation issues") is valid evidence of current state unless the schema or source data changed
+  since — check `git log`/migration state before re-deriving it.
+- A migration change still requires verify-then-apply-then-validate (`db:pi:check` →
+  `db:pi:migrate` → targeted ingestion/query check) — this sequence is not the thing being
+  optimized away, only _unnecessary repeats_ of it are.
 
 ## Portability
 

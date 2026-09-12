@@ -6,6 +6,73 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Phase 1C.2b — Explore UX polish + documentation reorganization (2026-09-12)
+
+Part A: closes real UX gaps found by auditing Phase 1C.2 against live data, not speculative polish.
+
+- **Moves**: Pokémon-detail Moves section rewritten as an interactive client table (desktop) /
+  card list (mobile) — search, type/damage-class/method filters, sortable Name/Power/Accuracy/PP/
+  Level columns (client-side; the per-form/version-group dataset is small and already
+  server-fetched once, so no extra round trip). Null power/accuracy/non-level methods render as
+  "—", never a misleading `0`. New version-group selector lets a Pokémon's moveset be viewed per
+  game generation instead of one hardcoded default. Global `/moves` index now does real
+  server/database-backed search+filtering (`listMovesPage` gained `MoveListFilters`) instead of
+  client-side filtering of a full dataset; filtered URLs canonicalize to the base `/moves` path and
+  are excluded from the sitemap.
+- **Fixed a real default-version-group bug**: `getDefaultVersionGroup` picked "any version group
+  with a `pokemon_form_move` row," which a niche `champions` version group (24k rows, all via the
+  non-mainline `train` method) could outrank the fully-populated `scarlet-violet` on raw
+  `display_order`. Now requires at least one `level-up` row — the real "has mainline coverage"
+  signal.
+- **Abilities**: audited EN/ES coverage first (313/313 EN, 0/313 ES, 0 missing both — confirmed a
+  genuine, total upstream gap, not an ingestion bug). Spanish UI now falls back to the English
+  description with a visible "English" tag instead of rendering blank; never machine-translated.
+- **Base stats**: added quality tiers (low/average/good/excellent, distinct thresholds for Total
+  Base Stat) validated against real data before shipping, reusing the existing
+  `--color-success/warning/danger` tokens rather than inventing a new palette.
+- **Evolutions**: redesigned as one parent fanning out to all of its children (e.g. Eevee →
+  Vaporeon/Jolteon/Flareon/...) instead of repeating the parent per evolution edge. Evolution
+  condition text is now locale-aware, including a small hand-verified table of classic evolution
+  stone names in Spanish (e.g. "Piedra Agua").
+- **i18n**: Spanish nav/product-section label for Build changed from the literal verb "Construir"
+  to "Equipo" ("Explorar · Equipo · Laboratorio de Combate") to read as a product section name.
+- Extensive new unit/component tests for all of the above (stat tiers, version-group labels,
+  evolution item labels, moves filtering/sorting, ability fallback, version-group selection).
+
+Part B: reorganizes root documentation now that the schema/UX work is stable — no functional
+change.
+
+- Moved 22 root-level docs into `docs/{product,architecture,engineering,community,legal}/`
+  alongside the existing `docs/adr/`; removed `MANIFEST.md` and `START_HERE.md` (redundant Phase 0
+  bootstrap entry points with no ongoing utility beyond what `CLAUDE.md`/`docs/README.md` now
+  cover). Added `docs/README.md` as a compact index. Fixed every cross-reference (Markdown links,
+  `CLAUDE.md`, `README.md`, ADRs, package READMEs) to the new paths — verified with a full repo
+  scan, zero stray references remaining.
+- Fixed stale facts found during the reorg audit: `README.md` claimed the Cloudflare Worker was
+  "not deployed yet" (it has been, to a `workers.dev` subdomain); `docs/product/DESIGN_SYSTEM.md`
+  referenced the pre-rename `AppShell` component (now `PersistentShell`) in two places.
+
+Part C: final presentation/accessibility polish before freezing 1C.2 — density and hierarchy only,
+no new product scope, no data/routing change.
+
+- **All moves games/methods**: replaced an inline `<details>` expansion (which made a row as tall
+  as its full game/method list) with a small anchored `PopoverDisclosure` — a move's row height is
+  now constant regardless of how many games/methods grant it. Games collapse to the game's own name
+  (one game) or "{count} games · Gen. X[–Y]" (more), grouped by generation inside the popover.
+  Methods collapse to "{primary method} +{N}" with the full breakdown one click away.
+- **Ability presentation**: clearer name hierarchy, a separator between multiple abilities, and
+  `leading-relaxed` on long PokeStudio Spanish effect text so it doesn't read as a wall of text.
+- **PokeStudio-owned Spanish ability effects, 313/313**: the layer promised (not delivered) in the
+  first UX-polish pass — a static, version-controlled `packages/i18n/src/ability-effects-es.ts`
+  keyed by ability slug, exact technical mechanics preserved (percentages, stat stages, HP
+  thresholds, conditions), verified 313/313 against the live Pi dataset
+  (`packages/database/tests/ability-effects-coverage.integration.test.ts`). Fallback chain:
+  upstream Spanish (in case PokéAPI ever publishes one) → PokeStudio Spanish → upstream English
+  (tagged honestly) → localized "unavailable" message. The "English" fallback tag no longer shows
+  once a PokeStudio translation exists.
+- Table row density tightened (`py-2` → `py-1.5`); the "All moves" clarifying hint capped to
+  `max-w-prose` so it reads as a caption, not a banner.
+
 ### Phase 1C.2 — Moves + Learnsets (2026-09-12)
 
 Adds a full move + learnset data foundation (ADR-0013) and Explore integration — the schema

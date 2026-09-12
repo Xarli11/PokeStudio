@@ -80,7 +80,7 @@ PokeStudio should own and improve areas that create product advantage, including
 
 ## 6. External dependencies are not untouchable
 
-Follow `DEPENDENCY_POLICY.md`.
+Follow `docs/engineering/DEPENDENCY_POLICY.md`.
 
 For strategic dependencies:
 
@@ -248,7 +248,7 @@ Do not create a Poké Ball-derived logo by default.
 
 ## 19. Scope control
 
-Follow `ROADMAP.md`.
+Follow `docs/product/ROADMAP.md`.
 
 Do not jump to community feeds, public ranking, tournaments, mobile-native apps or complex AI infrastructure before the foundations they depend on exist.
 

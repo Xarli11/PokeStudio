@@ -32,7 +32,7 @@ files already cached from Phase 1B/1C.1, and live fetches of `/move`, `/version-
   silently drop a genuine relearn-move fact. `pokemon_form_move`'s unique key is therefore
   `(pokemon_form_id, move_id, version_group_id, learn_method, level)`.
 - **Moves have no Spanish effect text** — `effect_entries` was never observed to contain an `es`
-  entry for any move sampled, the same gap `ability.effect_es` already documents (DATA_SOURCES.md).
+  entry for any move sampled, the same gap `ability.effect_es` already documents (docs/engineering/DATA_SOURCES.md).
   Spanish move _names_, unlike effects, are reliably present.
 - **Machine identity is cheap to add.** A move's own detail response already embeds every
   `{machine url, version_group}` pair it appears in — the only extra fetch needed is each _unique_

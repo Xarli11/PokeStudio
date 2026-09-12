@@ -35,7 +35,7 @@ export interface SpeciesListItem {
 export interface AbilitySummary {
   slug: string;
   nameEn: string;
-  /** Undefined when PokéAPI has no Spanish name for this ability (DATA_SOURCES.md) — never invented. */
+  /** Undefined when PokéAPI has no Spanish name for this ability (docs/engineering/DATA_SOURCES.md) — never invented. */
   nameEs?: string | undefined;
   effectEn?: string | undefined;
   /** Undefined far more often than nameEs — PokéAPI rarely publishes a Spanish ability effect at all. */
@@ -545,12 +545,6 @@ export interface VersionGroupSummary {
 }
 
 /** One learnset fact for a form, joined with the move it refers to. */
-export interface FormLearnsetEntry {
-  move: MoveSummary;
-  learnMethod: string;
-  /** 0 = not applicable (non-level-up) or "known upon evolution" (level-up) — see NormalizedLearnsetEntry. */
-  level: number;
-}
 
 interface MoveRow {
   slug: string;
@@ -692,70 +686,113 @@ export async function getDefaultVersionGroup(
   return null;
 }
 
-interface PokemonFormMoveRow {
-  move_id: string;
-  learn_method: string;
+/** One raw (move, version group, method, level) fact — the client-side moves explorer's unit of data. */
+export interface FormLearnsetAllEntry {
+  moveSlug: string;
+  versionGroupSlug: string;
+  learnMethod: string;
+  /** 0 = not applicable (non-level-up) or "known upon evolution" (level-up) — see NormalizedLearnsetEntry. */
   level: number;
 }
 
+export interface FormLearnsetAllVersionGroups {
+  /** Newest-first — only groups this form actually has data in. */
+  versionGroups: VersionGroupSummary[];
+  /** Every unique move this form can learn in any version group — never repeated per version group/entry. */
+  moves: MoveSummary[];
+  entries: FormLearnsetAllEntry[];
+}
+
 /**
- * A form's learnset, scoped to one version group (Pokémon detail's Moves
- * section — CLAUDE.md §16/task §15: never silently merge incompatible
- * historical learnsets across games). Null if the form doesn't exist; an
- * empty array is a real, distinct state (the form exists but has no data for
- * this particular version group).
+ * A form's *entire* learnset across every version group it has data in, in
+ * one bounded fetch (Phase 1C.2b instant client-side version switching —
+ * moves/entries are normalized/deduplicated, not repeated per version group,
+ * so the payload stays proportional to the form's real move count, not
+ * `moves × version groups`). Scoped entirely to *this form's own* indexed
+ * rows (`pokemon_form_move_form_version_idx`'s leading column) — never a
+ * query across the whole ~693k-row table. Paginated past PostgREST's
+ * default 1000-row cap: a handful of forms with data in every version group
+ * (Mew, Mewtwo, Chansey, ...) have 1500-2700+ raw rows. Null if the form
+ * doesn't exist.
  */
-export async function getFormLearnset(
+export async function getFormLearnsetAllVersionGroups(
   client: PokeStudioDatabaseClient,
   formSlug: string,
-  versionGroupSlug: string,
-): Promise<FormLearnsetEntry[] | null> {
+): Promise<FormLearnsetAllVersionGroups | null> {
   const formResult = await client
     .from('pokemon_form')
     .select('id')
     .eq('slug', formSlug)
     .maybeSingle();
-  if (formResult.error)
-    throw new Error(`getFormLearnset (form) failed: ${formResult.error.message}`);
+  if (formResult.error) {
+    throw new Error(`getFormLearnsetAllVersionGroups (form) failed: ${formResult.error.message}`);
+  }
   if (!formResult.data) return null;
+  const formId = formResult.data.id;
 
-  const versionGroupResult = await client
-    .from('version_group')
-    .select('id')
-    .eq('slug', versionGroupSlug)
-    .maybeSingle();
-  if (versionGroupResult.error) {
-    throw new Error(`getFormLearnset (version group) failed: ${versionGroupResult.error.message}`);
+  const rawEntries = await selectAllRows<{
+    move_id: string;
+    version_group_id: string;
+    learn_method: string;
+    level: number;
+  }>((from, to) =>
+    client
+      .from('pokemon_form_move')
+      .select('move_id, version_group_id, learn_method, level')
+      .eq('pokemon_form_id', formId)
+      .range(from, to),
+  );
+  if (rawEntries.length === 0) return { versionGroups: [], moves: [], entries: [] };
+
+  const moveIds = [...new Set(rawEntries.map((entry) => entry.move_id))];
+  const versionGroupIds = [...new Set(rawEntries.map((entry) => entry.version_group_id))];
+
+  const [movesResult, versionGroupsResult] = await Promise.all([
+    client
+      .from('move')
+      .select('id, slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority')
+      .in('id', moveIds),
+    client
+      .from('version_group')
+      .select('id, slug, generation, display_order')
+      .in('id', versionGroupIds)
+      .order('generation', { ascending: false })
+      .order('display_order', { ascending: false }),
+  ]);
+  if (movesResult.error) {
+    throw new Error(`getFormLearnsetAllVersionGroups (moves) failed: ${movesResult.error.message}`);
   }
-  if (!versionGroupResult.data) return [];
-
-  const entriesResult = await client
-    .from('pokemon_form_move')
-    .select('move_id, learn_method, level')
-    .eq('pokemon_form_id', formResult.data.id)
-    .eq('version_group_id', versionGroupResult.data.id);
-  if (entriesResult.error) {
-    throw new Error(`getFormLearnset (entries) failed: ${entriesResult.error.message}`);
+  if (versionGroupsResult.error) {
+    throw new Error(
+      `getFormLearnsetAllVersionGroups (version groups) failed: ${versionGroupsResult.error.message}`,
+    );
   }
-  const entries = entriesResult.data as PokemonFormMoveRow[];
-  if (entries.length === 0) return [];
 
-  const moveIds = [...new Set(entries.map((entry) => entry.move_id))];
-  const movesResult = await client
-    .from('move')
-    .select('id, slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority')
-    .in('id', moveIds);
-  if (movesResult.error)
-    throw new Error(`getFormLearnset (moves) failed: ${movesResult.error.message}`);
   const moveById = new Map(movesResult.data.map((row) => [row.id, toMoveSummary(row as MoveRow)]));
+  const versionGroupSlugById = new Map(versionGroupsResult.data.map((row) => [row.id, row.slug]));
 
-  const result: FormLearnsetEntry[] = [];
-  for (const entry of entries) {
-    const move = moveById.get(entry.move_id);
-    if (!move) continue; // defensive: should never happen given the FK constraint
-    result.push({ move, learnMethod: entry.learn_method, level: entry.level });
+  const entries: FormLearnsetAllEntry[] = [];
+  for (const entry of rawEntries) {
+    const moveSlug = moveById.get(entry.move_id)?.slug;
+    const versionGroupSlug = versionGroupSlugById.get(entry.version_group_id);
+    if (!moveSlug || !versionGroupSlug) continue; // defensive: should never happen given the FK constraints
+    entries.push({
+      moveSlug,
+      versionGroupSlug,
+      learnMethod: entry.learn_method,
+      level: entry.level,
+    });
   }
-  return result.sort((a, b) => a.level - b.level || a.move.nameEn.localeCompare(b.move.nameEn));
+
+  return {
+    versionGroups: versionGroupsResult.data.map((row) => ({
+      slug: row.slug,
+      generation: row.generation,
+      displayOrder: row.display_order,
+    })),
+    moves: [...moveById.values()].sort((a, b) => a.nameEn.localeCompare(b.nameEn)),
+    entries,
+  };
 }
 
 export interface MovePage {
@@ -767,20 +804,72 @@ export interface MovePage {
 }
 
 /** One page of the move index (/[locale]/moves), ordered alphabetically by English name. */
+/**
+ * Server/database-backed filters for the global move index (Phase 1C.2b
+ * task §6) — deliberately not an Excel-like query builder: a text search
+ * (matched against both localized names) plus three exact-match filters and
+ * one sort column. `search` is intentionally locale-agnostic (matches
+ * `name_en` OR `name_es` regardless of the page's own locale) so a Spanish
+ * user typing an English name they already know still finds the move.
+ */
+export interface MoveListFilters {
+  search?: string | undefined;
+  type?: PokemonType | undefined;
+  damageClass?: DamageClass | undefined;
+  generation?: number | undefined;
+  sortBy?: 'name' | 'power' | 'accuracy' | 'pp' | undefined;
+  sortDirection?: 'asc' | 'desc' | undefined;
+}
+
+const MOVE_SORT_COLUMN: Record<NonNullable<MoveListFilters['sortBy']>, string> = {
+  name: 'name_en',
+  power: 'power',
+  accuracy: 'accuracy',
+  pp: 'pp',
+};
+
+/** One page of the move index, filtered/sorted entirely in Postgres — never loads the full ~937-move table into the browser to filter client-side. */
 export async function listMovesPage(
   client: PokeStudioDatabaseClient,
-  options: { page: number; pageSize: number },
+  options: { page: number; pageSize: number; filters?: MoveListFilters },
 ): Promise<MovePage> {
   const from = (options.page - 1) * options.pageSize;
   const to = from + options.pageSize - 1;
+  const filters = options.filters ?? {};
+  const sortColumn = MOVE_SORT_COLUMN[filters.sortBy ?? 'name'];
+  const ascending = filters.sortDirection !== 'desc';
+
+  let dataQuery = client
+    .from('move')
+    .select('slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority');
+  let countQuery = client.from('move').select('id', { count: 'exact', head: true });
+
+  if (filters.search && filters.search.trim()) {
+    // PostgREST .or() syntax: comma-separated "column.op.value" clauses.
+    // "%"-wrap for a substring ilike match; commas in user input can't
+    // break this since a literal comma inside a value would need
+    // percent-encoding to be interpreted as a separator here.
+    const escaped = filters.search.trim().replace(/[%,()]/g, '');
+    const clause = `name_en.ilike.%${escaped}%,name_es.ilike.%${escaped}%`;
+    dataQuery = dataQuery.or(clause);
+    countQuery = countQuery.or(clause);
+  }
+  if (filters.type) {
+    dataQuery = dataQuery.eq('type', filters.type);
+    countQuery = countQuery.eq('type', filters.type);
+  }
+  if (filters.damageClass) {
+    dataQuery = dataQuery.eq('damage_class', filters.damageClass);
+    countQuery = countQuery.eq('damage_class', filters.damageClass);
+  }
+  if (filters.generation) {
+    dataQuery = dataQuery.eq('generation', filters.generation);
+    countQuery = countQuery.eq('generation', filters.generation);
+  }
 
   const [movesResult, countResult] = await Promise.all([
-    client
-      .from('move')
-      .select('slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority')
-      .order('name_en', { ascending: true })
-      .range(from, to),
-    client.from('move').select('id', { count: 'exact', head: true }),
+    dataQuery.order(sortColumn, { ascending, nullsFirst: false }).range(from, to),
+    countQuery,
   ]);
   if (movesResult.error)
     throw new Error(`listMovesPage (moves) failed: ${movesResult.error.message}`);

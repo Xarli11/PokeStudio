@@ -3,20 +3,27 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import {
-  getDefaultVersionGroup,
   getEvolutionFamily,
-  getFormLearnset,
+  getFormLearnsetAllVersionGroups,
   getSpeciesBySlug,
   type SpeciesFormDetail,
 } from '@pokestudio/database';
-import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
+import {
+  abilityEffectsEs,
+  formatMessage,
+  getDictionary,
+  isLocale,
+  locales,
+} from '@pokestudio/i18n';
 
 import { PokemonEvolutionSection } from '@/components/pokemon/evolution-section';
 import { PokemonFormSection } from '@/components/pokemon/form-section';
-import { PokemonMovesSection, type MoveRowItem } from '@/components/pokemon/moves-section';
+import { PokemonMovesSection, type MovesExplorerMove } from '@/components/pokemon/moves-section';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { partitionOtherForms } from '@/lib/form-grouping';
+import { pickDefaultVersionGroup } from '@/lib/moves-explorer';
 import { buttonClass, cardClass, eyebrowClass, tagClass } from '@/lib/ui-classes';
+import { versionGroupDisplayName } from '@/lib/version-group-label';
 
 // Reads live reference data per request — do not attempt to statically
 // prerender this at build time (CI has no Supabase instance during `next build`).
@@ -48,16 +55,33 @@ function formSectionProps(
     statLabels: dictionary.pokedex.stat,
     typesLabel: dictionary.pokedex.types,
     baseStatsLabel: dictionary.pokedex.baseStats,
+    statTierLabels: dictionary.pokedex.statTier,
     baseStatTotalLabel: dictionary.pokedex.baseStatTotal,
-    abilities: form.abilities.map((ability) => ({
-      slug: ability.slug,
-      name: locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn,
-      description: locale === 'es' ? ability.effectEs : ability.effectEn,
-      isHidden: ability.isHidden,
-    })),
+    abilities: form.abilities.map((ability) => {
+      // PokéAPI never publishes a Spanish ability effect (docs/engineering/DATA_SOURCES.md) —
+      // 0 of 313 abilities have one upstream, so PokeStudio owns this layer
+      // (Phase 1C.2b, packages/i18n/src/ability-effects-es.ts, 313/313,
+      // verified against the live dataset — see
+      // packages/database/tests/ability-effects-coverage.integration.test.ts).
+      // Fallback chain: upstream Spanish (kept first in case PokéAPI ever
+      // publishes one) → PokeStudio Spanish → upstream English (marked
+      // honestly, never mislabeled as Spanish) → "unavailable" message.
+      const pokeStudioEs = abilityEffectsEs[ability.slug];
+      const description =
+        locale === 'es' ? (ability.effectEs ?? pokeStudioEs ?? ability.effectEn) : ability.effectEn;
+      return {
+        slug: ability.slug,
+        name: locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn,
+        description,
+        descriptionIsFallback:
+          locale === 'es' && !ability.effectEs && !pokeStudioEs && description !== undefined,
+        isHidden: ability.isHidden,
+      };
+    }),
     abilitiesLabel: dictionary.pokedex.abilities,
     hiddenAbilityLabel: dictionary.pokedex.hiddenAbility,
     noAbilityDescriptionLabel: dictionary.pokedex.noAbilityDescription,
+    fallbackLanguageLabel: dictionary.pokedex.descriptionFallbackLanguage,
     variant,
   } as const;
 }
@@ -105,10 +129,9 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
 
   const dictionary = getDictionary(locale);
   const client = getPokemonDatabaseClient();
-  const [species, evolutionFamily, defaultVersionGroup] = await Promise.all([
+  const [species, evolutionFamily] = await Promise.all([
     getSpeciesBySlug(client, slug),
     getEvolutionFamily(client, slug),
-    getDefaultVersionGroup(client),
   ]);
   if (!species) notFound();
 
@@ -118,28 +141,34 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
   const { distinctForms, cosmeticVariants } = partitionOtherForms(defaultForm, otherForms);
   const hasOtherForms = distinctForms.length > 0 || cosmeticVariants.length > 0;
 
-  // Moves are shown for the default form only in this phase (1C.2) — a
-  // per-form Moves section (mirroring abilities/stats) is a reasonable next
-  // step, deferred to keep this page restrained (task §15 "not the final
-  // Team Builder UI"). Never silently merges historical learnsets across
-  // games: always scoped to one explicit version group (task §15).
-  const learnset = defaultVersionGroup
-    ? await getFormLearnset(client, defaultForm.slug, defaultVersionGroup.slug)
-    : null;
-  const moveRows: MoveRowItem[] = (learnset ?? []).map((entry) => ({
-    slug: entry.move.slug,
-    name: locale === 'es' ? (entry.move.nameEs ?? entry.move.nameEn) : entry.move.nameEn,
-    type: entry.move.type,
-    typeLabel: dictionary.types[entry.move.type],
-    damageClass: entry.move.damageClass,
-    damageClassLabel: dictionary.moves.damageClass[entry.move.damageClass],
-    power: entry.move.power,
-    accuracy: entry.move.accuracy,
-    learnMethod: entry.learnMethod,
-    methodLabel:
-      dictionary.moves.method[entry.learnMethod as keyof typeof dictionary.moves.method] ??
-      entry.learnMethod,
-    level: entry.level,
+  // Moves are shown for the default form only in this phase — a per-form
+  // Moves section (mirroring abilities/stats) is a reasonable next step,
+  // deferred to keep this page restrained (task §15 "not the final Team
+  // Builder UI"). One bounded fetch gets this form's *entire* learnset
+  // across every version group it has data in (Phase 1C.2b instant
+  // client-side switching, docs/adr/0013) — the client owns version-group
+  // selection/"All moves"/filters/sorting from here on, never a server
+  // round-trip; this initial render still picks a real, deterministic
+  // default group so the page has meaningful content before any JS runs
+  // (crawlers, no-JS).
+  const learnset = await getFormLearnsetAllVersionGroups(client, defaultForm.slug);
+  const initialVersionGroupSlug = learnset
+    ? pickDefaultVersionGroup(learnset.versionGroups, learnset.entries)
+    : undefined;
+  const movesExplorerVersionGroups = (learnset?.versionGroups ?? []).map((vg) => ({
+    slug: vg.slug,
+    label: `${formatMessage(dictionary.moves.generation, { number: vg.generation })} — ${versionGroupDisplayName(vg.slug)}`,
+    name: versionGroupDisplayName(vg.slug),
+    generation: vg.generation,
+  }));
+  const movesExplorerMoves: MovesExplorerMove[] = (learnset?.moves ?? []).map((move) => ({
+    slug: move.slug,
+    name: locale === 'es' ? (move.nameEs ?? move.nameEn) : move.nameEn,
+    type: move.type,
+    damageClass: move.damageClass,
+    power: move.power,
+    accuracy: move.accuracy,
+    pp: move.pp,
   }));
 
   return (
@@ -160,24 +189,44 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
 
       <PokemonFormSection {...formSectionProps(defaultForm, locale, dictionary, 'primary')} />
 
-      {defaultVersionGroup ? (
-        <PokemonMovesSection
-          moves={moveRows}
-          localePrefix={`/${locale}`}
-          title={dictionary.moves.title}
-          gameContextLabel={formatMessage(dictionary.moves.gameContext, {
-            number: defaultVersionGroup.generation,
-          })}
-          noMoveDataLabel={dictionary.moves.noMoveData}
-          powerLabel={dictionary.moves.power}
-          accuracyLabel={dictionary.moves.accuracy}
-          noPowerLabel={dictionary.moves.noPower}
-          neverMissesLabel={dictionary.moves.neverMisses}
-          levelLabel={(level) => formatMessage(dictionary.moves.level, { level })}
-          levelOnEvolveLabel={dictionary.moves.levelOnEvolve}
-          showAllLabel={(count) => formatMessage(dictionary.moves.showAll, { count })}
-        />
-      ) : null}
+      <PokemonMovesSection
+        moves={movesExplorerMoves}
+        entries={learnset?.entries ?? []}
+        versionGroups={movesExplorerVersionGroups}
+        initialVersionGroupSlug={initialVersionGroupSlug}
+        localePrefix={`/${locale}`}
+        title={dictionary.moves.title}
+        versionGroupLabel={dictionary.moves.versionGroup}
+        allMovesLabel={dictionary.moves.allMoves}
+        allMovesHint={dictionary.moves.allMovesHint}
+        noMoveDataLabel={dictionary.moves.noMoveData}
+        noResultsLabel={dictionary.moves.noResults}
+        resultCountTemplate={dictionary.moves.resultCount}
+        searchLabel={dictionary.moves.search}
+        searchPlaceholder={dictionary.moves.searchPlaceholder}
+        allTypesLabel={dictionary.moves.allTypes}
+        allDamageClassesLabel={dictionary.moves.allDamageClasses}
+        allMethodsLabel={dictionary.moves.allMethods}
+        typeLabels={dictionary.types}
+        damageClassLabels={dictionary.moves.damageClass}
+        methodLabels={dictionary.moves.method}
+        typeFilterLabel={dictionary.moves.typeFilter}
+        damageClassFilterLabel={dictionary.moves.damageClassFilter}
+        methodFilterLabel={dictionary.moves.methodFilter}
+        columnLabels={dictionary.moves.column}
+        noPowerLabel={dictionary.moves.noPower}
+        neverMissesLabel={dictionary.moves.neverMisses}
+        levelTemplate={dictionary.moves.level}
+        levelRangeTemplate={dictionary.moves.levelRange}
+        levelOnEvolveLabel={dictionary.moves.levelOnEvolve}
+        levelNotApplicableLabel={dictionary.moves.levelNotApplicable}
+        gamesCountTemplate={dictionary.moves.gamesCount}
+        gamesSummarySameGenerationTemplate={dictionary.moves.gamesSummarySameGeneration}
+        gamesSummaryRangeTemplate={dictionary.moves.gamesSummaryRange}
+        generationLabelTemplate={dictionary.moves.generation}
+        methodsSummaryTemplate={dictionary.moves.methodsSummary}
+        methodsSummaryAriaLabelTemplate={dictionary.moves.methodsSummaryAriaLabel}
+      />
 
       {evolutionFamily ? (
         <PokemonEvolutionSection family={evolutionFamily} locale={locale} dictionary={dictionary} />

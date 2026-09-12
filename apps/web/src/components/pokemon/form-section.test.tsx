@@ -41,6 +41,8 @@ describe('PokemonFormSection', () => {
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
         noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
         variant="primary"
       />,
     );
@@ -81,6 +83,8 @@ describe('PokemonFormSection', () => {
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
         noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
         variant="secondary"
       />,
     );
@@ -124,6 +128,8 @@ describe('PokemonFormSection', () => {
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
         noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
         variant="primary"
       />,
     );
@@ -151,6 +157,8 @@ describe('PokemonFormSection', () => {
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
         noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
         variant="primary"
       />,
     );
@@ -184,6 +192,8 @@ describe('PokemonFormSection', () => {
         abilitiesLabel="Abilities"
         hiddenAbilityLabel="Hidden Ability"
         noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
         variant="primary"
       />,
     );

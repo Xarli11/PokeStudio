@@ -69,19 +69,19 @@ Status: Phase 0 complete as of 2026-09-08; Phase 0.5 foundation hardening comple
 
 ## Security/observability
 
-- [x] secrets strategy (`.env.example`, server/client key separation, SECURITY.md unchanged/still authoritative)
+- [x] secrets strategy (`.env.example`, server/client key separation, docs/engineering/SECURITY.md unchanged/still authoritative)
 - [ ] dependency alerts — Dependabot not enabled (requires repo settings access outside this environment); tracked as a known risk
 - [x] Sentry plan/minimal integration (`apps/web/src/lib/observability.ts`, console-based until `NEXT_PUBLIC_SENTRY_DSN` exists)
 - [x] telemetry privacy review (observability boundary never receives secrets/tokens/private content by construction)
 
 ## Legal/provenance
 
-- [x] third-party license inventory started (`THIRD_PARTY_NOTICES.md` updated with exact versions)
+- [x] third-party license inventory started (`docs/legal/THIRD_PARTY_NOTICES.md` updated with exact versions)
 - [x] upstream notices preserved (MIT for pokemon-showdown/@smogon/calc, BSD-3-Clause for PokéAPI)
 - [x] source-available license remains pending final review if not approved (`LICENSE` stub added, explicitly non-final)
 
 ## Documentation
 
-- [x] actual implementation reflected in docs (ARCHITECTURE.md, DATA_SOURCES.md updated)
+- [x] actual implementation reflected in docs (docs/architecture/ARCHITECTURE.md, docs/engineering/DATA_SOURCES.md updated)
 - [x] ADRs updated/superseded if required (none required — no deviations from accepted ADRs)
 - [x] changelog updated

@@ -1,6 +1,6 @@
 -- Deterministic seed data for local development.
 --
--- Phase 1B (DATABASE.md "Seed vs. ingestion"): Pokémon reference data
+-- Phase 1B (docs/engineering/DATABASE.md "Seed vs. ingestion"): Pokémon reference data
 -- (species/pokemon_form/data_sources) is no longer seeded here — it comes
 -- from the ingestion pipeline (`pnpm --filter @pokestudio/pokemon-data
 -- ingest`), which upserts its own `data_sources` provenance row too. This

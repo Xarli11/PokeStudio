@@ -4,7 +4,7 @@ import { createPublicDatabaseClient } from '../src/client';
 import {
   getDefaultVersionGroup,
   getEvolutionFamily,
-  getFormLearnset,
+  getFormLearnsetAllVersionGroups,
   getMoveBySlug,
   getMoveLearners,
   getSpeciesBySlug,
@@ -22,8 +22,9 @@ import {
  * Meowth's regional forms, Alcremie's 64-form cosmetic family, Xerneas'
  * two-state default-form quirk) come back correctly.
  *
- * Requires a running local Supabase instance seeded via full ingestion.
- * Skipped automatically when SUPABASE_URL is not set (see rls.integration.test.ts).
+ * Requires a reachable Supabase instance seeded via full ingestion (normally the Raspberry Pi,
+ * `pnpm ingest:pi` — CLAUDE.md §21). Skipped automatically when SUPABASE_URL is not set (see
+ * rls.integration.test.ts).
  */
 const supabaseUrl = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -221,26 +222,42 @@ describe.skipIf(!hasLocalSupabase)(
       expect(new Set(page.items.map((m) => m.slug)).size).toBe(20);
     });
 
-    it("getFormLearnset returns null for a form that doesn't exist", async () => {
-      const versionGroup = await getDefaultVersionGroup(client());
-      expect(await getFormLearnset(client(), 'does-not-exist', versionGroup!.slug)).toBeNull();
+    it("getFormLearnsetAllVersionGroups returns null for a form that doesn't exist", async () => {
+      expect(await getFormLearnsetAllVersionGroups(client(), 'does-not-exist')).toBeNull();
     });
 
-    it('getFormLearnset returns Bulbasaur learning Tackle in the default version group', async () => {
-      const versionGroup = await getDefaultVersionGroup(client());
-      const entries = await getFormLearnset(client(), 'bulbasaur', versionGroup!.slug);
-      expect(entries).not.toBeNull();
-      expect(entries!.length).toBeGreaterThan(0);
-      expect(entries!.some((e) => e.move.slug === 'tackle')).toBe(true);
-      expect(entries!.every((e) => e.level >= 0)).toBe(true);
+    it('getFormLearnsetAllVersionGroups returns Bulbasaur learning Tackle, with moves/version-groups normalized (not repeated per entry)', async () => {
+      const result = await getFormLearnsetAllVersionGroups(client(), 'bulbasaur');
+      expect(result).not.toBeNull();
+      expect(result!.entries.length).toBeGreaterThan(0);
+      expect(result!.entries.every((e) => e.level >= 0)).toBe(true);
+      expect(result!.moves.some((m) => m.slug === 'tackle')).toBe(true);
+      expect(result!.versionGroups.some((vg) => vg.slug === 'scarlet-violet')).toBe(true);
+      // Normalized, not duplicated: each move/version-group appears exactly
+      // once in its own array regardless of how many entries reference it.
+      expect(new Set(result!.moves.map((m) => m.slug)).size).toBe(result!.moves.length);
+      expect(new Set(result!.versionGroups.map((vg) => vg.slug)).size).toBe(
+        result!.versionGroups.length,
+      );
+      // Every entry references a real move/version-group from the normalized arrays.
+      const moveSlugs = new Set(result!.moves.map((m) => m.slug));
+      const versionGroupSlugs = new Set(result!.versionGroups.map((vg) => vg.slug));
+      expect(result!.entries.every((e) => moveSlugs.has(e.moveSlug))).toBe(true);
+      expect(result!.entries.every((e) => versionGroupSlugs.has(e.versionGroupSlug))).toBe(true);
+      // Newest-first.
+      for (let i = 1; i < result!.versionGroups.length; i++) {
+        const prev = result!.versionGroups[i - 1]!;
+        const curr = result!.versionGroups[i]!;
+        const prevRank = prev.generation * 1000 + prev.displayOrder;
+        const currRank = curr.generation * 1000 + curr.displayOrder;
+        expect(prevRank).toBeGreaterThanOrEqual(currRank);
+      }
     });
 
-    it('getFormLearnset returns an empty array for a real form in a version group with no data for it', async () => {
-      // "legends-za" is an announced-but-not-yet-per-Pokémon-populated version
-      // group in the reference table (docs/adr/0013) — a real, distinct empty
-      // state, not a missing-form null.
-      const entries = await getFormLearnset(client(), 'bulbasaur', 'legends-za');
-      expect(entries).toEqual([]);
+    it('getFormLearnsetAllVersionGroups pages past the 1000-row PostgREST cap (Mew: 2700+ raw rows across all version groups)', async () => {
+      const result = await getFormLearnsetAllVersionGroups(client(), 'mew');
+      expect(result).not.toBeNull();
+      expect(result!.entries.length).toBeGreaterThan(1000);
     });
 
     it('getMoveLearners returns null for an unknown move', async () => {
@@ -265,11 +282,53 @@ describe.skipIf(!hasLocalSupabase)(
       expect(new Set(page!.items.map((i) => i.formSlug)).size).toBe(page!.items.length);
       expect(page!.items.every((i) => i.speciesSlug.length > 0)).toBe(true);
     });
+
+    it('listMovesPage filters by search text (case-insensitive substring, either locale)', async () => {
+      const page = await listMovesPage(client(), {
+        page: 1,
+        pageSize: 20,
+        filters: { search: 'thunder' },
+      });
+      expect(page.totalCount).toBeGreaterThan(0);
+      expect(page.items.every((m) => m.nameEn.toLowerCase().includes('thunder'))).toBe(true);
+    });
+
+    it('listMovesPage filters by type', async () => {
+      const page = await listMovesPage(client(), {
+        page: 1,
+        pageSize: 50,
+        filters: { type: 'electric' },
+      });
+      expect(page.totalCount).toBeGreaterThan(0);
+      expect(page.items.every((m) => m.type === 'electric')).toBe(true);
+    });
+
+    it('listMovesPage filters by damage class', async () => {
+      const page = await listMovesPage(client(), {
+        page: 1,
+        pageSize: 50,
+        filters: { damageClass: 'status' },
+      });
+      expect(page.totalCount).toBeGreaterThan(0);
+      expect(page.items.every((m) => m.damageClass === 'status')).toBe(true);
+    });
+
+    it('listMovesPage sorts by power descending', async () => {
+      const page = await listMovesPage(client(), {
+        page: 1,
+        pageSize: 20,
+        filters: { sortBy: 'power', sortDirection: 'desc' },
+      });
+      const powers = page.items.map((m) => m.power ?? 0);
+      for (let i = 1; i < powers.length; i++) {
+        expect(powers[i - 1]!).toBeGreaterThanOrEqual(powers[i]!);
+      }
+    });
   },
 );
 
 describe.skipIf(hasLocalSupabase)('species/form queries (no local Supabase)', () => {
-  it.skip('set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY against a running local Supabase instance to run this suite', () => {
-    // See db:start in packages/database/package.json.
+  it.skip('set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY against a reachable Supabase instance to run this suite', () => {
+    // Normally the Raspberry Pi (pnpm db:pi:check) — see CLAUDE.md §21.
   });
 });

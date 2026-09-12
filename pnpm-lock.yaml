@@ -147,6 +147,9 @@ importers:
       '@pokestudio/config':
         specifier: workspace:*
         version: link:../config
+      '@pokestudio/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       supabase:
         specifier: ^2.1.1
         version: 2.117.0

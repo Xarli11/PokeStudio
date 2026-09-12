@@ -9,7 +9,7 @@
  * it's a genuine, transparent-background export (no baked-in canvas fill),
  * but its all-Emerald coloring doesn't disambiguate which of the two
  * Figma-named variants it is ("Logo – Emerald" vs "Logo – Emerald White") —
- * see DESIGN_SYSTEM.md "Logo" section. Don't guess a mapping for it; confirm
+ * see docs/product/DESIGN_SYSTEM.md "Logo" section. Don't guess a mapping for it; confirm
  * with the design source first.
  */
 export const brandAssets = {

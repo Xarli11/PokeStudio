@@ -63,12 +63,12 @@ Created because Phase 0 had real code for them: `apps/web`, `packages/config`,
 Deferred (no Phase 0 responsibility yet): `apps/battle-server`, `packages/domain`,
 `packages/formats`, `packages/team-builder`, `packages/ai`. Interfaces that
 would eventually live in `packages/domain` (e.g. the conceptual `BattleEngine`
-API in BATTLE_ENGINE.md) currently live as each adapter package's own public
+API in docs/architecture/BATTLE_ENGINE.md) currently live as each adapter package's own public
 API surface until a second consumer justifies extracting a shared package.
 
 ### Phase 1A addition — Explore Core vertical slice
 
-The first real product feature (ROADMAP.md Phase 1, ADR-0010): a Pokédex index
+The first real product feature (docs/product/ROADMAP.md Phase 1, ADR-0010): a Pokédex index
 (`/[locale]/pokemon`) and detail page (`/[locale]/pokemon/[slug]`) reading
 normalized species/form reference data end-to-end from Postgres.
 
@@ -95,12 +95,12 @@ normalized species/form reference data end-to-end from Postgres.
 
 Replaced the small hand-mirrored sample with a reproducible, idempotent, full-dataset ingestion
 pipeline (~1025 species, ~1580 forms — the complete PokéAPI dataset for this scope). See
-`DATA_SOURCES.md` and `packages/pokemon-data/README.md` for the full pipeline shape; summary of
+`docs/engineering/DATA_SOURCES.md` and `packages/pokemon-data/README.md` for the full pipeline shape; summary of
 what changed architecturally:
 
 - **`seed.sql` no longer carries Pokémon data.** `packages/database/supabase/seed.sql` is now
   reserved for small static bootstrap lookups (none exist yet); `species`/`pokemon_form` come
-  exclusively from `pnpm --filter @pokestudio/pokemon-data ingest` (DATABASE.md "Seed vs.
+  exclusively from `pnpm --filter @pokestudio/pokemon-data ingest` (docs/engineering/DATABASE.md "Seed vs.
   ingestion"). `db:reset` alone no longer produces a Pokédex-ready database — a second, separate
   step is required, by design.
 - **Ingestion writes directly to Postgres** (batched, identity-based upsert —
@@ -139,7 +139,7 @@ a static-asset binding and a name — no R2/KV incremental cache (this app has n
 revalidation needing one yet), no images binding (no `next/image` usage yet), no custom domain,
 no production routes. Server-side Supabase access in the deployed Worker uses the same
 `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` variables `apps/web` already
-reads locally (DATABASE.md "Supabase API keys") — set as Worker environment variables in
+reads locally (docs/engineering/DATABASE.md "Supabase API keys") — set as Worker environment variables in
 Cloudflare, never committed; `SUPABASE_SECRET_KEY` must never be configured on this Worker.
 
 ## Layering
@@ -263,7 +263,7 @@ Phase 0 decisions while changes were still inexpensive:
 - **Node runtime**: pinned to 24 LTS (`.nvmrc`, `package.json#engines`) rather than an open-ended
   `>=20.0.0` range — avoids Node's current odd-numbered "latest" release, which lacks a prebuilt
   `better-sqlite3` binary (transitive via `pokemon-showdown`) and silently falls back to a
-  from-source compile. See DEPENDENCY_POLICY.md.
+  from-source compile. See docs/engineering/DEPENDENCY_POLICY.md.
 - **i18n**: confirmed the custom `packages/i18n` dictionary over adopting `next-intl` (ADR-0009).
 - **Supabase local workflow**: verified against the real local stack (Postgres/GoTrue/PostgREST/
   Storage/Realtime/Studio via Docker), not just a standalone Postgres fallback. Found and fixed a

@@ -51,11 +51,11 @@ Pokédex slice genuinely needs (YAGNI — do not create every table below on day
    unwieldy.
 7. **Provenance is mandatory per imported row**, continuing the Phase 0 `data_sources` pattern:
    every table populated by ingestion carries a `source_id` foreign key, and the pipeline records
-   source revision/fetch time/importer version per DATA_SOURCES.md.
+   source revision/fetch time/importer version per docs/engineering/DATA_SOURCES.md.
 
 ## What Phase 1 actually builds
 
-Only what the Pokédex index/detail/compare slice (ROADMAP.md Phase 1) needs: `species`,
+Only what the Pokédex index/detail/compare slice (docs/product/ROADMAP.md Phase 1) needs: `species`,
 `pokemon_form` (collapsed to "one row per form, generation-scoped stats/types only where they
 actually differ historically — most forms don't"), `move`/`ability`/`item` reference tables, and
 the existing `data_sources` provenance table. Game/format availability, full learnsets, and
@@ -81,7 +81,7 @@ The species/form split (decision #1) was ingested and proved against the complet
 (~1025 species, ~1579 forms), not just the 3-species Phase 1A sample — including cases the sample
 couldn't exercise: a 64-form cosmetic family (Alcremie), a species with no default-named form at
 all (Xerneas), and forms that change type without any PokéAPI battle-only/mega flag (Rotom). No
-change to the decision itself; see DATA_SOURCES.md "Classification findings" and
+change to the decision itself; see docs/engineering/DATA_SOURCES.md "Classification findings" and
 `packages/pokemon-data/src/classify.ts` for what the full-scale audit found and how it was
 generalized (not patched per-species). Decision #5 (canonical id/slug distinct from external id)
 is now also enforced at the database level via a `unique (source_id, external_id)` constraint,

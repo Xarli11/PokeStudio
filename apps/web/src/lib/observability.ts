@@ -1,5 +1,5 @@
 /**
- * PokeStudio observability boundary (OBSERVABILITY.md).
+ * PokeStudio observability boundary (docs/engineering/OBSERVABILITY.md).
  *
  * No Sentry DSN is configured yet, so this reports to the console for now.
  * Swap the body of `captureException`/`captureMessage` for `@sentry/nextjs`

@@ -21,3 +21,4 @@ export function getDictionary(locale: Locale): Dictionary {
 }
 
 export { formatMessage } from './format';
+export { abilityEffectsEs } from './ability-effects-es';
