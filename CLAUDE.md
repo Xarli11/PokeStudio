@@ -52,9 +52,11 @@ Default completion report:
 - **Changed:** what changed.
 - **Decision:** important decision, if any.
 - **Validated:** exact relevant checks run.
-- **Remaining:** only actual known issue or next step.
+- **Remaining:** actual known next step, if any.
+- **Blockers:** only if something is genuinely blocking, distinct from ordinary remaining work.
 
-No filler, ceremony or self-congratulation.
+Match report length to task size — a small task doesn't need every heading filled in. No filler,
+ceremony or self-congratulation.
 
 Do **not** apply Caveman style to user-facing product copy, legal text, public documentation or educational explanations.
 
@@ -162,14 +164,12 @@ Apply least privilege and RLS where relevant.
 
 Never declare a task complete without relevant validation.
 
-Minimum expected gates where applicable:
-
-```text
-format/lint
-typecheck
-tests
-build
-```
+`pnpm validate:full` (format, lint, typecheck, all tests, Next build, Cloudflare/OpenNext build) is
+the mandatory gate before declaring a phase or a significant commit complete — it is the
+authoritative list of what "validated" means; don't restate it elsewhere. During active
+implementation, `pnpm validate:changed` (format check + lint/typecheck/test scoped to changed
+packages and their dependents via Turborepo's git-aware `--filter`) is enough — it's not a
+hand-rolled guess, it uses the same dependency graph the full build does.
 
 Add regression tests for mechanics bugs.
 
@@ -278,3 +278,25 @@ this is the rule to carry on every task, not the reference detail:
   never the Pi (unreachable from Cloudflare's network anyway).
 - Never print or request secrets in chat. Never hardcode credentials in the repository. Expected
   `.env.local` variables are listed in `.env.example`.
+
+## 22. Token & Work Efficiency
+
+Never trade correctness, safety, architecture quality, tests, or product quality for token
+savings — this section governs _how_ work is done, not _how much_ gets verified.
+
+- Before expensive work, check whether valid evidence already exists (recent test/build output,
+  a migration's applied state, an existing audit) rather than redoing it.
+- Do not repeat a migration, full ingestion, full-repo audit, or build without a concrete reason
+  the prior result may no longer hold.
+- Use `git status`/`git diff`/`git log` to reconstruct current state before asking or re-deriving.
+- Prefer targeted search/read over broad repository scans; read the smallest relevant doc set
+  first. ADRs are authoritative for settled architectural decisions — don't re-litigate them.
+- Don't reread a file that hasn't changed since it was last read, unless new evidence requires it.
+- Use `pnpm validate:changed` during implementation; `pnpm validate:full` before declaring a
+  phase/commit complete (§12) — never skip the full gate to save time.
+- If resuming after an interruption: inspect the current working tree (`git status --short`,
+  `git diff --stat`, then relevant diffs) instead of replaying the entire original phase or asking
+  for the mega-prompt again. Trust repository state over conversational memory.
+- Keep progress updates concise — narrate meaningful changes, not every read/command. Final
+  reports emphasize changes, decisions, validation and remaining debt over retelling the task;
+  match report size to task size, not to a fixed template.
