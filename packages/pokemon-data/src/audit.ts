@@ -45,6 +45,21 @@ export interface AuditReport {
       conditionCount: number;
     }[];
   };
+  moves: {
+    totalMoves: number;
+    missingSpanishName: number;
+    missingSpanishEffect: number;
+    byDamageClass: Record<string, number>;
+  };
+  learnsets: {
+    totalVersionGroups: number;
+    totalLearnMethods: number;
+    totalEntries: number;
+    totalMachines: number;
+    byLearnMethod: Record<string, number>;
+    /** Same (form,move,versionGroup,method) at >1 distinct level — a real mechanic (docs/adr/0013), not a data-quality issue. */
+    multiLevelKeyCount: number;
+  };
   validationIssueCount: number;
   validationIssuesSample: ValidationIssue[];
 }
@@ -123,6 +138,24 @@ export function buildAuditReport(params: {
     })
     .slice(0, MAX_LISTED);
 
+  const byDamageClass: Record<string, number> = {};
+  for (const move of dataset.moves) {
+    byDamageClass[move.damageClass] = (byDamageClass[move.damageClass] ?? 0) + 1;
+  }
+
+  const byLearnMethod: Record<string, number> = {};
+  const levelsByNaturalKeyPrefix = new Map<string, Set<number>>();
+  for (const entry of dataset.learnsetEntries) {
+    byLearnMethod[entry.learnMethodSlug] = (byLearnMethod[entry.learnMethodSlug] ?? 0) + 1;
+    const prefixKey = `${entry.formSlug}:${entry.moveSlug}:${entry.versionGroupSlug}:${entry.learnMethodSlug}`;
+    const levels = levelsByNaturalKeyPrefix.get(prefixKey) ?? new Set<number>();
+    levels.add(entry.level);
+    levelsByNaturalKeyPrefix.set(prefixKey, levels);
+  }
+  const multiLevelKeyCount = [...levelsByNaturalKeyPrefix.values()].filter(
+    (levels) => levels.size > 1,
+  ).length;
+
   return {
     totalSpecies: dataset.species.length,
     totalForms: dataset.forms.length,
@@ -152,6 +185,20 @@ export function buildAuditReport(params: {
         .length,
       branchingSpecies,
       multiConditionEdges,
+    },
+    moves: {
+      totalMoves: dataset.moves.length,
+      missingSpanishName: dataset.moves.filter((m) => !m.nameEs).length,
+      missingSpanishEffect: dataset.moves.filter((m) => !m.effectEs).length,
+      byDamageClass,
+    },
+    learnsets: {
+      totalVersionGroups: dataset.versionGroups.length,
+      totalLearnMethods: dataset.learnMethods.length,
+      totalEntries: dataset.learnsetEntries.length,
+      totalMachines: dataset.machines.length,
+      byLearnMethod,
+      multiLevelKeyCount,
     },
     validationIssueCount: validationIssues.length,
     validationIssuesSample: validationIssues.slice(0, MAX_LISTED),
@@ -212,6 +259,29 @@ export function formatAuditReport(report: AuditReport): string {
         `    ${edge.fromSpeciesSlug} -> ${edge.toSpeciesSlug}: ${edge.conditionCount} methods`,
       );
     }
+  }
+  lines.push('');
+  lines.push('Moves:');
+  lines.push(`  total moves: ${report.moves.totalMoves}`);
+  for (const [damageClass, count] of Object.entries(report.moves.byDamageClass)) {
+    lines.push(`    ${damageClass}: ${count}`);
+  }
+  lines.push(`  moves missing a Spanish name: ${report.moves.missingSpanishName}`);
+  lines.push(`  moves missing a Spanish effect: ${report.moves.missingSpanishEffect}`);
+  lines.push('');
+  lines.push('Learnsets:');
+  lines.push(`  version groups: ${report.learnsets.totalVersionGroups}`);
+  lines.push(`  learn methods: ${report.learnsets.totalLearnMethods}`);
+  lines.push(
+    `  learnset entries (form/move/version-group/method/level rows): ${report.learnsets.totalEntries}`,
+  );
+  lines.push(`  machines (TM/HM/TR identities): ${report.learnsets.totalMachines}`);
+  lines.push(
+    `  same (form,move,version-group,method) at >1 level (real relearn mechanic): ${report.learnsets.multiLevelKeyCount}`,
+  );
+  lines.push('  entries by learn method:');
+  for (const [method, count] of Object.entries(report.learnsets.byLearnMethod)) {
+    lines.push(`    ${method}: ${count}`);
   }
   lines.push('');
   lines.push(`Validation issues: ${report.validationIssueCount}`);

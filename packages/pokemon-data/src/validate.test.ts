@@ -6,7 +6,12 @@ import type {
   NormalizedEvolution,
   NormalizedForm,
   NormalizedFormAbility,
+  NormalizedLearnMethod,
+  NormalizedLearnsetEntry,
+  NormalizedMachine,
+  NormalizedMove,
   NormalizedSpecies,
+  NormalizedVersionGroup,
 } from './types';
 import { validateExploreDataset } from './validate';
 
@@ -77,6 +82,69 @@ function makeEvolution(overrides: Partial<NormalizedEvolution> = {}): Normalized
   };
 }
 
+function makeMove(overrides: Partial<NormalizedMove> = {}): NormalizedMove {
+  return {
+    slug: 'tackle',
+    nameEn: 'Tackle',
+    nameEs: 'Placaje',
+    type: 'normal',
+    damageClass: 'physical',
+    power: 40,
+    accuracy: 100,
+    pp: 35,
+    priority: 0,
+    target: 'selected-pokemon',
+    generation: 1,
+    ailment: 'none',
+    category: 'damage',
+    drain: 0,
+    healing: 0,
+    critRate: 0,
+    ailmentChance: 0,
+    flinchChance: 0,
+    statChance: 0,
+    source: { sourceId: 'pokeapi', externalId: '33' },
+    ...overrides,
+  };
+}
+
+function makeVersionGroup(overrides: Partial<NormalizedVersionGroup> = {}): NormalizedVersionGroup {
+  return {
+    slug: 'red-blue',
+    generation: 1,
+    displayOrder: 1,
+    source: { sourceId: 'pokeapi', externalId: '1' },
+    ...overrides,
+  };
+}
+
+function makeLearnMethod(overrides: Partial<NormalizedLearnMethod> = {}): NormalizedLearnMethod {
+  return { slug: 'level-up', source: { sourceId: 'pokeapi', externalId: '1' }, ...overrides };
+}
+
+function makeLearnsetEntry(
+  overrides: Partial<NormalizedLearnsetEntry> = {},
+): NormalizedLearnsetEntry {
+  return {
+    formSlug: 'bulbasaur',
+    moveSlug: 'tackle',
+    versionGroupSlug: 'red-blue',
+    learnMethodSlug: 'level-up',
+    level: 1,
+    ...overrides,
+  };
+}
+
+function makeMachine(overrides: Partial<NormalizedMachine> = {}): NormalizedMachine {
+  return {
+    moveSlug: 'tackle',
+    versionGroupSlug: 'red-blue',
+    itemSlug: 'tm01',
+    source: { sourceId: 'pokeapi', externalId: '1' },
+    ...overrides,
+  };
+}
+
 function makeDataset(
   species: NormalizedSpecies[],
   forms: NormalizedForm[],
@@ -84,6 +152,11 @@ function makeDataset(
     abilities?: NormalizedAbility[];
     formAbilities?: NormalizedFormAbility[];
     evolutions?: NormalizedEvolution[];
+    moves?: NormalizedMove[];
+    versionGroups?: NormalizedVersionGroup[];
+    learnMethods?: NormalizedLearnMethod[];
+    learnsetEntries?: NormalizedLearnsetEntry[];
+    machines?: NormalizedMachine[];
   } = {},
 ): NormalizedDataset {
   return {
@@ -99,6 +172,11 @@ function makeDataset(
     abilities: options.abilities ?? [],
     formAbilities: options.formAbilities ?? [],
     evolutions: options.evolutions ?? [],
+    moves: options.moves ?? [],
+    versionGroups: options.versionGroups ?? [],
+    learnMethods: options.learnMethods ?? [],
+    learnsetEntries: options.learnsetEntries ?? [],
+    machines: options.machines ?? [],
   };
 }
 
@@ -565,5 +643,114 @@ describe('validateExploreDataset', () => {
     expect(issues.some((issue) => issue.message.includes('cannot point a species to itself'))).toBe(
       true,
     );
+  });
+});
+
+describe('validateExploreDataset — moves and learnsets', () => {
+  it('accepts a valid move/learnset/machine dataset', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [makeMove()],
+        versionGroups: [makeVersionGroup()],
+        learnMethods: [makeLearnMethod()],
+        learnsetEntries: [makeLearnsetEntry()],
+        machines: [makeMachine()],
+      }),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it('flags a duplicate move slug', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [makeMove(), makeMove({ source: { sourceId: 'pokeapi', externalId: '34' } })],
+      }),
+    );
+    expect(issues.some((issue) => issue.message === 'Duplicate move slug.')).toBe(true);
+  });
+
+  it('flags an unknown move type and damage class', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [makeMove({ type: 'nonsense' as never, damageClass: 'nonsense' as never })],
+      }),
+    );
+    expect(issues.some((issue) => issue.message.includes('Unknown type'))).toBe(true);
+    expect(issues.some((issue) => issue.message.includes('Unknown damage class'))).toBe(true);
+  });
+
+  it('flags out-of-range accuracy/power/pp', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [makeMove({ accuracy: 150, power: -5, pp: 0 })],
+      }),
+    );
+    expect(issues.some((issue) => issue.message.includes('Accuracy must be'))).toBe(true);
+    expect(issues.some((issue) => issue.message.includes('Power must be'))).toBe(true);
+    expect(issues.some((issue) => issue.message.includes('PP must be'))).toBe(true);
+  });
+
+  it('flags a learnset entry referencing an unknown form, move, version group or method', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [makeMove()],
+        versionGroups: [makeVersionGroup()],
+        learnMethods: [makeLearnMethod()],
+        learnsetEntries: [
+          makeLearnsetEntry({ formSlug: 'does-not-exist' }),
+          makeLearnsetEntry({ moveSlug: 'does-not-exist' }),
+          makeLearnsetEntry({ versionGroupSlug: 'does-not-exist' }),
+          makeLearnsetEntry({ learnMethodSlug: 'does-not-exist' }),
+        ],
+      }),
+    );
+    expect(issues.some((i) => i.message.includes('unknown form "does-not-exist"'))).toBe(true);
+    expect(issues.some((i) => i.message.includes('unknown move "does-not-exist"'))).toBe(true);
+    expect(issues.some((i) => i.message.includes('unknown version group "does-not-exist"'))).toBe(
+      true,
+    );
+    expect(issues.some((i) => i.message.includes('Unknown learn method "does-not-exist"'))).toBe(
+      true,
+    );
+  });
+
+  it('flags a negative level but allows the same key at two different levels', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [makeMove()],
+        versionGroups: [makeVersionGroup()],
+        learnMethods: [makeLearnMethod()],
+        learnsetEntries: [
+          makeLearnsetEntry({ level: -1 }),
+          makeLearnsetEntry({ level: 1 }),
+          makeLearnsetEntry({ level: 8 }),
+        ],
+      }),
+    );
+    expect(issues.some((i) => i.message.includes('non-negative integer'))).toBe(true);
+    expect(issues.some((i) => i.message === 'Duplicate learnset natural key.')).toBe(false);
+  });
+
+  it('flags a true duplicate learnset natural key', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [makeMove()],
+        versionGroups: [makeVersionGroup()],
+        learnMethods: [makeLearnMethod()],
+        learnsetEntries: [makeLearnsetEntry(), makeLearnsetEntry()],
+      }),
+    );
+    expect(issues.some((i) => i.message === 'Duplicate learnset natural key.')).toBe(true);
+  });
+
+  it('flags a machine referencing an unknown move or version group', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [makeMove()],
+        versionGroups: [makeVersionGroup()],
+        machines: [makeMachine({ moveSlug: 'does-not-exist' })],
+      }),
+    );
+    expect(issues.some((i) => i.message.includes('Orphan machine: unknown move'))).toBe(true);
   });
 });

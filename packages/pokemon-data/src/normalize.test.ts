@@ -4,16 +4,27 @@ import {
   normalizeAbility,
   normalizeEvolutionChain,
   normalizeFormAbilities,
+  normalizeFormMoves,
+  normalizeLearnMethod,
+  normalizeMachine,
+  normalizeMove,
   normalizeSpeciesGroup,
+  normalizeVersionGroup,
+  parseGenerationSlug,
   type RawSpeciesGroup,
 } from './normalize';
 import type {
   PokeApiAbility,
   PokeApiEvolutionChain,
   PokeApiEvolutionDetail,
+  PokeApiMachine,
+  PokeApiMove,
+  PokeApiMoveLearnMethod,
   PokeApiPokemon,
   PokeApiPokemonAbility,
   PokeApiPokemonForm,
+  PokeApiPokemonMove,
+  PokeApiVersionGroup,
 } from './pokeapi-client';
 
 // Fixtures below are literal captures of real PokéAPI responses — normalization
@@ -35,6 +46,7 @@ function pokemon(
     ],
     forms: [],
     abilities: [],
+    moves: [],
     ...overrides,
   };
 }
@@ -648,5 +660,331 @@ describe('normalizeEvolutionChain', () => {
     expect(edges.find((e) => e.toSpeciesSlug === 'hitmontop')).toMatchObject({
       relativePhysicalStats: 0,
     });
+  });
+});
+
+describe('parseGenerationSlug', () => {
+  it('parses roman-numeral generation slugs 1-9', () => {
+    expect(parseGenerationSlug('generation-i')).toBe(1);
+    expect(parseGenerationSlug('generation-iv')).toBe(4);
+    expect(parseGenerationSlug('generation-ix')).toBe(9);
+  });
+
+  it('throws for an unrecognized generation slug', () => {
+    expect(() => parseGenerationSlug('generation-x')).toThrow(/Unrecognized generation slug/);
+  });
+});
+
+describe('normalizeMove', () => {
+  // Fixture shape is a literal capture of the real PokéAPI /move/85 (Thunderbolt) response.
+  function move(overrides: Partial<PokeApiMove> & { id: number; name: string }): PokeApiMove {
+    return {
+      names: [
+        { name: 'Thunderbolt', language: { name: 'en', url: '' } },
+        { name: 'Rayo', language: { name: 'es', url: '' } },
+      ],
+      accuracy: 100,
+      effect_chance: 10,
+      pp: 15,
+      priority: 0,
+      power: 90,
+      damage_class: { name: 'special', url: '' },
+      effect_entries: [
+        {
+          effect: 'Inflicts regular damage.  Has a chance to paralyze the target.',
+          short_effect: 'Has a chance to paralyze the target.',
+          language: { name: 'en', url: '' },
+        },
+      ],
+      generation: { name: 'generation-i', url: '' },
+      meta: {
+        ailment: { name: 'paralysis', url: '' },
+        category: { name: 'damage-ailment', url: '' },
+        min_hits: null,
+        max_hits: null,
+        min_turns: null,
+        max_turns: null,
+        drain: 0,
+        healing: 0,
+        crit_rate: 0,
+        ailment_chance: 10,
+        flinch_chance: 0,
+        stat_chance: 0,
+      },
+      target: { name: 'selected-pokemon', url: '' },
+      type: { name: 'electric', url: '' },
+      machines: [],
+      ...overrides,
+    };
+  }
+
+  it('normalizes a damaging move with a secondary ailment chance (Thunderbolt)', () => {
+    const normalized = normalizeMove({
+      move: move({ id: 85, name: 'thunderbolt' }),
+      sourceId: 'pokeapi',
+    });
+    expect(normalized).toEqual({
+      slug: 'thunderbolt',
+      nameEn: 'Thunderbolt',
+      nameEs: 'Rayo',
+      type: 'electric',
+      damageClass: 'special',
+      power: 90,
+      accuracy: 100,
+      pp: 15,
+      priority: 0,
+      target: 'selected-pokemon',
+      generation: 1,
+      effectEn: 'Has a chance to paralyze the target.',
+      effectEs: undefined,
+      effectChance: 10,
+      ailment: 'paralysis',
+      category: 'damage-ailment',
+      minHits: undefined,
+      maxHits: undefined,
+      minTurns: undefined,
+      maxTurns: undefined,
+      drain: 0,
+      healing: 0,
+      critRate: 0,
+      ailmentChance: 10,
+      flinchChance: 0,
+      statChance: 0,
+      source: { sourceId: 'pokeapi', externalId: '85' },
+    });
+  });
+
+  it('normalizes a status move with null power/effect_chance (Toxic)', () => {
+    const normalized = normalizeMove({
+      move: move({
+        id: 92,
+        name: 'toxic',
+        power: null,
+        accuracy: 90,
+        effect_chance: null,
+        damage_class: { name: 'status', url: '' },
+        meta: {
+          ailment: { name: 'poison', url: '' },
+          category: { name: 'ailment', url: '' },
+          min_hits: null,
+          max_hits: null,
+          min_turns: 15,
+          max_turns: 15,
+          drain: 0,
+          healing: 0,
+          crit_rate: 0,
+          ailment_chance: 0,
+          flinch_chance: 0,
+          stat_chance: 0,
+        },
+      }),
+      sourceId: 'pokeapi',
+    });
+    expect(normalized.power).toBeUndefined();
+    expect(normalized.accuracy).toBe(90);
+    expect(normalized.effectChance).toBeUndefined();
+    expect(normalized.damageClass).toBe('status');
+    expect(normalized.minTurns).toBe(15);
+    expect(normalized.maxTurns).toBe(15);
+  });
+
+  it('leaves effectEs undefined — PokéAPI never publishes a Spanish move effect', () => {
+    const normalized = normalizeMove({ move: move({ id: 1, name: 'pound' }), sourceId: 'pokeapi' });
+    expect(normalized.effectEs).toBeUndefined();
+  });
+
+  it('leaves ailment/category undefined (not a guessed default) when the move has no meta block — a real, current gap for some very recent moves', () => {
+    const noMeta = move({ id: 887, name: 'ivy-cudgel' });
+    delete (noMeta as { meta?: unknown }).meta;
+    const normalized = normalizeMove({ move: noMeta, sourceId: 'pokeapi' });
+    expect(normalized.ailment).toBeUndefined();
+    expect(normalized.category).toBeUndefined();
+    expect(normalized.minHits).toBeUndefined();
+    // Numeric modifier fields still default to 0 ("no known secondary
+    // effect") even with no meta block — a reasonable domain default, not
+    // invented data, unlike the ailment/category sentinels above.
+    expect(normalized.drain).toBe(0);
+    expect(normalized.ailmentChance).toBe(0);
+  });
+
+  it("collapses a Z-Move physical/special variant's double-dash suffix into a valid slug", () => {
+    // Real PokéAPI shape: "Breakneck Blitz" exists as two records
+    // ("breakneck-blitz--physical" / "breakneck-blitz--special") that share
+    // one display name — not two separately-named in-game moves.
+    const physical = normalizeMove({
+      move: move({ id: 622, name: 'breakneck-blitz--physical' }),
+      sourceId: 'pokeapi',
+    });
+    const special = normalizeMove({
+      move: move({ id: 623, name: 'breakneck-blitz--special' }),
+      sourceId: 'pokeapi',
+    });
+    expect(physical.slug).toBe('breakneck-blitz-physical');
+    expect(special.slug).toBe('breakneck-blitz-special');
+  });
+
+  it('treats literal power/accuracy 0 the same as null — both mean "no fixed power"/"never misses" upstream', () => {
+    // Real PokéAPI inconsistency found at full-dataset scale: some status
+    // moves (power-shift, victory-dance, ...) encode "no power" as 0 instead
+    // of null; a few moves (burning-bulwark, ...) do the same for accuracy.
+    const normalized = normalizeMove({
+      move: move({ id: 1, name: 'power-shift', power: 0, accuracy: 0 }),
+      sourceId: 'pokeapi',
+    });
+    expect(normalized.power).toBeUndefined();
+    expect(normalized.accuracy).toBeUndefined();
+  });
+});
+
+describe('normalizeVersionGroup', () => {
+  it('normalizes a version group with its generation and display order (Red/Blue)', () => {
+    const versionGroup: PokeApiVersionGroup = {
+      id: 1,
+      name: 'red-blue',
+      order: 3,
+      generation: { name: 'generation-i', url: '' },
+    };
+    expect(normalizeVersionGroup({ versionGroup, sourceId: 'pokeapi' })).toEqual({
+      slug: 'red-blue',
+      generation: 1,
+      displayOrder: 3,
+      source: { sourceId: 'pokeapi', externalId: '1' },
+    });
+  });
+});
+
+describe('normalizeLearnMethod', () => {
+  it('normalizes a learn method to its slug and provenance only (no label fields)', () => {
+    const method: PokeApiMoveLearnMethod = { id: 1, name: 'level-up' };
+    expect(normalizeLearnMethod({ method, sourceId: 'pokeapi' })).toEqual({
+      slug: 'level-up',
+      source: { sourceId: 'pokeapi', externalId: '1' },
+    });
+  });
+});
+
+describe('normalizeMachine', () => {
+  it('normalizes a machine to its move/version-group/item-slug identity', () => {
+    const machine: PokeApiMachine = {
+      id: 1,
+      item: { name: 'tm00', url: '' },
+      version_group: { name: 'sword-shield', url: '' },
+      move: { name: 'mega-punch', url: '' },
+    };
+    expect(normalizeMachine({ machine, sourceId: 'pokeapi' })).toEqual({
+      moveSlug: 'mega-punch',
+      versionGroupSlug: 'sword-shield',
+      itemSlug: 'tm00',
+      source: { sourceId: 'pokeapi', externalId: '1' },
+    });
+  });
+});
+
+describe('normalizeFormMoves', () => {
+  it("sanitizes a Z-Move variant's raw double-dash name the same way normalizeMove sanitizes its canonical slug", () => {
+    // Without this, a learnset entry referencing "breakneck-blitz--physical"
+    // would never match the canonical move slug "breakneck-blitz-physical"
+    // normalizeMove produces, and would be dropped as an orphan.
+    const moves: PokeApiPokemonMove[] = [
+      {
+        move: { name: 'breakneck-blitz--physical', url: '' },
+        version_group_details: [
+          {
+            level_learned_at: 0,
+            version_group: { name: 'sun-moon', url: '' },
+            move_learn_method: { name: 'machine', url: '' },
+            order: null,
+          },
+        ],
+      },
+    ];
+    expect(normalizeFormMoves('pikachu', moves)[0]?.moveSlug).toBe('breakneck-blitz-physical');
+  });
+
+  it('produces one entry per (move, version group, method, level) triple, level included in the key', () => {
+    // Shape mirrors the real cached Bulbasaur "swords-dance" entry: the same
+    // move learned via different methods across different version groups.
+    const moves: PokeApiPokemonMove[] = [
+      {
+        move: { name: 'swords-dance', url: '' },
+        version_group_details: [
+          {
+            level_learned_at: 0,
+            version_group: { name: 'red-blue', url: '' },
+            move_learn_method: { name: 'machine', url: '' },
+            order: null,
+          },
+          {
+            level_learned_at: 0,
+            version_group: { name: 'emerald', url: '' },
+            move_learn_method: { name: 'tutor', url: '' },
+            order: null,
+          },
+        ],
+      },
+    ];
+    expect(normalizeFormMoves('bulbasaur', moves)).toEqual([
+      {
+        formSlug: 'bulbasaur',
+        moveSlug: 'swords-dance',
+        versionGroupSlug: 'red-blue',
+        learnMethodSlug: 'machine',
+        level: 0,
+        sortOrder: undefined,
+      },
+      {
+        formSlug: 'bulbasaur',
+        moveSlug: 'swords-dance',
+        versionGroupSlug: 'emerald',
+        learnMethodSlug: 'tutor',
+        level: 0,
+        sortOrder: undefined,
+      },
+    ]);
+  });
+
+  it('keeps two entries for the same (move, version group, method) at different levels — a real relearn mechanic', () => {
+    // Mirrors the real cached Aromatisse case: odor-sleuth learned at both
+    // level 1 (inherited on evolution) and level 8 in sun-moon.
+    const moves: PokeApiPokemonMove[] = [
+      {
+        move: { name: 'odor-sleuth', url: '' },
+        version_group_details: [
+          {
+            level_learned_at: 1,
+            version_group: { name: 'sun-moon', url: '' },
+            move_learn_method: { name: 'level-up', url: '' },
+            order: 1,
+          },
+          {
+            level_learned_at: 8,
+            version_group: { name: 'sun-moon', url: '' },
+            move_learn_method: { name: 'level-up', url: '' },
+            order: 1,
+          },
+        ],
+      },
+    ];
+    const entries = normalizeFormMoves('aromatisse', moves);
+    expect(entries).toHaveLength(2);
+    expect(entries.map((e) => e.level).sort()).toEqual([1, 8]);
+  });
+
+  it("associates every cosmetic sub-form under one variety with that variety's moveset", () => {
+    const moves: PokeApiPokemonMove[] = [
+      {
+        move: { name: 'tackle', url: '' },
+        version_group_details: [
+          {
+            level_learned_at: 1,
+            version_group: { name: 'x-y', url: '' },
+            move_learn_method: { name: 'level-up', url: '' },
+            order: 1,
+          },
+        ],
+      },
+    ];
+    expect(normalizeFormMoves('vivillon-meadow', moves)[0]?.formSlug).toBe('vivillon-meadow');
+    expect(normalizeFormMoves('vivillon-polar', moves)[0]?.formSlug).toBe('vivillon-polar');
   });
 });

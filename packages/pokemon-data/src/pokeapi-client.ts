@@ -47,6 +47,18 @@ export interface PokeApiPokemonAbility {
   slot: number;
 }
 
+export interface PokeApiPokemonMoveVersionGroupDetail {
+  level_learned_at: number;
+  version_group: PokeApiNamedResource;
+  move_learn_method: PokeApiNamedResource;
+  order: number | null;
+}
+
+export interface PokeApiPokemonMove {
+  move: PokeApiNamedResource;
+  version_group_details: PokeApiPokemonMoveVersionGroupDetail[];
+}
+
 export interface PokeApiPokemon {
   id: number;
   name: string;
@@ -54,6 +66,7 @@ export interface PokeApiPokemon {
   stats: PokeApiPokemonStat[];
   forms: PokeApiNamedResource[];
   abilities: PokeApiPokemonAbility[];
+  moves: PokeApiPokemonMove[];
 }
 
 export interface PokeApiEffectEntry {
@@ -102,6 +115,67 @@ export interface PokeApiEvolutionChain {
   chain: PokeApiEvolutionChainLink;
 }
 
+/** PokéAPI move `meta` block — always present upstream; "none"/"damage" etc. are real sentinel values. */
+export interface PokeApiMoveMeta {
+  ailment: PokeApiNamedResource;
+  category: PokeApiNamedResource;
+  min_hits: number | null;
+  max_hits: number | null;
+  min_turns: number | null;
+  max_turns: number | null;
+  drain: number;
+  healing: number;
+  crit_rate: number;
+  ailment_chance: number;
+  flinch_chance: number;
+  stat_chance: number;
+}
+
+/** One (machine resource, version group) pair a move appears as a TM/HM/TR in — resolved further via `fetchMachine`. */
+export interface PokeApiMoveMachineRef {
+  machine: { url: string };
+  version_group: PokeApiNamedResource;
+}
+
+export interface PokeApiMove {
+  id: number;
+  name: string;
+  names: PokeApiLocalizedName[];
+  accuracy: number | null;
+  effect_chance: number | null;
+  pp: number;
+  priority: number;
+  power: number | null;
+  damage_class: PokeApiNamedResource;
+  effect_entries: PokeApiEffectEntry[];
+  generation: PokeApiNamedResource;
+  /** Deliberately optional here even though PokéAPI reliably includes it — a handful of historical/special moves may lack it; normalize.ts fails that one move loudly rather than inventing values. */
+  meta?: PokeApiMoveMeta | undefined;
+  target: PokeApiNamedResource;
+  type: PokeApiNamedResource;
+  machines: PokeApiMoveMachineRef[];
+}
+
+export interface PokeApiVersionGroup {
+  id: number;
+  name: string;
+  /** PokéAPI's own chronological ordering — lets PokeStudio pick "the latest version group" without hardcoding a slug. */
+  order: number;
+  generation: PokeApiNamedResource;
+}
+
+export interface PokeApiMoveLearnMethod {
+  id: number;
+  name: string;
+}
+
+export interface PokeApiMachine {
+  id: number;
+  item: PokeApiNamedResource;
+  move: PokeApiNamedResource;
+  version_group: PokeApiNamedResource;
+}
+
 export interface PokeApiPokemonForm {
   id: number;
   name: string;
@@ -123,6 +197,13 @@ export interface PokeApiClient {
   fetchPokemonForm: (url: string) => Promise<PokeApiPokemonForm>;
   fetchAbility: (url: string) => Promise<PokeApiAbility>;
   fetchEvolutionChain: (url: string) => Promise<PokeApiEvolutionChain>;
+  fetchMoveRefs: () => Promise<PokeApiNamedResource[]>;
+  fetchMove: (idOrUrl: number | string) => Promise<PokeApiMove>;
+  fetchVersionGroupRefs: () => Promise<PokeApiNamedResource[]>;
+  fetchVersionGroup: (url: string) => Promise<PokeApiVersionGroup>;
+  fetchMoveLearnMethodRefs: () => Promise<PokeApiNamedResource[]>;
+  fetchMoveLearnMethod: (url: string) => Promise<PokeApiMoveLearnMethod>;
+  fetchMachine: (url: string) => Promise<PokeApiMachine>;
   requestCount: () => number;
 }
 
@@ -168,6 +249,31 @@ export function createPokeApiClient(options: { cache?: RawCache | undefined } = 
     fetchPokemonForm: (url) => fetchJson(url),
     fetchAbility: (url) => fetchJson(url),
     fetchEvolutionChain: (url) => fetchJson(url),
+    async fetchMoveRefs() {
+      // 937 moves live upstream (Phase 1C.2 audit) — one page covers all.
+      const page = await fetchJson<{ results: PokeApiNamedResource[] }>(
+        `${POKEAPI_BASE_URL}/move?limit=2000`,
+      );
+      return page.results;
+    },
+    fetchMove: (idOrUrl) => fetchJson(toUrl(idOrUrl, 'move')),
+    async fetchVersionGroupRefs() {
+      // 32 version groups live upstream — one page covers all.
+      const page = await fetchJson<{ results: PokeApiNamedResource[] }>(
+        `${POKEAPI_BASE_URL}/version-group?limit=100`,
+      );
+      return page.results;
+    },
+    fetchVersionGroup: (url) => fetchJson(url),
+    async fetchMoveLearnMethodRefs() {
+      // 12 learn methods live upstream — one page covers all.
+      const page = await fetchJson<{ results: PokeApiNamedResource[] }>(
+        `${POKEAPI_BASE_URL}/move-learn-method?limit=100`,
+      );
+      return page.results;
+    },
+    fetchMoveLearnMethod: (url) => fetchJson(url),
+    fetchMachine: (url) => fetchJson(url),
     requestCount: () => requestCount,
   };
 }

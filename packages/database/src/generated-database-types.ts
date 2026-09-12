@@ -102,6 +102,194 @@ export type Database = {
         }
         Relationships: []
       }
+      machine: {
+        Row: {
+          created_at: string
+          external_id: string
+          id: string
+          item_slug: string
+          move_id: string
+          source_id: string
+          version_group_id: string
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          id?: string
+          item_slug: string
+          move_id: string
+          source_id: string
+          version_group_id: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          id?: string
+          item_slug?: string
+          move_id?: string
+          source_id?: string
+          version_group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machine_move_id_fkey"
+            columns: ["move_id"]
+            isOneToOne: false
+            referencedRelation: "move"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machine_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+          {
+            foreignKeyName: "machine_version_group_id_fkey"
+            columns: ["version_group_id"]
+            isOneToOne: false
+            referencedRelation: "version_group"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      move: {
+        Row: {
+          accuracy: number | null
+          ailment: string | null
+          ailment_chance: number
+          category: string | null
+          created_at: string
+          crit_rate: number
+          damage_class: string
+          drain: number
+          effect_chance: number | null
+          effect_en: string | null
+          effect_es: string | null
+          external_id: string
+          flinch_chance: number
+          generation: number
+          healing: number
+          id: string
+          max_hits: number | null
+          max_turns: number | null
+          min_hits: number | null
+          min_turns: number | null
+          name_en: string
+          name_es: string | null
+          power: number | null
+          pp: number
+          priority: number
+          slug: string
+          source_id: string
+          stat_chance: number
+          target: string
+          type: string
+        }
+        Insert: {
+          accuracy?: number | null
+          ailment?: string | null
+          ailment_chance?: number
+          category?: string | null
+          created_at?: string
+          crit_rate?: number
+          damage_class: string
+          drain?: number
+          effect_chance?: number | null
+          effect_en?: string | null
+          effect_es?: string | null
+          external_id: string
+          flinch_chance?: number
+          generation: number
+          healing?: number
+          id?: string
+          max_hits?: number | null
+          max_turns?: number | null
+          min_hits?: number | null
+          min_turns?: number | null
+          name_en: string
+          name_es?: string | null
+          power?: number | null
+          pp: number
+          priority: number
+          slug: string
+          source_id: string
+          stat_chance?: number
+          target: string
+          type: string
+        }
+        Update: {
+          accuracy?: number | null
+          ailment?: string | null
+          ailment_chance?: number
+          category?: string | null
+          created_at?: string
+          crit_rate?: number
+          damage_class?: string
+          drain?: number
+          effect_chance?: number | null
+          effect_en?: string | null
+          effect_es?: string | null
+          external_id?: string
+          flinch_chance?: number
+          generation?: number
+          healing?: number
+          id?: string
+          max_hits?: number | null
+          max_turns?: number | null
+          min_hits?: number | null
+          min_turns?: number | null
+          name_en?: string
+          name_es?: string | null
+          power?: number | null
+          pp?: number
+          priority?: number
+          slug?: string
+          source_id?: string
+          stat_chance?: number
+          target?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "move_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      move_learn_method: {
+        Row: {
+          created_at: string
+          external_id: string
+          slug: string
+          source_id: string
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          slug: string
+          source_id: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          slug?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "move_learn_method_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
       pokemon_form: {
         Row: {
           base_stats: Json
@@ -211,6 +399,78 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "data_sources"
             referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      pokemon_form_move: {
+        Row: {
+          created_at: string
+          id: string
+          learn_method: string
+          level: number
+          move_id: string
+          pokemon_form_id: string
+          sort_order: number | null
+          source_id: string
+          version_group_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          learn_method: string
+          level?: number
+          move_id: string
+          pokemon_form_id: string
+          sort_order?: number | null
+          source_id: string
+          version_group_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          learn_method?: string
+          level?: number
+          move_id?: string
+          pokemon_form_id?: string
+          sort_order?: number | null
+          source_id?: string
+          version_group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pokemon_form_move_learn_method_fkey"
+            columns: ["learn_method"]
+            isOneToOne: false
+            referencedRelation: "move_learn_method"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "pokemon_form_move_move_id_fkey"
+            columns: ["move_id"]
+            isOneToOne: false
+            referencedRelation: "move"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pokemon_form_move_pokemon_form_id_fkey"
+            columns: ["pokemon_form_id"]
+            isOneToOne: false
+            referencedRelation: "pokemon_form"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pokemon_form_move_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+          {
+            foreignKeyName: "pokemon_form_move_version_group_id_fkey"
+            columns: ["version_group_id"]
+            isOneToOne: false
+            referencedRelation: "version_group"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -358,6 +618,44 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "species"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      version_group: {
+        Row: {
+          created_at: string
+          display_order: number
+          external_id: string
+          generation: number
+          id: string
+          slug: string
+          source_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_order: number
+          external_id: string
+          generation: number
+          id?: string
+          slug: string
+          source_id: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          external_id?: string
+          generation?: number
+          id?: string
+          slug?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "version_group_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
           },
         ]
       }

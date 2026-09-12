@@ -1,4 +1,10 @@
-import type { BaseStats, FormCategory, LocalizedName, PokemonType } from '@pokestudio/pokemon-data';
+import type {
+  BaseStats,
+  DamageClass,
+  FormCategory,
+  LocalizedName,
+  PokemonType,
+} from '@pokestudio/pokemon-data';
 
 import type { PokeStudioDatabaseClient } from './client';
 
@@ -493,5 +499,410 @@ export async function getEvolutionFamily(
       toSpeciesSlug: memberById.get(row.to_species_id)!.slug,
       condition: toEvolutionCondition(row),
     })),
+  };
+}
+
+/** Move fields useful in list contexts (Pokémon detail's Moves section, the move index). */
+export interface MoveSummary {
+  slug: string;
+  nameEn: string;
+  /** Undefined only if PokéAPI ever lacks a Spanish move name — never invented. */
+  nameEs?: string | undefined;
+  type: PokemonType;
+  damageClass: DamageClass;
+  power?: number | undefined;
+  accuracy?: number | undefined;
+  pp: number;
+  priority: number;
+}
+
+/** Everything MoveSummary has, plus the fields only the move detail page needs. */
+export interface MoveDetail extends MoveSummary {
+  target: string;
+  generation: number;
+  effectEn?: string | undefined;
+  effectEs?: string | undefined;
+  effectChance?: number | undefined;
+  /** Undefined when PokéAPI's move `meta` block is entirely absent (a real, current gap for some very recent moves — docs/adr/0013-moves-learnsets-schema.md) — never invented. */
+  ailment?: string | undefined;
+  category?: string | undefined;
+  minHits?: number | undefined;
+  maxHits?: number | undefined;
+  minTurns?: number | undefined;
+  maxTurns?: number | undefined;
+  drain: number;
+  healing: number;
+  critRate: number;
+  ailmentChance: number;
+  flinchChance: number;
+  statChance: number;
+}
+
+export interface VersionGroupSummary {
+  slug: string;
+  generation: number;
+  displayOrder: number;
+}
+
+/** One learnset fact for a form, joined with the move it refers to. */
+export interface FormLearnsetEntry {
+  move: MoveSummary;
+  learnMethod: string;
+  /** 0 = not applicable (non-level-up) or "known upon evolution" (level-up) — see NormalizedLearnsetEntry. */
+  level: number;
+}
+
+interface MoveRow {
+  slug: string;
+  name_en: string;
+  name_es: string | null;
+  type: string;
+  damage_class: string;
+  power: number | null;
+  accuracy: number | null;
+  pp: number;
+  priority: number;
+}
+
+function toMoveSummary(row: MoveRow): MoveSummary {
+  return {
+    slug: row.slug,
+    nameEn: row.name_en,
+    nameEs: row.name_es ?? undefined,
+    type: row.type as PokemonType,
+    damageClass: row.damage_class as DamageClass,
+    power: row.power ?? undefined,
+    accuracy: row.accuracy ?? undefined,
+    pp: row.pp,
+    priority: row.priority,
+  };
+}
+
+interface MoveDetailRow extends MoveRow {
+  target: string;
+  generation: number;
+  effect_en: string | null;
+  effect_es: string | null;
+  effect_chance: number | null;
+  ailment: string | null;
+  category: string | null;
+  min_hits: number | null;
+  max_hits: number | null;
+  min_turns: number | null;
+  max_turns: number | null;
+  drain: number;
+  healing: number;
+  crit_rate: number;
+  ailment_chance: number;
+  flinch_chance: number;
+  stat_chance: number;
+}
+
+function toMoveDetail(row: MoveDetailRow): MoveDetail {
+  return {
+    ...toMoveSummary(row),
+    target: row.target,
+    generation: row.generation,
+    effectEn: row.effect_en ?? undefined,
+    effectEs: row.effect_es ?? undefined,
+    effectChance: row.effect_chance ?? undefined,
+    ailment: row.ailment ?? undefined,
+    category: row.category ?? undefined,
+    minHits: row.min_hits ?? undefined,
+    maxHits: row.max_hits ?? undefined,
+    minTurns: row.min_turns ?? undefined,
+    maxTurns: row.max_turns ?? undefined,
+    drain: row.drain,
+    healing: row.healing,
+    critRate: row.crit_rate,
+    ailmentChance: row.ailment_chance,
+    flinchChance: row.flinch_chance,
+    statChance: row.stat_chance,
+  };
+}
+
+const MOVE_DETAIL_COLUMNS =
+  'slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority, target, generation, effect_en, effect_es, effect_chance, ailment, category, min_hits, max_hits, min_turns, max_turns, drain, healing, crit_rate, ailment_chance, flinch_chance, stat_chance';
+
+/** A single move by slug (move detail page). Null if the slug doesn't exist. */
+export async function getMoveBySlug(
+  client: PokeStudioDatabaseClient,
+  slug: string,
+): Promise<MoveDetail | null> {
+  const result = await client
+    .from('move')
+    .select(MOVE_DETAIL_COLUMNS)
+    .eq('slug', slug)
+    .maybeSingle();
+  if (result.error) throw new Error(`getMoveBySlug failed: ${result.error.message}`);
+  if (!result.data) return null;
+  return toMoveDetail(result.data as MoveDetailRow);
+}
+
+/**
+ * The version group to default the UI to when none is explicitly selected
+ * (Pokémon detail's Moves section, move detail's "Pokémon that learn this"
+ * list) — the newest-generation version group that actually has learnset
+ * rows. Not simply "the newest version_group row": a few announced/DLC
+ * version groups in the reference table (e.g. an unreleased game) can have
+ * zero pokemon_form_move rows if PokéAPI hasn't published per-Pokémon
+ * learnsets for them yet, and defaulting to an empty game context would show
+ * a misleadingly empty Moves section. Walks newest-first and stops at the
+ * first version group with at least one row — typically the very first
+ * candidate, so this is a handful of small indexed lookups, not a scan.
+ */
+export async function getDefaultVersionGroup(
+  client: PokeStudioDatabaseClient,
+): Promise<VersionGroupSummary | null> {
+  const versionGroupsResult = await client
+    .from('version_group')
+    .select('id, slug, generation, display_order')
+    .order('generation', { ascending: false })
+    .order('display_order', { ascending: false });
+  if (versionGroupsResult.error) {
+    throw new Error(
+      `getDefaultVersionGroup (version groups) failed: ${versionGroupsResult.error.message}`,
+    );
+  }
+
+  for (const versionGroup of versionGroupsResult.data) {
+    // "Has any row at all" is too weak a signal: a real full-dataset case
+    // (version group "champions", generation 9) has thousands of rows but
+    // *only* via the niche "train" learn method — no genuine per-species
+    // moveset coverage. Every real, playable mainline game has level-up
+    // rows (every Pokémon learns something at level 1), so requiring at
+    // least one level-up row is a much stronger signal of "this version
+    // group has real, useful moveset data" than mere row presence.
+    const countResult = await client
+      .from('pokemon_form_move')
+      .select('id', { count: 'exact', head: true })
+      .eq('version_group_id', versionGroup.id)
+      .eq('learn_method', 'level-up');
+    if (countResult.error) {
+      throw new Error(`getDefaultVersionGroup (count) failed: ${countResult.error.message}`);
+    }
+    if ((countResult.count ?? 0) > 0) {
+      return {
+        slug: versionGroup.slug,
+        generation: versionGroup.generation,
+        displayOrder: versionGroup.display_order,
+      };
+    }
+  }
+  return null;
+}
+
+interface PokemonFormMoveRow {
+  move_id: string;
+  learn_method: string;
+  level: number;
+}
+
+/**
+ * A form's learnset, scoped to one version group (Pokémon detail's Moves
+ * section — CLAUDE.md §16/task §15: never silently merge incompatible
+ * historical learnsets across games). Null if the form doesn't exist; an
+ * empty array is a real, distinct state (the form exists but has no data for
+ * this particular version group).
+ */
+export async function getFormLearnset(
+  client: PokeStudioDatabaseClient,
+  formSlug: string,
+  versionGroupSlug: string,
+): Promise<FormLearnsetEntry[] | null> {
+  const formResult = await client
+    .from('pokemon_form')
+    .select('id')
+    .eq('slug', formSlug)
+    .maybeSingle();
+  if (formResult.error)
+    throw new Error(`getFormLearnset (form) failed: ${formResult.error.message}`);
+  if (!formResult.data) return null;
+
+  const versionGroupResult = await client
+    .from('version_group')
+    .select('id')
+    .eq('slug', versionGroupSlug)
+    .maybeSingle();
+  if (versionGroupResult.error) {
+    throw new Error(`getFormLearnset (version group) failed: ${versionGroupResult.error.message}`);
+  }
+  if (!versionGroupResult.data) return [];
+
+  const entriesResult = await client
+    .from('pokemon_form_move')
+    .select('move_id, learn_method, level')
+    .eq('pokemon_form_id', formResult.data.id)
+    .eq('version_group_id', versionGroupResult.data.id);
+  if (entriesResult.error) {
+    throw new Error(`getFormLearnset (entries) failed: ${entriesResult.error.message}`);
+  }
+  const entries = entriesResult.data as PokemonFormMoveRow[];
+  if (entries.length === 0) return [];
+
+  const moveIds = [...new Set(entries.map((entry) => entry.move_id))];
+  const movesResult = await client
+    .from('move')
+    .select('id, slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority')
+    .in('id', moveIds);
+  if (movesResult.error)
+    throw new Error(`getFormLearnset (moves) failed: ${movesResult.error.message}`);
+  const moveById = new Map(movesResult.data.map((row) => [row.id, toMoveSummary(row as MoveRow)]));
+
+  const result: FormLearnsetEntry[] = [];
+  for (const entry of entries) {
+    const move = moveById.get(entry.move_id);
+    if (!move) continue; // defensive: should never happen given the FK constraint
+    result.push({ move, learnMethod: entry.learn_method, level: entry.level });
+  }
+  return result.sort((a, b) => a.level - b.level || a.move.nameEn.localeCompare(b.move.nameEn));
+}
+
+export interface MovePage {
+  items: MoveSummary[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+/** One page of the move index (/[locale]/moves), ordered alphabetically by English name. */
+export async function listMovesPage(
+  client: PokeStudioDatabaseClient,
+  options: { page: number; pageSize: number },
+): Promise<MovePage> {
+  const from = (options.page - 1) * options.pageSize;
+  const to = from + options.pageSize - 1;
+
+  const [movesResult, countResult] = await Promise.all([
+    client
+      .from('move')
+      .select('slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority')
+      .order('name_en', { ascending: true })
+      .range(from, to),
+    client.from('move').select('id', { count: 'exact', head: true }),
+  ]);
+  if (movesResult.error)
+    throw new Error(`listMovesPage (moves) failed: ${movesResult.error.message}`);
+  if (countResult.error)
+    throw new Error(`listMovesPage (count) failed: ${countResult.error.message}`);
+
+  const totalCount = countResult.count ?? 0;
+  return {
+    items: movesResult.data.map((row) => toMoveSummary(row as MoveRow)),
+    page: options.page,
+    pageSize: options.pageSize,
+    totalCount,
+    totalPages: Math.max(1, Math.ceil(totalCount / options.pageSize)),
+  };
+}
+
+/**
+ * One form that can learn a move — deliberately its own shape, not
+ * `SpeciesFormSummary`: the Pokémon detail route is keyed by *species* slug
+ * (`/pokemon/[speciesSlug]`), which differs from a non-default form's own
+ * slug (e.g. form "rotom-heat" belongs to species "rotom") — `speciesSlug`
+ * is what a "Pokémon that can learn this move" link must point at.
+ */
+export interface MoveLearnerItem {
+  formSlug: string;
+  speciesSlug: string;
+  name: LocalizedName;
+  isDefault: boolean;
+  types: PokemonType[];
+}
+
+export interface MoveLearnerPage {
+  items: MoveLearnerItem[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+/**
+ * Forms that can learn a given move in a given version group (move detail's
+ * "Pokémon that can learn it" section). Null if the move doesn't exist; an
+ * empty page is a real state (no form learns it in this version group).
+ */
+export async function getMoveLearners(
+  client: PokeStudioDatabaseClient,
+  moveSlug: string,
+  versionGroupSlug: string,
+  options: { page: number; pageSize: number },
+): Promise<MoveLearnerPage | null> {
+  const moveResult = await client.from('move').select('id').eq('slug', moveSlug).maybeSingle();
+  if (moveResult.error)
+    throw new Error(`getMoveLearners (move) failed: ${moveResult.error.message}`);
+  if (!moveResult.data) return null;
+
+  const versionGroupResult = await client
+    .from('version_group')
+    .select('id')
+    .eq('slug', versionGroupSlug)
+    .maybeSingle();
+  if (versionGroupResult.error) {
+    throw new Error(`getMoveLearners (version group) failed: ${versionGroupResult.error.message}`);
+  }
+  const emptyPage = {
+    items: [],
+    page: options.page,
+    pageSize: options.pageSize,
+    totalCount: 0,
+    totalPages: 1,
+  };
+  if (!versionGroupResult.data) return emptyPage;
+
+  // At most a few thousand rows for even the most common moves (Tackle-tier);
+  // deduplicated to distinct forms in JS, then paginated — a single move's
+  // learner set is never large enough to need a second round trip per page.
+  const entriesResult = await client
+    .from('pokemon_form_move')
+    .select('pokemon_form_id')
+    .eq('move_id', moveResult.data.id)
+    .eq('version_group_id', versionGroupResult.data.id);
+  if (entriesResult.error) {
+    throw new Error(`getMoveLearners (entries) failed: ${entriesResult.error.message}`);
+  }
+  const formIds = [...new Set(entriesResult.data.map((row) => row.pokemon_form_id))];
+  if (formIds.length === 0) return emptyPage;
+
+  const from = (options.page - 1) * options.pageSize;
+  const to = from + options.pageSize;
+  const pageFormIds = formIds.slice(from, to);
+  if (pageFormIds.length === 0) {
+    return {
+      ...emptyPage,
+      totalCount: formIds.length,
+      totalPages: Math.max(1, Math.ceil(formIds.length / options.pageSize)),
+    };
+  }
+
+  const formsResult = await client
+    .from('pokemon_form')
+    .select('species_id, slug, name_en, name_es, is_default, types')
+    .in('id', pageFormIds);
+  if (formsResult.error)
+    throw new Error(`getMoveLearners (forms) failed: ${formsResult.error.message}`);
+
+  const speciesIds = [...new Set(formsResult.data.map((row) => row.species_id))];
+  const speciesResult = await client.from('species').select('id, slug').in('id', speciesIds);
+  if (speciesResult.error) {
+    throw new Error(`getMoveLearners (species) failed: ${speciesResult.error.message}`);
+  }
+  const speciesSlugById = new Map(speciesResult.data.map((row) => [row.id, row.slug]));
+
+  return {
+    items: formsResult.data.map((row) => ({
+      formSlug: row.slug,
+      speciesSlug: speciesSlugById.get(row.species_id) ?? row.slug,
+      name: { en: row.name_en, es: row.name_es },
+      isDefault: row.is_default,
+      types: row.types as PokemonType[],
+    })),
+    page: options.page,
+    pageSize: options.pageSize,
+    totalCount: formIds.length,
+    totalPages: Math.max(1, Math.ceil(formIds.length / options.pageSize)),
   };
 }

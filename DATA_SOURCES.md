@@ -23,6 +23,40 @@ full pipeline shape, fetch/cache strategy and idempotency guarantee.
 Phase 1A's small hand-mirrored 3-species sample (`seed.sql`) has been fully superseded — see
 DATABASE.md "Seed vs. ingestion."
 
+## Moves and learnsets (Phase 1C.2)
+
+Ingestion also fetches the complete move roster (~937), every version group (32), every learn
+method (12), and every unique machine (TM/HM/TR) a learnable move actually references, then
+upserts `move`/`version_group`/`move_learn_method` by identity and `pokemon_form_move`/`machine`
+per ADR-0013. Two real upstream inconsistencies were found only at full-dataset scale (a 3-move
+sample can't surface them) and are handled explicitly, not silently:
+
+- **"No power"/"never misses" is encoded two different ways.** Most status moves use PokéAPI's
+  `null` for `power`/`accuracy`, but several (`power-shift`, `victory-dance`, `shelter`,
+  `burning-bulwark`, ...) use literal `0` for the identical real absence. Both normalize to the
+  same `undefined` (`packages/pokemon-data/src/normalize.ts`) — no move ever has a genuinely
+  displayed power/accuracy of exactly 0 in-game.
+- **~110 of 937 moves have no `meta` block at all** — mostly very recent Generation IX moves
+  (`ivy-cudgel`, `population-bomb`, `hydro-steam`) and a handful of id-10000+ placeholder moves for
+  an unreleased game. `move.ailment`/`move.category` are nullable at the DB level for exactly this
+  reason; never backfilled with a guessed `"none"`/`"damage"` default (CLAUDE.md §14).
+- **5 moves have PokéAPI's non-standard `"shadow"` type** (`shadow-rush`, `shadow-blast`, ...) —
+  exclusive to Pokémon Colosseum/XD's Shadow Pokémon mechanic, a battle-only overlay, never a real
+  Pokémon type. PokeStudio's `PokemonType` domain doesn't model it (mainline mechanics only, this
+  phase), so these 5 are explicitly excluded from ingestion — along with their learnset entries,
+  which would otherwise become orphans — rather than silently miscast into a real type.
+- **A handful of signature Z-Moves are split into two PokéAPI records** sharing one display name,
+  disambiguated only by a `--physical`/`--special` suffix (e.g. `breakneck-blitz--physical`) — not
+  two separately-named in-game moves, just PokéAPI's own per-variant modeling. The double dash is
+  collapsed to a single dash for a valid slug (`sanitizeMoveSlug`), applied consistently to both the
+  canonical move and any learnset entry referencing it.
+
+Not modeled (documented limitation, not a silent gap): PokéAPI's `past_values` (historical
+per-generation power/accuracy/type changes, e.g. Thunderbolt's power was 95 before Generation VI) —
+`move` stores only the current mechanics. See ADR-0013 for the full schema rationale and the
+"Full-dataset ingestion addendum" for exactly how each of the findings above was discovered and
+fixed.
+
 ## Normalization strategy (Phase 1)
 
 ADR-0010 defines how species/form/regional-form/battle-only-form/cosmetic-form,

@@ -2,7 +2,11 @@ import { mapWithConcurrency } from './concurrency';
 import {
   normalizeAbility,
   normalizeEvolutionChain,
+  normalizeLearnMethod,
+  normalizeMachine,
+  normalizeMove,
   normalizeSpeciesGroup,
+  normalizeVersionGroup,
   type LocalizationNote,
   type RawSpeciesGroup,
   type RawVarietyGroup,
@@ -13,7 +17,12 @@ import type {
   NormalizedEvolution,
   NormalizedForm,
   NormalizedFormAbility,
+  NormalizedLearnMethod,
+  NormalizedLearnsetEntry,
+  NormalizedMachine,
+  NormalizedMove,
   NormalizedSpecies,
+  NormalizedVersionGroup,
 } from './types';
 
 export interface FetchAndNormalizeResult {
@@ -22,6 +31,11 @@ export interface FetchAndNormalizeResult {
   abilities: NormalizedAbility[];
   formAbilities: NormalizedFormAbility[];
   evolutions: NormalizedEvolution[];
+  moves: NormalizedMove[];
+  versionGroups: NormalizedVersionGroup[];
+  learnMethods: NormalizedLearnMethod[];
+  learnsetEntries: NormalizedLearnsetEntry[];
+  machines: NormalizedMachine[];
   localizationNotes: LocalizationNote[];
   normalizationFailures: { speciesName: string; error: string }[];
   varietyCount: number;
@@ -95,6 +109,55 @@ export async function fetchAndNormalize(
     api.fetchEvolutionChain(url),
   );
 
+  // Moves/version-groups/learn-methods are their own flat, globally-bounded-
+  // concurrency phases too (Phase 1C.2) — same "fetch once, not once per
+  // reference" shape as abilities/evolution chains above, just at the scale
+  // of the whole move roster (~937) rather than per-species references.
+  const moveRefs = await api.fetchMoveRefs();
+  const allMoveDetails = await mapWithConcurrency(moveRefs, options.concurrency, (ref) =>
+    api.fetchMove(ref.url),
+  );
+
+  // PokéAPI's non-standard "shadow" type exists only for a handful of moves
+  // exclusive to Pokémon Colosseum/XD's Shadow Pokémon mechanic — a
+  // battle-only overlay, never a real Pokémon type (no species/form ever has
+  // it). PokeStudio's PokemonType domain deliberately doesn't model it
+  // (mainline mechanics only, this phase) — excluded here explicitly, not
+  // silently miscast into a real type, so the excluded set stays visible in
+  // one place. Their learnset entries are dropped alongside below, rather
+  // than left as orphans referencing a move that was never ingested.
+  // None of these have a double-dash Z-Move-style name, so the raw PokéAPI
+  // name already equals the (would-be) sanitized slug — no need to import
+  // normalize.ts's private sanitizeMoveSlug just for this comparison.
+  const excludedMoveSlugs = new Set(
+    allMoveDetails.filter((move) => move.type.name === 'shadow').map((move) => move.name),
+  );
+  const moveDetails = allMoveDetails.filter((move) => !excludedMoveSlugs.has(move.name));
+
+  const versionGroupRefs = await api.fetchVersionGroupRefs();
+  const versionGroupDetails = await mapWithConcurrency(
+    versionGroupRefs,
+    options.concurrency,
+    (ref) => api.fetchVersionGroup(ref.url),
+  );
+
+  const learnMethodRefs = await api.fetchMoveLearnMethodRefs();
+  const learnMethodDetails = await mapWithConcurrency(learnMethodRefs, options.concurrency, (ref) =>
+    api.fetchMoveLearnMethod(ref.url),
+  );
+
+  // Machine identity (TM/HM/TR): each move detail already embeds the
+  // {machine url, version_group} pairs it appears as, so the only remaining
+  // fetch is each *unique* referenced machine resource (to resolve its item
+  // slug) — not the full live /machine list (2372), which would fetch many
+  // machines no ingested move ever references.
+  const machineUrls = [
+    ...new Set(moveDetails.flatMap((move) => move.machines.map((m) => m.machine.url))),
+  ];
+  const machineDetails = await mapWithConcurrency(machineUrls, options.concurrency, (url) =>
+    api.fetchMachine(url),
+  );
+
   const fetchDurationMs = Date.now() - startedAt;
 
   const formsByVarietyJobIndex = new Map<number, PokeApiPokemonForm[]>();
@@ -123,6 +186,7 @@ export async function fetchAndNormalize(
   const species: NormalizedSpecies[] = [];
   const forms: NormalizedForm[] = [];
   const formAbilities: NormalizedFormAbility[] = [];
+  const learnsetEntries: NormalizedLearnsetEntry[] = [];
   const localizationNotes: LocalizationNote[] = [];
   const normalizationFailures: { speciesName: string; error: string }[] = [];
   for (const group of rawGroups) {
@@ -131,6 +195,12 @@ export async function fetchAndNormalize(
       species.push(normalized.species);
       forms.push(...normalized.forms);
       formAbilities.push(...normalized.formAbilities);
+      // Drop learnset entries for excluded (shadow-type) moves rather than
+      // leaving them as validate.ts orphans referencing a move that was
+      // never ingested — see excludedMoveSlugs above.
+      learnsetEntries.push(
+        ...normalized.formMoves.filter((entry) => !excludedMoveSlugs.has(entry.moveSlug)),
+      );
       localizationNotes.push(...normalized.localizationNotes);
     } catch (error) {
       normalizationFailures.push({
@@ -156,12 +226,41 @@ export async function fetchAndNormalize(
     normalizeEvolutionChain({ chain, sourceId: SOURCE_ID }),
   );
 
+  const moves: NormalizedMove[] = [];
+  for (const move of moveDetails) {
+    try {
+      moves.push(normalizeMove({ move, sourceId: SOURCE_ID }));
+    } catch (error) {
+      normalizationFailures.push({
+        speciesName: `move:${move.name}`,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const versionGroups: NormalizedVersionGroup[] = versionGroupDetails.map((versionGroup) =>
+    normalizeVersionGroup({ versionGroup, sourceId: SOURCE_ID }),
+  );
+
+  const learnMethods: NormalizedLearnMethod[] = learnMethodDetails.map((method) =>
+    normalizeLearnMethod({ method, sourceId: SOURCE_ID }),
+  );
+
+  const machines: NormalizedMachine[] = machineDetails.map((machine) =>
+    normalizeMachine({ machine, sourceId: SOURCE_ID }),
+  );
+
   return {
     species,
     forms,
     abilities,
     formAbilities,
     evolutions,
+    moves,
+    versionGroups,
+    learnMethods,
+    learnsetEntries,
+    machines,
     localizationNotes,
     normalizationFailures,
     varietyCount: varietyJobs.length,

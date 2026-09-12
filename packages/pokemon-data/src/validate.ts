@@ -1,4 +1,4 @@
-import type { FormCategory, NormalizedDataset, PokemonType } from './types';
+import type { DamageClass, FormCategory, NormalizedDataset, PokemonType } from './types';
 
 export interface ValidationIssue {
   recordId: string;
@@ -32,6 +32,7 @@ const KNOWN_TYPES: ReadonlySet<PokemonType> = new Set<PokemonType>([
   'fairy',
 ]);
 const STAT_KEYS = ['hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'] as const;
+const KNOWN_DAMAGE_CLASSES: readonly DamageClass[] = ['physical', 'special', 'status'];
 
 /**
  * Validates dataset invariants (Phase 1B §9, ADR-0010). Returns an empty
@@ -244,6 +245,159 @@ export function validateExploreDataset(dataset: NormalizedDataset): ValidationIs
     }
     if (!evolution.source.sourceId) {
       issues.push({ recordId, message: 'Missing provenance (source id).' });
+    }
+  }
+
+  const seenMoveSlugs = new Set<string>();
+  const seenMoveExternalIds = new Set<string>();
+  for (const move of dataset.moves) {
+    if (seenMoveSlugs.has(move.slug)) {
+      issues.push({ recordId: move.slug, message: 'Duplicate move slug.' });
+    }
+    seenMoveSlugs.add(move.slug);
+
+    if (!move.nameEn.trim()) {
+      issues.push({ recordId: move.slug, message: 'Missing English move name.' });
+    }
+    if (!KNOWN_TYPES.has(move.type)) {
+      issues.push({ recordId: move.slug, message: `Unknown type "${move.type}".` });
+    }
+    if (!KNOWN_DAMAGE_CLASSES.includes(move.damageClass)) {
+      issues.push({ recordId: move.slug, message: `Unknown damage class "${move.damageClass}".` });
+    }
+    if (!Number.isInteger(move.pp) || move.pp <= 0) {
+      issues.push({
+        recordId: move.slug,
+        message: `PP must be a positive integer, got ${move.pp}.`,
+      });
+    }
+    if (move.power !== undefined && (!Number.isFinite(move.power) || move.power <= 0)) {
+      issues.push({
+        recordId: move.slug,
+        message: `Power must be null or positive, got ${move.power}.`,
+      });
+    }
+    if (
+      move.accuracy !== undefined &&
+      (!Number.isFinite(move.accuracy) || move.accuracy < 1 || move.accuracy > 100)
+    ) {
+      issues.push({
+        recordId: move.slug,
+        message: `Accuracy must be null or in 1-100, got ${move.accuracy}.`,
+      });
+    }
+    if (!Number.isInteger(move.generation) || move.generation < 1 || move.generation > 9) {
+      issues.push({
+        recordId: move.slug,
+        message: `Move generation must be 1-9, got ${move.generation}.`,
+      });
+    }
+
+    if (!move.source.sourceId || !move.source.externalId) {
+      issues.push({ recordId: move.slug, message: 'Missing provenance (source/external id).' });
+    } else {
+      const externalKey = `${move.source.sourceId}:${move.source.externalId}`;
+      if (seenMoveExternalIds.has(externalKey)) {
+        issues.push({
+          recordId: move.slug,
+          message: `External identity collision: another move already uses ${externalKey}.`,
+        });
+      }
+      seenMoveExternalIds.add(externalKey);
+    }
+  }
+
+  const seenVersionGroupSlugs = new Set<string>();
+  const seenVersionGroupExternalIds = new Set<string>();
+  for (const versionGroup of dataset.versionGroups) {
+    if (seenVersionGroupSlugs.has(versionGroup.slug)) {
+      issues.push({ recordId: versionGroup.slug, message: 'Duplicate version group slug.' });
+    }
+    seenVersionGroupSlugs.add(versionGroup.slug);
+
+    if (
+      !Number.isInteger(versionGroup.generation) ||
+      versionGroup.generation < 1 ||
+      versionGroup.generation > 9
+    ) {
+      issues.push({
+        recordId: versionGroup.slug,
+        message: `Version group generation must be 1-9, got ${versionGroup.generation}.`,
+      });
+    }
+
+    const externalKey = `${versionGroup.source.sourceId}:${versionGroup.source.externalId}`;
+    if (seenVersionGroupExternalIds.has(externalKey)) {
+      issues.push({
+        recordId: versionGroup.slug,
+        message: `External identity collision: another version group already uses ${externalKey}.`,
+      });
+    }
+    seenVersionGroupExternalIds.add(externalKey);
+  }
+
+  const seenLearnMethodSlugs = new Set<string>();
+  for (const method of dataset.learnMethods) {
+    if (seenLearnMethodSlugs.has(method.slug)) {
+      issues.push({ recordId: method.slug, message: 'Duplicate move learn method slug.' });
+    }
+    seenLearnMethodSlugs.add(method.slug);
+  }
+
+  const seenLearnsetNaturalKeys = new Set<string>();
+  for (const entry of dataset.learnsetEntries) {
+    const recordId = `${entry.formSlug}:${entry.moveSlug}:${entry.versionGroupSlug}:${entry.learnMethodSlug}:${entry.level}`;
+
+    if (!seenFormSlugs.has(entry.formSlug)) {
+      issues.push({
+        recordId,
+        message: `Orphan learnset entry: unknown form "${entry.formSlug}".`,
+      });
+    }
+    if (!seenMoveSlugs.has(entry.moveSlug)) {
+      issues.push({
+        recordId,
+        message: `Orphan learnset entry: unknown move "${entry.moveSlug}".`,
+      });
+    }
+    if (!seenVersionGroupSlugs.has(entry.versionGroupSlug)) {
+      issues.push({
+        recordId,
+        message: `Orphan learnset entry: unknown version group "${entry.versionGroupSlug}".`,
+      });
+    }
+    if (!seenLearnMethodSlugs.has(entry.learnMethodSlug)) {
+      issues.push({
+        recordId,
+        message: `Unknown learn method "${entry.learnMethodSlug}".`,
+      });
+    }
+    if (!Number.isInteger(entry.level) || entry.level < 0) {
+      issues.push({
+        recordId,
+        message: `Level must be a non-negative integer, got ${entry.level}.`,
+      });
+    }
+
+    if (seenLearnsetNaturalKeys.has(recordId)) {
+      issues.push({ recordId, message: 'Duplicate learnset natural key.' });
+    }
+    seenLearnsetNaturalKeys.add(recordId);
+  }
+
+  for (const machine of dataset.machines) {
+    const recordId = `${machine.moveSlug}:${machine.versionGroupSlug}`;
+    if (!seenMoveSlugs.has(machine.moveSlug)) {
+      issues.push({ recordId, message: `Orphan machine: unknown move "${machine.moveSlug}".` });
+    }
+    if (!seenVersionGroupSlugs.has(machine.versionGroupSlug)) {
+      issues.push({
+        recordId,
+        message: `Orphan machine: unknown version group "${machine.versionGroupSlug}".`,
+      });
+    }
+    if (!machine.itemSlug.trim()) {
+      issues.push({ recordId, message: 'Missing machine item slug.' });
     }
   }
 

@@ -4,22 +4,53 @@ import type {
   PokeApiEffectEntry,
   PokeApiEvolutionChain,
   PokeApiEvolutionChainLink,
+  PokeApiMachine,
+  PokeApiMove,
+  PokeApiMoveLearnMethod,
   PokeApiPokemon,
   PokeApiPokemonAbility,
   PokeApiPokemonForm,
+  PokeApiPokemonMove,
   PokeApiPokemonSpecies,
+  PokeApiVersionGroup,
 } from './pokeapi-client';
 import type {
   BaseStats,
+  DamageClass,
   FormCategory,
   LocalizedName,
   NormalizedAbility,
   NormalizedEvolution,
   NormalizedForm,
   NormalizedFormAbility,
+  NormalizedLearnMethod,
+  NormalizedLearnsetEntry,
+  NormalizedMachine,
+  NormalizedMove,
   NormalizedSpecies,
+  NormalizedVersionGroup,
   PokemonType,
 } from './types';
+
+/** PokéAPI generation slugs are roman numerals ("generation-i".."generation-ix"); the schema stores the plain 1-9 number (species/species_evolution already use this convention). */
+const ROMAN_GENERATION_NUMERALS: Record<string, number> = {
+  i: 1,
+  ii: 2,
+  iii: 3,
+  iv: 4,
+  v: 5,
+  vi: 6,
+  vii: 7,
+  viii: 8,
+  ix: 9,
+};
+
+export function parseGenerationSlug(generationSlug: string): number {
+  const roman = generationSlug.replace(/^generation-/, '');
+  const value = ROMAN_GENERATION_NUMERALS[roman];
+  if (!value) throw new Error(`Unrecognized generation slug "${generationSlug}"`);
+  return value;
+}
 
 function findLocalized(
   names: { name: string; language: { name: string } }[],
@@ -165,11 +196,13 @@ export function normalizeSpeciesGroup(
   species: NormalizedSpecies;
   forms: NormalizedForm[];
   formAbilities: NormalizedFormAbility[];
+  formMoves: NormalizedLearnsetEntry[];
   localizationNotes: LocalizationNote[];
 } {
   const species = normalizeSpecies({ species: group.species, sourceId });
   const localizationNotes: LocalizationNote[] = [];
   const formAbilities: NormalizedFormAbility[] = [];
+  const formMoves: NormalizedLearnsetEntry[] = [];
 
   const varietyShapes = group.varieties.map((variety) => {
     const types = [...variety.pokemon.types]
@@ -231,11 +264,12 @@ export function normalizeSpeciesGroup(
         source: { sourceId, externalId: String(form.id) },
       };
       formAbilities.push(...normalizeFormAbilities(slug, variety.pokemon.abilities));
+      formMoves.push(...normalizeFormMoves(slug, variety.pokemon.moves));
       return normalized;
     });
   });
 
-  return { species, forms, formAbilities, localizationNotes };
+  return { species, forms, formAbilities, formMoves, localizationNotes };
 }
 
 /**
@@ -253,6 +287,38 @@ export function normalizeFormAbilities(
     slot: entry.slot,
     isHidden: entry.is_hidden,
   }));
+}
+
+/**
+ * Moves are a per-variety (`pokemon`) attribute in PokéAPI, same as
+ * abilities — every cosmetic sub-form under one variety shares its variety's
+ * learnset (`normalizeFormAbilities` above documents the identical reasoning).
+ * One entry per (move, version group, method, level) triple the variety's
+ * `moves[]` array actually contains — level is part of the natural key
+ * because the same triple can occur at two different levels (docs/adr/0013).
+ * `moveSlug` runs through the same `sanitizeMoveSlug` as `normalizeMove`'s
+ * own slug — without it, a Z-Move variant's raw `--physical`/`--special`
+ * name here would no longer match its canonical (sanitized) move slug and
+ * every such learnset entry would become a silent orphan.
+ */
+export function normalizeFormMoves(
+  formSlug: string,
+  moves: readonly PokeApiPokemonMove[],
+): NormalizedLearnsetEntry[] {
+  const entries: NormalizedLearnsetEntry[] = [];
+  for (const moveEntry of moves) {
+    for (const detail of moveEntry.version_group_details) {
+      entries.push({
+        formSlug,
+        moveSlug: sanitizeMoveSlug(moveEntry.move.name),
+        versionGroupSlug: detail.version_group.name,
+        learnMethodSlug: detail.move_learn_method.name,
+        level: detail.level_learned_at,
+        sortOrder: detail.order ?? undefined,
+      });
+    }
+  }
+  return entries;
 }
 
 function findEffectText(
@@ -347,4 +413,108 @@ export function normalizeEvolutionChain(params: {
 
   walk(params.chain.chain, undefined);
   return edges;
+}
+
+/**
+ * PokéAPI's signature Z-Move-derived moves (e.g. Breakneck Blitz) are split
+ * into two records sharing one display name, disambiguated only by a
+ * `--physical`/`--special` suffix depending on the base move's category —
+ * not two separately-named in-game moves, just PokéAPI's own record-per-
+ * variant modeling. That suffix's double dash fails PokeStudio's general
+ * kebab-case slug rule (species/forms/abilities never legitimately have
+ * one); collapsing it to a single dash keeps the two variants distinct
+ * (e.g. "breakneck-blitz-physical" / "breakneck-blitz-special") without
+ * loosening the shared slug rule everywhere else it applies.
+ */
+function sanitizeMoveSlug(rawName: string): string {
+  return rawName.replace(/-{2,}/g, '-');
+}
+
+/**
+ * Normalizes one canonical move (Phase 1C.2, Part A). `effectEs` is left
+ * `undefined` — never invented — because PokéAPI's move `effect_entries` has
+ * never been observed to contain an "es" entry (same documented gap as
+ * ability effects, DATA_SOURCES.md). `meta`-derived fields are left
+ * `undefined` when PokéAPI's `meta` block is entirely absent — a genuine,
+ * current gap for ~110 of 937 moves at full-dataset scale (mostly very
+ * recent Generation IX moves and unreleased-game placeholders) — never
+ * guessed at (docs/adr/0013-moves-learnsets-schema.md).
+ */
+export function normalizeMove(params: { move: PokeApiMove; sourceId: string }): NormalizedMove {
+  const slug = sanitizeMoveSlug(params.move.name);
+  assertValidSlug(slug, `move #${params.move.id}`);
+  const nameEn = findLocalized(params.move.names, 'en');
+  if (!nameEn) throw new Error(`Missing en name for move "${slug}"`);
+  const meta = params.move.meta;
+
+  return {
+    slug,
+    nameEn,
+    nameEs: findLocalized(params.move.names, 'es'),
+    type: params.move.type.name as PokemonType,
+    damageClass: params.move.damage_class.name as DamageClass,
+    // PokéAPI is inconsistent about how it encodes "no fixed power"/"never
+    // misses": most status moves use `null`, but some (power-shift,
+    // victory-dance, shelter, ...) use literal `0` for the same real
+    // absence — no move ever has a genuinely displayed power/accuracy of 0
+    // in-game, so both encodings normalize to the identical `undefined`.
+    power: params.move.power || undefined,
+    accuracy: params.move.accuracy || undefined,
+    pp: params.move.pp,
+    priority: params.move.priority,
+    target: params.move.target.name,
+    generation: parseGenerationSlug(params.move.generation.name),
+    effectEn: findEffectText(params.move.effect_entries, 'en'),
+    effectEs: findEffectText(params.move.effect_entries, 'es'),
+    effectChance: params.move.effect_chance ?? undefined,
+    ailment: meta?.ailment.name,
+    category: meta?.category.name,
+    minHits: meta?.min_hits ?? undefined,
+    maxHits: meta?.max_hits ?? undefined,
+    minTurns: meta?.min_turns ?? undefined,
+    maxTurns: meta?.max_turns ?? undefined,
+    drain: meta?.drain ?? 0,
+    healing: meta?.healing ?? 0,
+    critRate: meta?.crit_rate ?? 0,
+    ailmentChance: meta?.ailment_chance ?? 0,
+    flinchChance: meta?.flinch_chance ?? 0,
+    statChance: meta?.stat_chance ?? 0,
+    source: { sourceId: params.sourceId, externalId: String(params.move.id) },
+  };
+}
+
+export function normalizeVersionGroup(params: {
+  versionGroup: PokeApiVersionGroup;
+  sourceId: string;
+}): NormalizedVersionGroup {
+  const slug = params.versionGroup.name;
+  assertValidSlug(slug, `version group #${params.versionGroup.id}`);
+  return {
+    slug,
+    generation: parseGenerationSlug(params.versionGroup.generation.name),
+    displayOrder: params.versionGroup.order,
+    source: { sourceId: params.sourceId, externalId: String(params.versionGroup.id) },
+  };
+}
+
+export function normalizeLearnMethod(params: {
+  method: PokeApiMoveLearnMethod;
+  sourceId: string;
+}): NormalizedLearnMethod {
+  const slug = params.method.name;
+  assertValidSlug(slug, `move learn method #${params.method.id}`);
+  return { slug, source: { sourceId: params.sourceId, externalId: String(params.method.id) } };
+}
+
+/** Minimal TM/HM/TR identity (Phase 1C.2, task §7) — item detail is deliberately not modeled, see NormalizedMachine. */
+export function normalizeMachine(params: {
+  machine: PokeApiMachine;
+  sourceId: string;
+}): NormalizedMachine {
+  return {
+    moveSlug: params.machine.move.name,
+    versionGroupSlug: params.machine.version_group.name,
+    itemSlug: params.machine.item.name,
+    source: { sourceId: params.sourceId, externalId: String(params.machine.id) },
+  };
 }

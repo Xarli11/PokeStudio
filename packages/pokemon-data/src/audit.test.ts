@@ -56,6 +56,63 @@ const dataset: NormalizedDataset = {
     { formSlug: 'rotom', abilitySlug: 'overgrow', slot: 1, isHidden: false },
   ],
   evolutions: [],
+  moves: [
+    {
+      slug: 'tackle',
+      nameEn: 'Tackle',
+      nameEs: 'Placaje',
+      type: 'normal',
+      damageClass: 'physical',
+      power: 40,
+      accuracy: 100,
+      pp: 35,
+      priority: 0,
+      target: 'selected-pokemon',
+      generation: 1,
+      ailment: 'none',
+      category: 'damage',
+      drain: 0,
+      healing: 0,
+      critRate: 0,
+      ailmentChance: 0,
+      flinchChance: 0,
+      statChance: 0,
+      source: { sourceId: 'pokeapi', externalId: '33' },
+    },
+  ],
+  versionGroups: [
+    {
+      slug: 'red-blue',
+      generation: 1,
+      displayOrder: 1,
+      source: { sourceId: 'pokeapi', externalId: '1' },
+    },
+  ],
+  learnMethods: [{ slug: 'level-up', source: { sourceId: 'pokeapi', externalId: '1' } }],
+  learnsetEntries: [
+    {
+      formSlug: 'bulbasaur',
+      moveSlug: 'tackle',
+      versionGroupSlug: 'red-blue',
+      learnMethodSlug: 'level-up',
+      level: 1,
+    },
+    {
+      formSlug: 'rotom',
+      moveSlug: 'tackle',
+      versionGroupSlug: 'red-blue',
+      learnMethodSlug: 'level-up',
+      level: 1,
+    },
+    {
+      formSlug: 'rotom',
+      moveSlug: 'tackle',
+      versionGroupSlug: 'red-blue',
+      learnMethodSlug: 'level-up',
+      level: 5,
+    },
+  ],
+  machines: [],
 };
 
 describe('buildAuditReport', () => {
@@ -90,6 +147,17 @@ describe('buildAuditReport', () => {
     });
     expect(report.validationIssueCount).toBe(1);
     expect(report.validationIssuesSample).toHaveLength(1);
+  });
+
+  it('counts moves/learnsets and finds the same key at multiple levels', () => {
+    const report = buildAuditReport({ dataset, localizationNotes: [], validationIssues: [] });
+    expect(report.moves.totalMoves).toBe(1);
+    expect(report.moves.byDamageClass).toEqual({ physical: 1 });
+    expect(report.learnsets.totalEntries).toBe(3);
+    expect(report.learnsets.byLearnMethod).toEqual({ 'level-up': 3 });
+    // rotom/tackle/red-blue/level-up appears at both level 1 and level 5 — a
+    // real relearn mechanic (docs/adr/0013), not a duplicate to collapse.
+    expect(report.learnsets.multiLevelKeyCount).toBe(1);
   });
 });
 

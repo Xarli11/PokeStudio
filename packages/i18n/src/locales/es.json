@@ -120,5 +120,53 @@
         "turnUpsideDown": "con la consola boca abajo"
       }
     }
+  },
+  "moves": {
+    "title": "Movimientos",
+    "tagline": "Tipo, categoría de daño, potencia, precisión y PP de todos los movimientos en la base de datos de PokeStudio.",
+    "indexDescription": "Consulta tipo, categoría de daño, potencia, precisión y PP de {count} movimientos en la base de datos de PokeStudio.",
+    "detailDescription": "{name}: tipo, categoría de daño, potencia, precisión, PP y efecto en la base de datos de PokeStudio.",
+    "backToMoves": "Volver a Movimientos",
+    "backToPokemon": "Volver a {name}",
+    "power": "Potencia",
+    "accuracy": "Precisión",
+    "pp": "PP",
+    "priority": "Prioridad",
+    "target": "Objetivo",
+    "generation": "Generación {number}",
+    "noPower": "—",
+    "neverMisses": "Nunca falla",
+    "effect": "Efecto",
+    "noEffect": "Descripción no disponible.",
+    "gameContext": "Mostrando datos de la Generación {number}",
+    "noMoveData": "No hay datos de movimientos disponibles para este juego.",
+    "level": "Nv. {level}",
+    "levelOnEvolve": "Al evolucionar",
+    "learnedBy": "Pokémon que pueden aprender este movimiento",
+    "noLearners": "No hay datos de Pokémon disponibles para este juego.",
+    "showAll": "Mostrar los {count}",
+    "showFewer": "Mostrar menos",
+    "pageLabel": "Página {page} de {totalPages}",
+    "previousPage": "Anterior",
+    "nextPage": "Siguiente",
+    "damageClass": {
+      "physical": "Físico",
+      "special": "Especial",
+      "status": "Estado"
+    },
+    "method": {
+      "level-up": "Subir de nivel",
+      "machine": "Máquina",
+      "egg": "Huevo",
+      "tutor": "Tutor",
+      "form-change": "Cambio de forma",
+      "stadium-surfing-pikachu": "Movimiento especial de evento",
+      "light-ball-egg": "Movimiento especial de cría",
+      "colosseum-purification": "Purificación de Pokémon Sombra",
+      "xd-shadow": "Movimiento de Pokémon Sombra",
+      "xd-purification": "Purificación de Pokémon Sombra",
+      "zygarde-cube": "Cubo de Zygarde",
+      "train": "Entrenamiento especial"
+    }
   }
 }

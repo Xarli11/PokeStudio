@@ -26,6 +26,9 @@ function makeDataset(
     formName?: string;
     abilityName?: string;
     includeSecondSpecies?: boolean;
+    includeMoves?: boolean;
+    moveName?: string;
+    learnsetLevel?: number;
   } = {},
 ): NormalizedDataset {
   const secondSpecies = overrides.includeSecondSpecies
@@ -100,6 +103,66 @@ function makeDataset(
       },
     ],
     formAbilities: [{ formSlug: 'testmon', abilitySlug: 'testability', slot: 1, isHidden: false }],
+    moves: overrides.includeMoves
+      ? [
+          {
+            slug: 'testmove',
+            nameEn: overrides.moveName ?? 'Test Move',
+            nameEs: 'Movimiento de Prueba',
+            type: 'normal',
+            damageClass: 'physical',
+            power: 40,
+            accuracy: 100,
+            pp: 35,
+            priority: 0,
+            target: 'selected-pokemon',
+            generation: 1,
+            ailment: 'none',
+            category: 'damage',
+            drain: 0,
+            healing: 0,
+            critRate: 0,
+            ailmentChance: 0,
+            flinchChance: 0,
+            statChance: 0,
+            source: { sourceId: TEST_SOURCE_ID, externalId: 'move-90001' },
+          },
+        ]
+      : [],
+    versionGroups: overrides.includeMoves
+      ? [
+          {
+            slug: 'testversion',
+            generation: 1,
+            displayOrder: 1,
+            source: { sourceId: TEST_SOURCE_ID, externalId: 'version-group-90001' },
+          },
+        ]
+      : [],
+    learnMethods: overrides.includeMoves
+      ? [{ slug: 'level-up', source: { sourceId: TEST_SOURCE_ID, externalId: 'method-90001' } }]
+      : [],
+    learnsetEntries: overrides.includeMoves
+      ? [
+          {
+            formSlug: 'testmon',
+            moveSlug: 'testmove',
+            versionGroupSlug: 'testversion',
+            learnMethodSlug: 'level-up',
+            level: overrides.learnsetLevel ?? 1,
+          },
+        ]
+      : [],
+    machines: overrides.includeMoves
+      ? [
+          {
+            moveSlug: 'testmove',
+            versionGroupSlug: 'testversion',
+            itemSlug: 'tm90',
+            source: { sourceId: TEST_SOURCE_ID, externalId: 'machine-90001' },
+          },
+        ]
+      : [],
     evolutions: overrides.includeSecondSpecies
       ? [
           {
@@ -124,7 +187,12 @@ describe.skipIf(!hasLocalSupabase)('persistDataset idempotency', () => {
   async function cleanUp() {
     await client.from('species_evolution').delete().eq('source_id', TEST_SOURCE_ID);
     await client.from('pokemon_form_ability').delete().eq('source_id', TEST_SOURCE_ID);
+    await client.from('pokemon_form_move').delete().eq('source_id', TEST_SOURCE_ID);
+    await client.from('machine').delete().eq('source_id', TEST_SOURCE_ID);
     await client.from('ability').delete().eq('source_id', TEST_SOURCE_ID);
+    await client.from('move').delete().eq('source_id', TEST_SOURCE_ID);
+    await client.from('version_group').delete().eq('source_id', TEST_SOURCE_ID);
+    await client.from('move_learn_method').delete().eq('source_id', TEST_SOURCE_ID);
     await client.from('pokemon_form').delete().eq('source_id', TEST_SOURCE_ID);
     await client.from('species').delete().eq('source_id', TEST_SOURCE_ID);
   }
@@ -256,6 +324,80 @@ describe.skipIf(!hasLocalSupabase)('persistDataset idempotency', () => {
       .select('id')
       .eq('source_id', TEST_SOURCE_ID);
     expect(evolutions).toHaveLength(0);
+  });
+
+  it('a fresh ingestion writes exactly one move, version group, learn method, learnset entry and machine', async () => {
+    const result = await persistDataset(client, makeDataset({ includeMoves: true }));
+    expect(result.movesUpserted).toBe(1);
+    expect(result.versionGroupsUpserted).toBe(1);
+    expect(result.learnMethodsUpserted).toBe(1);
+    expect(result.learnsetEntriesWritten).toBe(1);
+    expect(result.machinesUpserted).toBe(1);
+
+    const { data: moves } = await client
+      .from('move')
+      .select('id, slug')
+      .eq('source_id', TEST_SOURCE_ID);
+    expect(moves).toHaveLength(1);
+    const { data: learnset } = await client
+      .from('pokemon_form_move')
+      .select('id, level')
+      .eq('source_id', TEST_SOURCE_ID);
+    expect(learnset).toHaveLength(1);
+    expect(learnset![0]!.level).toBe(1);
+  });
+
+  it('running ingestion again does not duplicate the move, and updates fields in place', async () => {
+    const { data: before } = await client.from('move').select('id').eq('source_id', TEST_SOURCE_ID);
+    const originalMoveId = before![0]!.id;
+
+    await persistDataset(
+      client,
+      makeDataset({ includeMoves: true, moveName: 'Test Move Renamed' }),
+    );
+
+    const { data: after } = await client
+      .from('move')
+      .select('id, slug, name_en')
+      .eq('source_id', TEST_SOURCE_ID);
+    expect(after).toHaveLength(1); // still exactly one row, not two
+    expect(after![0]!.id).toBe(originalMoveId); // same row, updated in place
+    expect(after![0]!.slug).toBe('testmove'); // slug preserved
+    expect(after![0]!.name_en).toBe('Test Move Renamed'); // other fields refresh
+  });
+
+  it('the same (form,move,version-group,method) at two different levels produces two learnset rows, not a collapsed one', async () => {
+    // Real mechanic (docs/adr/0013): re-running with a second, different-level
+    // learnset entry for the identical (form,move,version-group,method) must
+    // add a row, not silently replace it — level is part of the natural key.
+    await persistDataset(client, makeDataset({ includeMoves: true, learnsetLevel: 1 }));
+    const dataset = makeDataset({ includeMoves: true, learnsetLevel: 1 });
+    dataset.learnsetEntries.push({
+      formSlug: 'testmon',
+      moveSlug: 'testmove',
+      versionGroupSlug: 'testversion',
+      learnMethodSlug: 'level-up',
+      level: 8,
+    });
+    const result = await persistDataset(client, dataset);
+    expect(result.learnsetEntriesWritten).toBe(2);
+
+    const { data: learnset } = await client
+      .from('pokemon_form_move')
+      .select('level')
+      .eq('source_id', TEST_SOURCE_ID);
+    expect(learnset!.map((r) => r.level).sort()).toEqual([1, 8]);
+  });
+
+  it('running learnset ingestion again does not duplicate rows (delete+reinsert per source_id)', async () => {
+    await persistDataset(client, makeDataset({ includeMoves: true }));
+    await persistDataset(client, makeDataset({ includeMoves: true }));
+
+    const { data: learnset } = await client
+      .from('pokemon_form_move')
+      .select('id')
+      .eq('source_id', TEST_SOURCE_ID);
+    expect(learnset).toHaveLength(1); // delete+reinsert per run, never accumulates
   });
 });
 

@@ -164,6 +164,114 @@ export interface NormalizedEvolution {
   source: SourceRef;
 }
 
+export type DamageClass = 'physical' | 'special' | 'status';
+
+/**
+ * A canonical move, independent of any Pokémon (Phase 1C.2). Referenced by
+ * `NormalizedLearnsetEntry`/`NormalizedMachine`, never duplicated per form —
+ * same shape as `NormalizedAbility`. `effectEs` is expected `undefined` for
+ * every move at least initially — PokéAPI has never been observed to publish
+ * a Spanish move effect (same documented gap as ability effects,
+ * DATA_SOURCES.md) — never invented (CLAUDE.md §14).
+ */
+export interface NormalizedMove {
+  slug: string;
+  nameEn: string;
+  nameEs?: string | undefined;
+  type: PokemonType;
+  damageClass: DamageClass;
+  /** Undefined = no fixed power (status moves) — a real absence, not unknown. */
+  power?: number | undefined;
+  /** Undefined = never misses — a real absence, not unknown. */
+  accuracy?: number | undefined;
+  pp: number;
+  priority: number;
+  /** Free text (PokéAPI's move-target vocabulary), e.g. "selected-pokemon". */
+  target: string;
+  generation: number;
+  effectEn?: string | undefined;
+  effectEs?: string | undefined;
+  effectChance?: number | undefined;
+  /**
+   * PokéAPI's move `meta` block — "none"/"damage" are real sentinel values,
+   * not unknowns, when present. Undefined (not a guessed sentinel) when
+   * PokéAPI's `meta` is entirely absent — a genuine, current gap for some
+   * newly-added moves (found at full-dataset scale: 110 of 937, mostly very
+   * recent Generation IX moves and unreleased-game placeholders — see
+   * docs/adr/0013-moves-learnsets-schema.md). Never invented.
+   */
+  ailment?: string | undefined;
+  category?: string | undefined;
+  minHits?: number | undefined;
+  maxHits?: number | undefined;
+  minTurns?: number | undefined;
+  maxTurns?: number | undefined;
+  /** 0 when `meta` is present but the move has no such effect, *or* when `meta` is absent — 0 ("no known secondary effect") is a reasonable domain default, not invented data, for these modifier fields specifically. */
+  drain: number;
+  healing: number;
+  critRate: number;
+  ailmentChance: number;
+  flinchChance: number;
+  statChance: number;
+  source: SourceRef;
+}
+
+/** PokéAPI's version_group reference data — the game-context granularity learnsets/machines are scoped to. */
+export interface NormalizedVersionGroup {
+  slug: string;
+  generation: number;
+  /** PokéAPI's own chronological ordering — lets the app pick "the latest version group" without hardcoding a slug. */
+  displayOrder: number;
+  source: SourceRef;
+}
+
+/**
+ * A learn method's identity only (e.g. "level-up", "machine", "egg") — no
+ * name/label fields. Localized UI labels belong in packages/i18n, never the
+ * database (Phase 1C.2 requirement); this type exists purely so ingestion can
+ * upsert `move_learn_method` as a small reference table, giving
+ * `NormalizedLearnsetEntry.learnMethodSlug` real FK integrity.
+ */
+export interface NormalizedLearnMethod {
+  slug: string;
+  source: SourceRef;
+}
+
+/**
+ * One fact: this form can learn this move, in this version group, via this
+ * method, at this level (Phase 1C.2, docs/adr/0013-moves-learnsets-schema.md).
+ * `level` is part of the natural key alongside
+ * `(formSlug, moveSlug, versionGroupSlug, learnMethodSlug)` — real PokéAPI
+ * data has ~9.4k cases of the identical combination at two different levels
+ * (e.g. a move both inherited at level 1 on evolution and re-taught later),
+ * so level cannot be dropped or deduplicated away without losing that fact.
+ * `level` is PokéAPI's raw `level_learned_at`: 0 for every non-level-up
+ * method (not applicable) *and* for a level-up entry meaning "known
+ * immediately upon evolving" — never a PokeStudio-invented sentinel.
+ */
+export interface NormalizedLearnsetEntry {
+  formSlug: string;
+  moveSlug: string;
+  versionGroupSlug: string;
+  learnMethodSlug: string;
+  level: number;
+  /** PokéAPI's per-entry `order` — disambiguates teaching order for moves sharing a level; absent for most entries. */
+  sortOrder?: number | undefined;
+}
+
+/**
+ * Minimal TM/HM/TR identity (Phase 1C.2, task §7) — which move is which
+ * machine item, in which version group. Deliberately does not model item
+ * detail (sprite, TM/HM/TR category, description); `itemSlug` (e.g. "tm34")
+ * is PokéAPI's raw item slug, preserved but not decoded further.
+ */
+export interface NormalizedMachine {
+  moveSlug: string;
+  versionGroupSlug: string;
+  itemSlug: string;
+  source: SourceRef;
+}
+
 /** A normalized, provenance-tagged import batch — species and their forms together. */
 export interface NormalizedDataset {
   provenance: DataProvenance;
@@ -172,4 +280,9 @@ export interface NormalizedDataset {
   abilities: NormalizedAbility[];
   formAbilities: NormalizedFormAbility[];
   evolutions: NormalizedEvolution[];
+  moves: NormalizedMove[];
+  versionGroups: NormalizedVersionGroup[];
+  learnMethods: NormalizedLearnMethod[];
+  learnsetEntries: NormalizedLearnsetEntry[];
+  machines: NormalizedMachine[];
 }

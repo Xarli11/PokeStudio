@@ -90,6 +90,11 @@ async function main() {
     `[ingest]   ${result.species.length} species, ${result.varietyCount} varieties, ${result.formJobCount} forms, ` +
       `${result.abilities.length} abilities, ${result.evolutions.length} evolution edges.`,
   );
+  console.warn(
+    `[ingest]   ${result.moves.length} moves, ${result.versionGroups.length} version groups, ` +
+      `${result.learnMethods.length} learn methods, ${result.learnsetEntries.length} learnset entries, ` +
+      `${result.machines.length} machines.`,
+  );
 
   if (result.normalizationFailures.length > 0) {
     console.error(`[ingest] ${result.normalizationFailures.length} species failed to normalize:`);
@@ -113,6 +118,11 @@ async function main() {
     abilities: result.abilities,
     formAbilities: result.formAbilities,
     evolutions: result.evolutions,
+    moves: result.moves,
+    versionGroups: result.versionGroups,
+    learnMethods: result.learnMethods,
+    learnsetEntries: result.learnsetEntries,
+    machines: result.machines,
   };
 
   console.warn('[ingest] Validating...');
@@ -159,6 +169,11 @@ async function main() {
   console.warn(
     `Abilities upserted: ${persistResult.abilitiesUpserted}, form/ability links written: ` +
       `${persistResult.formAbilitiesWritten}, evolution edges written: ${persistResult.evolutionsWritten}`,
+  );
+  console.warn(
+    `Moves upserted: ${persistResult.movesUpserted}, version groups upserted: ${persistResult.versionGroupsUpserted}, ` +
+      `learn methods upserted: ${persistResult.learnMethodsUpserted}, learnset entries written: ` +
+      `${persistResult.learnsetEntriesWritten}, machines upserted: ${persistResult.machinesUpserted}`,
   );
 }
 

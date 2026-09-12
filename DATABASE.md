@@ -38,8 +38,22 @@ tables (`pokemon_form_ability`, `species_evolution`) have no independent externa
 own and are fully replaced per `source_id` on each ingestion run instead of upserted by identity.
 Fully populated: 313 abilities, 3369 form/ability links, 553 evolution edges.
 
-Not yet implemented from "Likely early domains" below: generations/games as their own tables,
-moves, items, learnsets — deferred until a real feature needs them (YAGNI).
+**Moves and learnsets** (Phase 1C.2, ADR-0013) are implemented too:
+`supabase/migrations/20260912140000_move_version_reference.sql` adds `move` (canonical, ~937 rows),
+`version_group` (~32 rows) and `move_learn_method` (~12 rows, slug-keyed, no name columns — labels
+live in `packages/i18n`); `supabase/migrations/20260912141000_pokemon_form_move.sql` adds
+`pokemon_form_move`, the form-aware learnset relation keyed by `(pokemon_form_id, move_id,
+version_group_id, learn_method, level)` — `level` is part of the key because the same
+form/move/version-group/method combination can occur at two different levels (a real relearn
+mechanic, found in ~9.4k cases at full-dataset scale); `supabase/migrations/20260912142000_machines.sql`
+adds `machine`, a minimal TM/HM/TR identity (`(move_id, version_group_id) → item_slug`, no item
+detail modeled). See ADR-0013 for the full rationale, including why `pokemon_form_move` is the
+largest table in the schema (~740k-750k rows estimated) and why that's an ingestion-batching
+concern, not a Postgres scale problem.
+
+Not yet implemented from "Likely early domains" below: items (beyond machine's raw item slug),
+generations/games as first-class tables beyond `version_group` — deferred until a real feature
+needs them (YAGNI).
 
 ### Seed vs. ingestion
 
@@ -74,6 +88,13 @@ re-inserted on each run, rather than upserted by identity — because neither ha
 id of its own (PokéAPI's `abilities[]`/`evolution_details[]` entries are array positions, not
 addressable resources). Still idempotent (re-running produces the identical row set, not
 duplicates); see ADR-0011 decision 3.
+
+`move`/`version_group`/`move_learn_method`/`machine` (Phase 1C.2) follow the identity-based upsert
+pattern too. `pokemon_form_move` follows the delete-and-reinsert pattern (same reasoning as
+`pokemon_form_ability` — `version_group_details` entries are array positions upstream, ADR-0011
+decision 3/ADR-0013), but at a different batch size: ~740k-750k rows estimated at full scale means
+the default 500-row batch would need ~1500 round trips, so `persistDataset` uses a 2000-row batch
+for this table only (`packages/pokemon-data/src/persist.ts`).
 
 ### Generated database types
 

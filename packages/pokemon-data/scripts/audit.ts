@@ -60,6 +60,11 @@ async function main() {
     abilities: result.abilities,
     formAbilities: result.formAbilities,
     evolutions: result.evolutions,
+    moves: result.moves,
+    versionGroups: result.versionGroups,
+    learnMethods: result.learnMethods,
+    learnsetEntries: result.learnsetEntries,
+    machines: result.machines,
   };
 
   const issues = validateExploreDataset(dataset);

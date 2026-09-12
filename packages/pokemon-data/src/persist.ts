@@ -90,6 +90,85 @@ export interface IngestSchema {
         Update: never;
         Relationships: [];
       };
+      move: {
+        Row: { id: string; slug: string; source_id: string; external_id: string };
+        Insert: {
+          slug: string;
+          name_en: string;
+          name_es: string | null;
+          type: string;
+          damage_class: string;
+          power: number | null;
+          accuracy: number | null;
+          pp: number;
+          priority: number;
+          target: string;
+          generation: number;
+          effect_en: string | null;
+          effect_es: string | null;
+          effect_chance: number | null;
+          ailment: string | null;
+          category: string | null;
+          min_hits: number | null;
+          max_hits: number | null;
+          min_turns: number | null;
+          max_turns: number | null;
+          drain: number;
+          healing: number;
+          crit_rate: number;
+          ailment_chance: number;
+          flinch_chance: number;
+          stat_chance: number;
+          source_id: string;
+          external_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      version_group: {
+        Row: { id: string; slug: string; source_id: string; external_id: string };
+        Insert: {
+          slug: string;
+          generation: number;
+          display_order: number;
+          source_id: string;
+          external_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      move_learn_method: {
+        Row: { slug: string; source_id: string; external_id: string };
+        Insert: { slug: string; source_id: string; external_id: string };
+        Update: never;
+        Relationships: [];
+      };
+      pokemon_form_move: {
+        Row: { id: string; source_id: string };
+        Insert: {
+          pokemon_form_id: string;
+          move_id: string;
+          version_group_id: string;
+          learn_method: string;
+          level: number;
+          sort_order: number | null;
+          source_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      machine: {
+        Row: { id: string; source_id: string; external_id: string };
+        Insert: {
+          move_id: string;
+          version_group_id: string;
+          item_slug: string;
+          source_id: string;
+          external_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       species_evolution: {
         Row: { id: string; from_species_id: string; to_species_id: string; source_id: string };
         Insert: {
@@ -137,10 +216,22 @@ export interface PersistResult {
   abilitiesUpserted: number;
   formAbilitiesWritten: number;
   evolutionsWritten: number;
+  movesUpserted: number;
+  versionGroupsUpserted: number;
+  learnMethodsUpserted: number;
+  learnsetEntriesWritten: number;
+  machinesUpserted: number;
   batches: number;
 }
 
 const BATCH_SIZE = 500;
+/**
+ * Larger batch size for `pokemon_form_move` only — at ~750k rows (Phase
+ * 1C.2, docs/adr/0013-moves-learnsets-schema.md scale estimate), the default
+ * 500-row batch would mean ~1500 round trips; 2000 keeps each payload small
+ * (~a few hundred KB) while cutting that to ~375.
+ */
+const LEARNSET_BATCH_SIZE = 2000;
 
 function sourceKey(ref: SourceRef): string {
   return `${ref.sourceId}:${ref.externalId}`;
@@ -424,6 +515,169 @@ export async function persistDataset(
     batches++;
   }
 
+  // Moves: identity-based upsert, same slug-preserving pattern as
+  // species/pokemon_form/ability above.
+  const existingMoveRows = await selectAllRows((from, to) =>
+    client.from('move').select('slug, source_id, external_id').range(from, to),
+  );
+  const existingMoveSlugByKey = new Map(
+    existingMoveRows.map((row) => [`${row.source_id}:${row.external_id}`, row.slug]),
+  );
+
+  const movesPayload = dataset.moves.map((move) => ({
+    slug: existingMoveSlugByKey.get(sourceKey(move.source)) ?? move.slug,
+    name_en: move.nameEn,
+    name_es: move.nameEs ?? null,
+    type: move.type,
+    damage_class: move.damageClass,
+    power: move.power ?? null,
+    accuracy: move.accuracy ?? null,
+    pp: move.pp,
+    priority: move.priority,
+    target: move.target,
+    generation: move.generation,
+    effect_en: move.effectEn ?? null,
+    effect_es: move.effectEs ?? null,
+    effect_chance: move.effectChance ?? null,
+    ailment: move.ailment ?? null,
+    category: move.category ?? null,
+    min_hits: move.minHits ?? null,
+    max_hits: move.maxHits ?? null,
+    min_turns: move.minTurns ?? null,
+    max_turns: move.maxTurns ?? null,
+    drain: move.drain,
+    healing: move.healing,
+    crit_rate: move.critRate,
+    ailment_chance: move.ailmentChance,
+    flinch_chance: move.flinchChance,
+    stat_chance: move.statChance,
+    source_id: move.source.sourceId,
+    external_id: move.source.externalId,
+  }));
+
+  for (const batch of chunk(movesPayload, BATCH_SIZE)) {
+    const { error } = await client
+      .from('move')
+      .upsert(batch, { onConflict: 'source_id,external_id' });
+    if (error) throw new Error(`Failed to upsert move batch: ${error.message}`);
+    batches++;
+  }
+
+  // Version groups: identity-based upsert, same pattern.
+  const existingVersionGroupRows = await selectAllRows((from, to) =>
+    client.from('version_group').select('slug, source_id, external_id').range(from, to),
+  );
+  const existingVersionGroupSlugByKey = new Map(
+    existingVersionGroupRows.map((row) => [`${row.source_id}:${row.external_id}`, row.slug]),
+  );
+
+  const versionGroupsPayload = dataset.versionGroups.map((versionGroup) => ({
+    slug: existingVersionGroupSlugByKey.get(sourceKey(versionGroup.source)) ?? versionGroup.slug,
+    generation: versionGroup.generation,
+    display_order: versionGroup.displayOrder,
+    source_id: versionGroup.source.sourceId,
+    external_id: versionGroup.source.externalId,
+  }));
+
+  for (const batch of chunk(versionGroupsPayload, BATCH_SIZE)) {
+    const { error } = await client
+      .from('version_group')
+      .upsert(batch, { onConflict: 'source_id,external_id' });
+    if (error) throw new Error(`Failed to upsert version_group batch: ${error.message}`);
+    batches++;
+  }
+
+  // Learn methods: the slug itself is the PK and is PokéAPI's own stable
+  // identity (e.g. "level-up" never renames), so this upserts directly by
+  // slug rather than the source_id/external_id-preserving dance above.
+  const learnMethodsPayload = dataset.learnMethods.map((method) => ({
+    slug: method.slug,
+    source_id: method.source.sourceId,
+    external_id: method.source.externalId,
+  }));
+
+  for (const batch of chunk(learnMethodsPayload, BATCH_SIZE)) {
+    const { error } = await client.from('move_learn_method').upsert(batch, { onConflict: 'slug' });
+    if (error) throw new Error(`Failed to upsert move_learn_method batch: ${error.message}`);
+    batches++;
+  }
+
+  // Resolve move_id/version_group_id for the learnset + machine payloads.
+  const moveIdRows = await selectAllRows((from, to) =>
+    client.from('move').select('id, slug').range(from, to),
+  );
+  const moveIdBySlug = new Map(moveIdRows.map((row) => [row.slug, row.id]));
+
+  const versionGroupIdRows = await selectAllRows((from, to) =>
+    client.from('version_group').select('id, slug').range(from, to),
+  );
+  const versionGroupIdBySlug = new Map(versionGroupIdRows.map((row) => [row.slug, row.id]));
+
+  // pokemon_form_move has no independent identity of its own upstream
+  // (PokéAPI's version_group_details entries are array positions, not
+  // addressable resources — same reasoning as pokemon_form_ability/
+  // species_evolution, ADR-0011 decision 3), so it is fully replaced per
+  // source_id per run rather than upserted by identity.
+  const learnsetPayload = dataset.learnsetEntries.map((entry) => {
+    const formId = formIdBySlug.get(entry.formSlug);
+    if (!formId) throw new Error(`Orphan learnset entry: unknown form "${entry.formSlug}"`);
+    const moveId = moveIdBySlug.get(entry.moveSlug);
+    if (!moveId) throw new Error(`Orphan learnset entry: unknown move "${entry.moveSlug}"`);
+    const versionGroupId = versionGroupIdBySlug.get(entry.versionGroupSlug);
+    if (!versionGroupId) {
+      throw new Error(`Orphan learnset entry: unknown version group "${entry.versionGroupSlug}"`);
+    }
+    return {
+      pokemon_form_id: formId,
+      move_id: moveId,
+      version_group_id: versionGroupId,
+      learn_method: entry.learnMethodSlug,
+      level: entry.level,
+      sort_order: entry.sortOrder ?? null,
+      source_id: dataset.provenance.sourceId,
+    };
+  });
+
+  const { error: deleteLearnsetError } = await client
+    .from('pokemon_form_move')
+    .delete()
+    .eq('source_id', dataset.provenance.sourceId);
+  if (deleteLearnsetError) {
+    throw new Error(`Failed to clear pokemon_form_move: ${deleteLearnsetError.message}`);
+  }
+  for (const batch of chunk(learnsetPayload, LEARNSET_BATCH_SIZE)) {
+    const { error } = await client.from('pokemon_form_move').insert(batch);
+    if (error) throw new Error(`Failed to insert pokemon_form_move batch: ${error.message}`);
+    batches++;
+  }
+
+  // Machines: identity-based upsert, same pattern as move/ability/species —
+  // but with no slug to preserve (machine has none), the upsert can write
+  // directly without a read-back-existing-rows step first.
+  const machinesPayload = dataset.machines.map((machine) => {
+    const moveId = moveIdBySlug.get(machine.moveSlug);
+    if (!moveId) throw new Error(`Orphan machine: unknown move "${machine.moveSlug}"`);
+    const versionGroupId = versionGroupIdBySlug.get(machine.versionGroupSlug);
+    if (!versionGroupId) {
+      throw new Error(`Orphan machine: unknown version group "${machine.versionGroupSlug}"`);
+    }
+    return {
+      move_id: moveId,
+      version_group_id: versionGroupId,
+      item_slug: machine.itemSlug,
+      source_id: machine.source.sourceId,
+      external_id: machine.source.externalId,
+    };
+  });
+
+  for (const batch of chunk(machinesPayload, BATCH_SIZE)) {
+    const { error } = await client
+      .from('machine')
+      .upsert(batch, { onConflict: 'source_id,external_id' });
+    if (error) throw new Error(`Failed to upsert machine batch: ${error.message}`);
+    batches++;
+  }
+
   return {
     dataSourceUpserted: true,
     speciesUpserted: speciesPayload.length,
@@ -431,6 +685,11 @@ export async function persistDataset(
     abilitiesUpserted: abilitiesPayload.length,
     formAbilitiesWritten: formAbilitiesPayload.length,
     evolutionsWritten: evolutionsPayload.length,
+    movesUpserted: movesPayload.length,
+    versionGroupsUpserted: versionGroupsPayload.length,
+    learnMethodsUpserted: learnMethodsPayload.length,
+    learnsetEntriesWritten: learnsetPayload.length,
+    machinesUpserted: machinesPayload.length,
     batches,
   };
 }

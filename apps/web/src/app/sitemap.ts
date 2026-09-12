@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-import { listSpecies } from '@pokestudio/database';
+import { listMovesPage, listSpecies } from '@pokestudio/database';
 import { locales } from '@pokestudio/i18n';
 
 import { captureException } from '@/lib/observability';
@@ -24,6 +24,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly' as const,
   }));
 
+  const moveIndexEntries = locales.map((locale) => ({
+    url: `${SITE_URL}/${locale}/moves`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+  }));
+
   // Best-effort: a sitemap missing the small, currently-fixed set of detail
   // pages is a minor SEO gap, not a broken page — never 500 the sitemap over it.
   try {
@@ -35,9 +41,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: 'monthly' as const,
       })),
     );
-    return [...localeEntries, ...pokemonIndexEntries, ...pokemonDetailEntries];
+
+    // pageSize large enough to cover the full ~937-move roster in one page —
+    // moves are a small, mostly-static reference set (unlike species, no
+    // pagination-past-1000 concern here).
+    const movesPage = await listMovesPage(getPokemonDatabaseClient(), { page: 1, pageSize: 1000 });
+    const moveDetailEntries = locales.flatMap((locale) =>
+      movesPage.items.map((move) => ({
+        url: `${SITE_URL}/${locale}/moves/${move.slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+      })),
+    );
+
+    return [
+      ...localeEntries,
+      ...pokemonIndexEntries,
+      ...pokemonDetailEntries,
+      ...moveIndexEntries,
+      ...moveDetailEntries,
+    ];
   } catch (error) {
-    captureException(error, { context: 'sitemap: listSpecies failed' });
-    return [...localeEntries, ...pokemonIndexEntries];
+    captureException(error, { context: 'sitemap: listSpecies/listMovesPage failed' });
+    return [...localeEntries, ...pokemonIndexEntries, ...moveIndexEntries];
   }
 }

@@ -6,6 +6,34 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Phase 1C.2 — Moves + Learnsets (2026-09-12)
+
+Adds a full move + learnset data foundation (ADR-0013) and Explore integration — the schema
+foundation legality validation, moveset display, and future move search/SEO all build on.
+
+- **Schema**: 5 new tables (`move`, `version_group`, `move_learn_method`, `pokemon_form_move`,
+  `machine`), form-aware (`pokemon_form_move`, not species-level) with a natural key that includes
+  `level` — real data has ~9.8k cases of the same form/move/version-group/method at two different
+  levels (a genuine relearn mechanic).
+- **Ingestion**: extends `packages/pokemon-data` with move/version-group/learn-method/machine
+  fetch+normalize+persist phases. Full run: 1025 species, 1579 forms, 919 moves, 32 version groups,
+  693,197 learnset rows, 2372 machines, 0 validation issues; a second run proved byte-identical
+  idempotency.
+- **Real full-scale findings, fixed not papered over**: PokéAPI splits signature Z-Moves into two
+  records with a double-dash name; ~110 recent moves have no `meta` block at all (nullable
+  `ailment`/`category`, never a guessed default); some status moves encode "no power" as literal
+  `0` instead of `null`; a handful of moves carry PokéAPI's non-standard `"shadow"` type
+  (Colosseum/XD-exclusive, excluded — PokeStudio's type domain doesn't model it); the "pick the
+  latest version group with data" heuristic needed strengthening from "any row" to "any level-up
+  row" after a newer, niche-only version group (`champions`) shadowed the real, fully-populated
+  `scarlet-violet`. See ADR-0013's addenda for the full account of each.
+- **Explore UI**: a restrained Moves section on the Pokémon detail page (scoped to one explicit,
+  dynamically-computed default version group — never silently merges historical learnsets),
+  first-class `/[locale]/moves` index and `/[locale]/moves/[slug]` detail pages with full SEO
+  metadata (canonical, hreflang, sitemap entries for all ~919 moves × 2 locales).
+- **i18n**: move/learn-method/damage-class labels added to `packages/i18n` — never stored in the
+  database (learn methods) or hardcoded in the app (labels stay swappable per locale).
+
 ### Final Brand 1.0 + Styling Foundation audit (2026-09-12)
 
 Pre-commit audit closing out the Styling Foundation 1.0 / UI Polish 1.1 / persistent-shell

@@ -2,11 +2,18 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getEvolutionFamily, getSpeciesBySlug, type SpeciesFormDetail } from '@pokestudio/database';
+import {
+  getDefaultVersionGroup,
+  getEvolutionFamily,
+  getFormLearnset,
+  getSpeciesBySlug,
+  type SpeciesFormDetail,
+} from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
 import { PokemonEvolutionSection } from '@/components/pokemon/evolution-section';
 import { PokemonFormSection } from '@/components/pokemon/form-section';
+import { PokemonMovesSection, type MoveRowItem } from '@/components/pokemon/moves-section';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { partitionOtherForms } from '@/lib/form-grouping';
 import { buttonClass, cardClass, eyebrowClass, tagClass } from '@/lib/ui-classes';
@@ -98,9 +105,10 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
 
   const dictionary = getDictionary(locale);
   const client = getPokemonDatabaseClient();
-  const [species, evolutionFamily] = await Promise.all([
+  const [species, evolutionFamily, defaultVersionGroup] = await Promise.all([
     getSpeciesBySlug(client, slug),
     getEvolutionFamily(client, slug),
+    getDefaultVersionGroup(client),
   ]);
   if (!species) notFound();
 
@@ -109,6 +117,30 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
   const otherForms = species.forms.filter((form) => !form.isDefault);
   const { distinctForms, cosmeticVariants } = partitionOtherForms(defaultForm, otherForms);
   const hasOtherForms = distinctForms.length > 0 || cosmeticVariants.length > 0;
+
+  // Moves are shown for the default form only in this phase (1C.2) — a
+  // per-form Moves section (mirroring abilities/stats) is a reasonable next
+  // step, deferred to keep this page restrained (task §15 "not the final
+  // Team Builder UI"). Never silently merges historical learnsets across
+  // games: always scoped to one explicit version group (task §15).
+  const learnset = defaultVersionGroup
+    ? await getFormLearnset(client, defaultForm.slug, defaultVersionGroup.slug)
+    : null;
+  const moveRows: MoveRowItem[] = (learnset ?? []).map((entry) => ({
+    slug: entry.move.slug,
+    name: locale === 'es' ? (entry.move.nameEs ?? entry.move.nameEn) : entry.move.nameEn,
+    type: entry.move.type,
+    typeLabel: dictionary.types[entry.move.type],
+    damageClass: entry.move.damageClass,
+    damageClassLabel: dictionary.moves.damageClass[entry.move.damageClass],
+    power: entry.move.power,
+    accuracy: entry.move.accuracy,
+    learnMethod: entry.learnMethod,
+    methodLabel:
+      dictionary.moves.method[entry.learnMethod as keyof typeof dictionary.moves.method] ??
+      entry.learnMethod,
+    level: entry.level,
+  }));
 
   return (
     <div className="mx-auto flex max-w-detail flex-col gap-8">
@@ -127,6 +159,25 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
       </header>
 
       <PokemonFormSection {...formSectionProps(defaultForm, locale, dictionary, 'primary')} />
+
+      {defaultVersionGroup ? (
+        <PokemonMovesSection
+          moves={moveRows}
+          localePrefix={`/${locale}`}
+          title={dictionary.moves.title}
+          gameContextLabel={formatMessage(dictionary.moves.gameContext, {
+            number: defaultVersionGroup.generation,
+          })}
+          noMoveDataLabel={dictionary.moves.noMoveData}
+          powerLabel={dictionary.moves.power}
+          accuracyLabel={dictionary.moves.accuracy}
+          noPowerLabel={dictionary.moves.noPower}
+          neverMissesLabel={dictionary.moves.neverMisses}
+          levelLabel={(level) => formatMessage(dictionary.moves.level, { level })}
+          levelOnEvolveLabel={dictionary.moves.levelOnEvolve}
+          showAllLabel={(count) => formatMessage(dictionary.moves.showAll, { count })}
+        />
+      ) : null}
 
       {evolutionFamily ? (
         <PokemonEvolutionSection family={evolutionFamily} locale={locale} dictionary={dictionary} />

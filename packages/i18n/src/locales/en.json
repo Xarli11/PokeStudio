@@ -120,5 +120,53 @@
         "turnUpsideDown": "holding the console upside down"
       }
     }
+  },
+  "moves": {
+    "title": "Moves",
+    "tagline": "Type, damage class, power, accuracy and PP for every move in the PokeStudio database.",
+    "indexDescription": "Browse type, damage class, power, accuracy and PP for {count} moves in the PokeStudio database.",
+    "detailDescription": "{name}: type, damage class, power, accuracy, PP and effect in the PokeStudio database.",
+    "backToMoves": "Back to Moves",
+    "backToPokemon": "Back to {name}",
+    "power": "Power",
+    "accuracy": "Accuracy",
+    "pp": "PP",
+    "priority": "Priority",
+    "target": "Target",
+    "generation": "Generation {number}",
+    "noPower": "—",
+    "neverMisses": "Never misses",
+    "effect": "Effect",
+    "noEffect": "No description available.",
+    "gameContext": "Showing data for Generation {number}",
+    "noMoveData": "No move data available for this game.",
+    "level": "Lv. {level}",
+    "levelOnEvolve": "On evolve",
+    "learnedBy": "Pokémon that can learn this move",
+    "noLearners": "No Pokémon data available for this game.",
+    "showAll": "Show all {count}",
+    "showFewer": "Show fewer",
+    "pageLabel": "Page {page} of {totalPages}",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "damageClass": {
+      "physical": "Physical",
+      "special": "Special",
+      "status": "Status"
+    },
+    "method": {
+      "level-up": "Level up",
+      "machine": "Machine",
+      "egg": "Egg",
+      "tutor": "Tutor",
+      "form-change": "Form change",
+      "stadium-surfing-pikachu": "Special event move",
+      "light-ball-egg": "Special breeding move",
+      "colosseum-purification": "Shadow Pokémon purification",
+      "xd-shadow": "Shadow Pokémon move",
+      "xd-purification": "Shadow Pokémon purification",
+      "zygarde-cube": "Zygarde Cube",
+      "train": "Special training"
+    }
   }
 }

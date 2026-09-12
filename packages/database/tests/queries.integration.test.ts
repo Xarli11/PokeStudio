@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import { createPublicDatabaseClient } from '../src/client';
-import { getEvolutionFamily, getSpeciesBySlug, listSpecies } from '../src/queries';
+import {
+  getDefaultVersionGroup,
+  getEvolutionFamily,
+  getFormLearnset,
+  getMoveBySlug,
+  getMoveLearners,
+  getSpeciesBySlug,
+  listMovesPage,
+  listSpecies,
+} from '../src/queries';
 
 /**
  * Proves the domain-shaped query layer against the real, fully-ingested
@@ -161,6 +170,103 @@ describe.skipIf(!hasLocalSupabase)('species/form queries against the full ingest
     );
   });
 });
+
+describe.skipIf(!hasLocalSupabase)(
+  'move/learnset queries against the full ingested dataset',
+  () => {
+    const client = () =>
+      createPublicDatabaseClient({ url: supabaseUrl!, publishableKey: publishableKey! });
+
+    it('getDefaultVersionGroup returns a version group that actually has learnset data', async () => {
+      const versionGroup = await getDefaultVersionGroup(client());
+      expect(versionGroup).not.toBeNull();
+      expect(versionGroup!.generation).toBeGreaterThanOrEqual(1);
+      expect(versionGroup!.generation).toBeLessThanOrEqual(9);
+    });
+
+    it('getDefaultVersionGroup skips a newer version group with only niche-method rows in favor of real mainline coverage', async () => {
+      // Regression: the live dataset's "champions" (generation 9, the
+      // highest display_order) has thousands of pokemon_form_move rows but
+      // *only* via the "train" learn method — no level-up coverage at all,
+      // so it is not a useful default game context. "scarlet-violet" (the
+      // real, fully-populated Generation IX game) must win instead.
+      const versionGroup = await getDefaultVersionGroup(client());
+      expect(versionGroup!.slug).not.toBe('champions');
+      expect(versionGroup!.slug).toBe('scarlet-violet');
+    });
+
+    it('getMoveBySlug returns null for an unknown slug', async () => {
+      expect(await getMoveBySlug(client(), 'does-not-exist')).toBeNull();
+    });
+
+    it('getMoveBySlug returns Tackle with sane mechanics fields', async () => {
+      const tackle = await getMoveBySlug(client(), 'tackle');
+      expect(tackle).not.toBeNull();
+      expect(tackle!.damageClass).toBe('physical');
+      expect(tackle!.pp).toBeGreaterThan(0);
+      expect(['physical', 'special', 'status']).toContain(tackle!.damageClass);
+    });
+
+    it('getMoveBySlug returns Toxic as a status move with null power', async () => {
+      const toxic = await getMoveBySlug(client(), 'toxic');
+      expect(toxic).not.toBeNull();
+      expect(toxic!.damageClass).toBe('status');
+      expect(toxic!.power).toBeUndefined();
+    });
+
+    it('listMovesPage paginates the full ~937-move roster without duplicates', async () => {
+      const page = await listMovesPage(client(), { page: 1, pageSize: 20 });
+      expect(page.items).toHaveLength(20);
+      expect(page.totalCount).toBeGreaterThan(900);
+      expect(new Set(page.items.map((m) => m.slug)).size).toBe(20);
+    });
+
+    it("getFormLearnset returns null for a form that doesn't exist", async () => {
+      const versionGroup = await getDefaultVersionGroup(client());
+      expect(await getFormLearnset(client(), 'does-not-exist', versionGroup!.slug)).toBeNull();
+    });
+
+    it('getFormLearnset returns Bulbasaur learning Tackle in the default version group', async () => {
+      const versionGroup = await getDefaultVersionGroup(client());
+      const entries = await getFormLearnset(client(), 'bulbasaur', versionGroup!.slug);
+      expect(entries).not.toBeNull();
+      expect(entries!.length).toBeGreaterThan(0);
+      expect(entries!.some((e) => e.move.slug === 'tackle')).toBe(true);
+      expect(entries!.every((e) => e.level >= 0)).toBe(true);
+    });
+
+    it('getFormLearnset returns an empty array for a real form in a version group with no data for it', async () => {
+      // "legends-za" is an announced-but-not-yet-per-Pokémon-populated version
+      // group in the reference table (docs/adr/0013) — a real, distinct empty
+      // state, not a missing-form null.
+      const entries = await getFormLearnset(client(), 'bulbasaur', 'legends-za');
+      expect(entries).toEqual([]);
+    });
+
+    it('getMoveLearners returns null for an unknown move', async () => {
+      const versionGroup = await getDefaultVersionGroup(client());
+      expect(
+        await getMoveLearners(client(), 'does-not-exist', versionGroup!.slug, {
+          page: 1,
+          pageSize: 10,
+        }),
+      ).toBeNull();
+    });
+
+    it('getMoveLearners returns forms that can learn Tackle, deduplicated', async () => {
+      const versionGroup = await getDefaultVersionGroup(client());
+      const page = await getMoveLearners(client(), 'tackle', versionGroup!.slug, {
+        page: 1,
+        pageSize: 10,
+      });
+      expect(page).not.toBeNull();
+      expect(page!.totalCount).toBeGreaterThan(0);
+      expect(page!.items.length).toBeGreaterThan(0);
+      expect(new Set(page!.items.map((i) => i.formSlug)).size).toBe(page!.items.length);
+      expect(page!.items.every((i) => i.speciesSlug.length > 0)).toBe(true);
+    });
+  },
+);
 
 describe.skipIf(hasLocalSupabase)('species/form queries (no local Supabase)', () => {
   it.skip('set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY against a running local Supabase instance to run this suite', () => {

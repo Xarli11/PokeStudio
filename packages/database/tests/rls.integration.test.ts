@@ -161,6 +161,170 @@ describe.skipIf(!hasLocalSupabase)(
   },
 );
 
+describe.skipIf(!hasLocalSupabase)(
+  'move/version_group/move_learn_method/pokemon_form_move/machine reference data RLS',
+  () => {
+    it('move is readable by the anonymous role', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data, error } = await client.from('move').select('id').limit(1);
+      expect(error).toBeNull();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('rejects anonymous writes to move', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { error } = await client.from('move').insert({
+        slug: 'should-fail',
+        name_en: 'x',
+        name_es: null,
+        type: 'normal',
+        damage_class: 'status',
+        power: null,
+        accuracy: null,
+        pp: 10,
+        priority: 0,
+        target: 'selected-pokemon',
+        generation: 1,
+        effect_en: null,
+        effect_es: null,
+        effect_chance: null,
+        ailment: 'none',
+        category: 'damage',
+        min_hits: null,
+        max_hits: null,
+        min_turns: null,
+        max_turns: null,
+        drain: 0,
+        healing: 0,
+        crit_rate: 0,
+        ailment_chance: 0,
+        flinch_chance: 0,
+        stat_chance: 0,
+        source_id: 'pokeapi',
+        external_id: '9999999',
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it('version_group is readable by the anonymous role', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data, error } = await client.from('version_group').select('id').limit(1);
+      expect(error).toBeNull();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('rejects anonymous writes to version_group', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { error } = await client.from('version_group').insert({
+        slug: 'should-fail',
+        generation: 1,
+        display_order: 1,
+        source_id: 'pokeapi',
+        external_id: '9999999',
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it('move_learn_method is readable by the anonymous role', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data, error } = await client.from('move_learn_method').select('slug').limit(1);
+      expect(error).toBeNull();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('rejects anonymous writes to move_learn_method', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { error } = await client
+        .from('move_learn_method')
+        .insert({ slug: 'should-fail', source_id: 'pokeapi', external_id: '9999999' });
+      expect(error).not.toBeNull();
+    });
+
+    it('pokemon_form_move is readable by the anonymous role', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data, error } = await client.from('pokemon_form_move').select('id').limit(1);
+      expect(error).toBeNull();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('rejects anonymous writes to pokemon_form_move', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data: form } = await client.from('pokemon_form').select('id').limit(1).single();
+      const { data: move } = await client.from('move').select('id').limit(1).single();
+      const { data: versionGroup } = await client
+        .from('version_group')
+        .select('id')
+        .limit(1)
+        .single();
+      const { error } = await client.from('pokemon_form_move').insert({
+        pokemon_form_id: form!.id,
+        move_id: move!.id,
+        version_group_id: versionGroup!.id,
+        learn_method: 'level-up',
+        level: 1,
+        sort_order: null,
+        source_id: 'pokeapi',
+      });
+      expect(error).not.toBeNull();
+    });
+
+    it('machine is readable by the anonymous role', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data, error } = await client.from('machine').select('id').limit(1);
+      expect(error).toBeNull();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('rejects anonymous writes to machine', async () => {
+      const client = createPublicDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+      });
+      const { data: move } = await client.from('move').select('id').limit(1).single();
+      const { data: versionGroup } = await client
+        .from('version_group')
+        .select('id')
+        .limit(1)
+        .single();
+      const { error } = await client.from('machine').insert({
+        move_id: move!.id,
+        version_group_id: versionGroup!.id,
+        item_slug: 'tm99',
+        source_id: 'pokeapi',
+        external_id: '9999999',
+      });
+      expect(error).not.toBeNull();
+    });
+  },
+);
+
 describe.skipIf(hasLocalSupabase)(
   'species/pokemon_form reference data RLS (no local Supabase)',
   () => {

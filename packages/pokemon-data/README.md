@@ -1,9 +1,9 @@
 # @pokestudio/pokemon-data
 
-Full Pokédex ingestion pipeline (Phase 1B/1C.1, ADR-0010, ADR-0011): fetch/cache → normalize →
-validate → persist. Not a runtime PokéAPI client — the web app never imports this package or calls
-PokéAPI at request time (CLAUDE.md §10); it only reads what this pipeline already wrote to
-Postgres, via `@pokestudio/database`.
+Full Pokédex ingestion pipeline (Phase 1B/1C.1/1C.2, ADR-0010, ADR-0011, ADR-0013): fetch/cache →
+normalize → validate → persist. Not a runtime PokéAPI client — the web app never imports this
+package or calls PokéAPI at request time (CLAUDE.md §10); it only reads what this pipeline already
+wrote to Postgres, via `@pokestudio/database`.
 
 ## Commands
 
@@ -33,16 +33,20 @@ Non-zero exit and no DB writes if validation fails.
 
 ```text
 fetch (species list -> species detail -> variety/pokemon detail -> per-form detail
-       -> unique ability detail -> unique evolution-chain detail)
+       -> unique ability detail -> unique evolution-chain detail
+       -> move list -> move detail -> unique machine detail
+       -> version-group list/detail -> move-learn-method list/detail)
     ↓  (bounded concurrency, on-disk cache — packages/pokemon-data/.cache/, gitignored)
-normalize (species + form + ability + form/ability link + evolution edge —
+normalize (species + form + ability + form/ability link + evolution edge
+           + move + version group + learn method + form/move learnset entry + machine —
            packages/pokemon-data/src/classify.ts, src/normalize.ts)
     ↓
 validate (invariants — packages/pokemon-data/src/validate.ts; failure blocks persist entirely)
     ↓
-persist (species/forms/abilities: batched upsert by (source_id, external_id) identity;
-         form/ability links + evolution edges: batched full replacement per source_id —
-         packages/pokemon-data/src/persist.ts, ADR-0011 decision 3)
+persist (species/forms/abilities/moves/version-groups/learn-methods/machines: batched upsert by
+         (source_id, external_id) identity; form/ability links + evolution edges + learnset
+         entries: batched full replacement per source_id —
+         packages/pokemon-data/src/persist.ts, ADR-0011 decision 3/ADR-0013)
 ```
 
 Fetch and normalize are pure/testable independently: `src/normalize.ts`'s tests use literal
@@ -96,3 +100,27 @@ its species' default variety), plus one small, documented, centralized exception
 tests for the representative edge cases this was built and hardened against (Rotom's unflagged
 type-changing appliance forms, Vivillon's unreliable per-form `is_default`, Xerneas' two-state
 default-form quirk).
+
+## Moves and learnsets (Phase 1C.2, ADR-0013)
+
+`src/normalize.ts` adds:
+
+- `normalizeMove({move, sourceId})` — canonical move row. Sanitizes a Z-Move variant's raw
+  `--physical`/`--special` double-dash name into a valid single-dash slug; leaves `ailment`/
+  `category` `undefined` (never a guessed default) when PokéAPI's `meta` block is entirely absent
+  (a real, current gap for ~110 of 937 moves); treats a literal `power`/`accuracy` of `0` the same
+  as PokéAPI's own `null` (both mean the identical real absence upstream).
+- `normalizeFormMoves(formSlug, moves)` — same per-variety-shared-by-every-cosmetic-form rule as
+  `normalizeFormAbilities`. `level` is part of the natural key, not just `(form, move,
+version_group, method)` — the same combination can legitimately occur at two different levels
+  (~9.4k real cases at full scale, e.g. a move both inherited on evolution and re-taught later).
+- `normalizeVersionGroup`/`normalizeLearnMethod`/`normalizeMachine` — small reference-table
+  normalizers, same identity-provenance shape as `normalizeAbility`.
+
+`fetchAndNormalize` (`src/pipeline.ts`) explicitly excludes the handful of moves carrying PokéAPI's
+non-standard `"shadow"` type (Pokémon Colosseum/XD's Shadow Pokémon mechanic — a battle-only
+overlay PokeStudio's `PokemonType` domain doesn't model) and their learnset entries, rather than
+letting them surface as validation orphans.
+
+See `src/audit.ts`'s `moves`/`learnsets` report sections and DATA_SOURCES.md "Moves and learnsets"
+for the full list of full-dataset-only findings and how each was handled.
