@@ -4,8 +4,7 @@ import type { EvolutionFamily } from '@pokestudio/database';
 import { formatMessage, type Dictionary, type Locale } from '@pokestudio/i18n';
 
 import { groupEvolutionEdges } from '@/lib/evolution-condition';
-
-import styles from './evolution-section.module.css';
+import { tagClass } from '@/lib/ui-classes';
 
 export interface PokemonEvolutionSectionProps {
   family: EvolutionFamily;
@@ -16,8 +15,14 @@ export interface PokemonEvolutionSectionProps {
 /** One linked family member — a small monogram + name, not a bare text link. */
 function MemberChip({ slug, name, locale }: { slug: string; name: string; locale: Locale }) {
   return (
-    <Link href={`/${locale}/pokemon/${slug}`} className={styles.memberChip}>
-      <span aria-hidden="true" className={styles.memberMonogram}>
+    <Link
+      href={`/${locale}/pokemon/${slug}`}
+      className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface py-1 pr-3 pl-1 text-base font-semibold text-foreground no-underline transition-[border-color,transform] duration-150 ease-ps hover:-translate-y-px hover:border-brand/45 focus-visible:-translate-y-px focus-visible:border-brand/45 motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
+    >
+      <span
+        aria-hidden="true"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-muted text-xs font-bold text-brand"
+      >
         {name.charAt(0)}
       </span>
       <span>{name}</span>
@@ -44,19 +49,9 @@ export function PokemonEvolutionSection({
   if (family.edges.length === 0) {
     const soloName = family.members[0]!.name[locale];
     return (
-      <section
-        style={{
-          paddingTop: 'var(--ps-space-5)',
-          borderTop: '1px solid var(--ps-color-border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--ps-space-2)',
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: 'var(--ps-font-size-lg)' }}>
-          {dictionary.pokedex.evolution.title}
-        </h2>
-        <p style={{ margin: 0, color: 'var(--ps-color-text-muted)' }}>
+      <section className="flex flex-col gap-2 border-t border-border-subtle pt-6">
+        <h2 className="m-0 text-lg">{dictionary.pokedex.evolution.title}</h2>
+        <p className="m-0 text-muted">
           {formatMessage(dictionary.pokedex.evolution.noEvolution, { name: soloName })}
         </p>
       </section>
@@ -75,55 +70,22 @@ export function PokemonEvolutionSection({
   });
 
   return (
-    <section
-      style={{
-        paddingTop: 'var(--ps-space-5)',
-        borderTop: '1px solid var(--ps-color-border-subtle)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--ps-space-4)',
-      }}
-    >
-      <h2 style={{ margin: 0, fontSize: 'var(--ps-font-size-lg)' }}>
-        {dictionary.pokedex.evolution.title}
-      </h2>
+    <section className="flex flex-col gap-4 border-t border-border-subtle pt-6">
+      <h2 className="m-0 text-lg">{dictionary.pokedex.evolution.title}</h2>
 
-      <ul
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--ps-space-3)',
-          margin: 0,
-          padding: 0,
-          listStyle: 'none',
-        }}
-      >
+      <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {groups.map((group) => (
           <li
             key={`${group.fromSpeciesSlug}->${group.toSpeciesSlug}`}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--ps-space-1)',
-              padding: 'var(--ps-space-3)',
-              borderRadius: 'var(--ps-radius-md)',
-              background: 'var(--ps-color-bg-elevated)',
-            }}
+            className="flex flex-col gap-1 rounded-md bg-surface-raised p-3"
           >
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: 'var(--ps-space-2)',
-              }}
-            >
+            <div className="flex flex-wrap items-center gap-2">
               <MemberChip
                 slug={group.fromSpeciesSlug}
                 name={nameBySlug.get(group.fromSpeciesSlug) ?? group.fromSpeciesSlug}
                 locale={locale}
               />
-              <span aria-hidden="true" style={{ color: 'var(--ps-color-text-muted)' }}>
+              <span aria-hidden="true" className="text-muted">
                 →
               </span>
               <MemberChip
@@ -132,28 +94,15 @@ export function PokemonEvolutionSection({
                 locale={locale}
               />
             </div>
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: 'var(--ps-space-2)',
-              }}
-            >
+            <div className="flex flex-wrap items-center gap-2">
               {group.conditionDescriptions.map((description, index) => (
-                <span key={description} style={{ display: 'contents' }}>
+                <span key={description} className="contents">
                   {index > 0 ? (
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        fontSize: 'var(--ps-font-size-xs)',
-                        color: 'var(--ps-color-text-muted)',
-                      }}
-                    >
+                    <span aria-hidden="true" className="text-xs text-muted">
                       {dictionary.pokedex.evolution.orSeparator}
                     </span>
                   ) : null}
-                  <span className="ps-tag">{description}</span>
+                  <span className={tagClass()}>{description}</span>
                 </span>
               ))}
             </div>

@@ -1,3 +1,5 @@
+import { tagClass } from '@/lib/ui-classes';
+
 export interface AbilityListItem {
   slug: string;
   name: string;
@@ -23,38 +25,16 @@ export function PokemonAbilityList({
   const ordered = [...abilities].sort((a, b) => Number(a.isHidden) - Number(b.isHidden));
 
   return (
-    <ul
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--ps-space-3)',
-        margin: 0,
-        padding: 0,
-        listStyle: 'none',
-      }}
-    >
+    <ul className="m-0 flex list-none flex-col gap-3 p-0">
       {ordered.map((ability) => (
         <li key={ability.slug}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 'var(--ps-space-2)',
-              flexWrap: 'wrap',
-            }}
-          >
-            <span style={{ fontWeight: 600 }}>{ability.name}</span>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="font-semibold">{ability.name}</span>
             {ability.isHidden ? (
-              <span className="ps-tag ps-tag-label ps-tag-accent">{hiddenAbilityLabel}</span>
+              <span className={tagClass({ label: true, accent: true })}>{hiddenAbilityLabel}</span>
             ) : null}
           </div>
-          <p
-            style={{
-              margin: '0.125rem 0 0',
-              fontSize: 'var(--ps-font-size-sm)',
-              color: 'var(--ps-color-text-muted)',
-            }}
-          >
+          <p className="m-0 mt-0.5 text-sm text-muted">
             {ability.description ?? noDescriptionLabel}
           </p>
         </li>

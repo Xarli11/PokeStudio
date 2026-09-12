@@ -6,6 +6,155 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Final Brand 1.0 + Styling Foundation audit (2026-09-12)
+
+Pre-commit audit closing out the Styling Foundation 1.0 / UI Polish 1.1 / persistent-shell
+body of work — no visual or architectural changes, verification + a few small fixes only.
+
+- **Asset re-export confirmed clean**: every SVG under `apps/web/public/brand/` (11 files)
+  audited programmatically for a baked-in full-canvas background rect — the defect flagged
+  in the Brand 1.0 entry below is resolved; none remain. Favicon center "holes" confirmed
+  as real stroke-only transparency, not an opaque fill.
+- **Favicon now size-aware**: `pokestudio-favicon-16.svg` registered in `brand-assets.ts`
+  alongside the existing 32px one; `generateMetadata`'s `icons.icon` is now an explicit
+  `[{ 16×16 }, { 32×32 }]` array instead of a single untyped icon.
+- **`pokestudio-symbol-light.svg` still not registered**, deliberately — see
+  `DESIGN_SYSTEM.md` "Logo" section; its background is now transparent, but which of the
+  two "Logo – Emerald" Figma variants it is remains unconfirmed.
+- Stale doc references to "AppShell" (renamed to `PersistentShell`) corrected in
+  `DESIGN_SYSTEM.md`.
+
+### Persistent shell + theme/locale fixes (2026-09-11 – 2026-09-12)
+
+Three follow-on passes after Styling Foundation 1.0, undocumented until now:
+
+- **Theme persistence made locale-independent**: `ThemeToggle` re-resolves from the one
+  global `pokestudio-theme` localStorage key (system preference as fallback) on every
+  mount instead of trusting `data-theme`'s current DOM value, which a locale switch could
+  transiently clear. Fixes theme appearing to "reset" when switching `/es` ↔ `/en`.
+- **Locale switcher moved to `next/link`**: was `router.push` from a plain button (correct
+  soft navigation already, but no prefetch eligibility); now a styled `<Link>`, keeping the
+  `NEXT_LOCALE` cookie write in `onClick`.
+- **Persistent shell refactor**: `AppShell` (header, wordmark, primary nav, locale/theme
+  controls, `<main>`) moved from being re-instantiated inside every `page.tsx` into
+  `[locale]/layout.tsx` as `PersistentShell`, rendered once. Same-locale navigation
+  (browsing the Pokédex, opening a Pokémon) no longer unmounts/remounts the header, nav,
+  `ThemeToggle`, `LocaleSwitcher`, or footer — only the page content inside `<main>`
+  changes. An actual locale change still remounts the shell (a different `[locale]` value
+  is a genuinely different layout instance in the App Router — not something to work
+  around without changing routing semantics). `contentWidth`/`MAIN_WIDTH_CLASS` machinery
+  removed; each page now puts `max-w-text|detail|wide` directly on its own content wrapper.
+
+### UI Polish 1.1 (2026-09-11)
+
+Visual refinement pass on top of the Tailwind foundation — no information-architecture
+changes.
+
+- **Navbar**: divider softened to a low-contrast border plus, dark mode only, an
+  extremely faint Emerald gradient line (never a flat neon edge); logo↔nav spacing and
+  nav-item rhythm separated into two deliberate tiers; EN/ES and the theme toggle became a
+  compact segmented-pill control instead of loose ghost-styled text.
+- **Home**: redesigned from a single CTA on a mostly-empty page into a hero (title,
+  tagline, status, Explore CTA) plus a "Built around three pillars" preview (Explore
+  live/linked; Build/Battle Lab flatter with a "Soon" badge) — new
+  `home.pillarsTitle`/`home.pillars.*` copy in both locale dictionaries.
+- **Pokédex cards**: stronger name/dex-number hierarchy; hover/focus reworked to a
+  restrained border + surface-lift + small transform — no colored glow shadow, no scale
+  (removed `--ps-shadow-glow` entirely, now unused).
+- **Light theme**: card surfaces now carry a whisper of the brand's cool-tinted base
+  instead of stark white; dark-mode borders quieted (fewer visibly-boxed edges).
+- **Primary CTA fixed at the semantic level**: introduced `--ps-color-brand-action` /
+  `-hover`, a filled-button-surface role distinct from `--ps-color-primary`'s text/icon
+  role (which is deliberately deepened in light mode for AA text contrast — wrong tone for
+  a button fill). Also fixed a real bug found in the process: `a { color: inherit }` in
+  `globals.css` was unlayered, so it silently beat every `.text-*` Tailwind utility on
+  anchor-rendered buttons regardless of specificity — moved PokeStudio's base rules into
+  `@layer base` so utilities correctly win again.
+
+### Styling Foundation 1.0 — Tailwind CSS 4 migration (2026-09-11)
+
+Adopts Tailwind CSS 4 as PokeStudio's primary styling system (`apps/web`), replacing CSS
+Modules and inline `style={{}}` objects across every currently-shipped page/component.
+PokeStudio's own semantic design tokens (`packages/ui/src/tokens.css`) remain the single
+source of truth — Tailwind consumes them via one `@theme` block (`--color-surface`,
+`--color-brand`, `--radius-md`, `--shadow-sm`, `--breakpoint-sm/md/lg/xl`, etc., each a
+`var()` alias onto an existing `--ps-*` token, never a duplicated value), so `bg-surface`,
+`text-muted`, `rounded-lg` and friends resolve through the exact same dark/light cascade
+the app already had.
+
+- **Checkpoint A (parity)**: AppShell/navbar, locale/theme controls, home, not-found,
+  global-error, the Pokédex index + pagination, the Pokémon detail page, and every
+  `pokemon/*` component (card, type badge, stat bars, ability list, art slot, form
+  section, evolution section) migrated to Tailwind utility classes.
+- **Checkpoint B (polish)**: AppShell navbar recomposed as one desktop row (logo → nav →
+  controls, ≥1200px) via flex `order`/`basis` instead of CSS Grid areas — no visual
+  regression, smaller diff. Divider softened to `border-border-subtle`. Wordmark height
+  now steps 28px → 32px → 44px across the shared breakpoint scale.
+- **CSS Modules removed**: all 4 (`app-shell`, `pokemon-grid`, `form-section`,
+  `evolution-section`) — none met the "keep only for a concrete technical reason" bar.
+  **0 `.module.css` files remain.**
+- **New shared primitives**: `apps/web/src/lib/ui-classes.ts` (`buttonClass`, `cardClass`,
+  `interactiveCardClass`, `tagClass`, `eyebrowClass` — class-string helpers, since call
+  sites render different elements for the same look) and
+  `apps/web/src/components/ui/skeleton.tsx`, replacing the old global `.ps-btn` /
+  `.ps-card` / `.ps-tag` / `.ps-eyebrow` / `.ps-skeleton` / `.ps-disclosure-summary`
+  classes (all removed from `globals.css`).
+- **Dead tokens removed**: `--ps-space-1..8` (Tailwind's own dynamic spacing scale already
+  reproduces the same 0.25rem grid) and `--ps-radius-pill` (identical to Tailwind's
+  built-in `rounded-full`).
+- **Per-type dynamic styling kept as inline `style`, deliberately**: `PokemonTypeBadge`,
+  `PokemonArtSlot`, the stat-bar fill gradient, and the card's type-accent border all pick
+  a CSS custom property at runtime from Pokémon data — a static Tailwind class can't
+  express that, so these stay `style={{ ... color-mix(..., var(--ps-type-x), ...) }}`,
+  still 100% token-driven (never a hardcoded hex).
+- **Dependencies**: added `tailwindcss` + `@tailwindcss/postcss` (`apps/web`, dev). Nothing
+  removed — there was no prior styling library to retire (CSS Modules are a Next.js
+  built-in, not a package).
+- Product/data behavior, Supabase, the battle/damage engines and Cloudflare deploy
+  architecture are untouched.
+
+### Brand 1.0 — Final Figma Integration (2026-09-11)
+
+Wires the official Figma-exported logo assets into the product, replacing the interim
+text-only wordmark from the earlier Brand Integration 1.0 pass.
+
+- **Official assets**: 10 SVG exports (of 11 named in the brief) added under
+  `apps/web/public/brand/`, referenced via a small registry
+  (`apps/web/src/lib/brand-assets.ts`) — never redrawn or recolored in code.
+- **AppShell**: header now renders the real wordmark SVG (`pokestudio-wordmark-on-dark.svg`
+  / `-on-light.svg`), theme-switched with pure CSS off the existing `data-theme` attribute
+  — no client JS, no hydration risk, no flash of the wrong variant.
+- **Favicon**: replaced the provisional placeholder (`apps/web/public/icon.svg`, removed)
+  with the official `pokestudio-favicon-32.svg`.
+- **Contrast/hue verified, not assumed**: Deep Green on Light measures 5.07:1, Emerald on
+  Charcoal 7.70:1 (both AA-clear); brand hue (~158–163°) confirmed distinct from
+  `--ps-type-grass` (128°) and `--ps-type-bug` (72°).
+- **Known asset issue, flagged not fixed**: every non-favicon export has an opaque
+  full-canvas background baked in rather than a transparent one, and two Figma variants
+  ("Logo – Emerald" / "Logo – Emerald White") have no unambiguous matching file — see
+  `DESIGN_SYSTEM.md` "Logo" section. Reported for a corrected re-export, not patched here.
+
+### Brand Integration 1.0 (2026-09-11)
+
+Adopts PokeStudio's approved visual identity across the whole product, replacing every
+provisional branding experiment. See `DESIGN_SYSTEM.md` for the full spec.
+
+- **Removed**: the temporary Brand Lab exploration page, the rejected Split Core mark,
+  the POKE/STUDIO split wordmark, and the Pokepedia-inspired technical subline under the
+  header wordmark.
+- **Canonical palette**: `packages/ui/src/tokens.css` now derives every neutral/brand
+  color from six fixed primitives (Emerald `#10B981`, Mint `#34D399`, Deep Green
+  `#047857`, Charcoal `#0A0D0C`, Graphite `#151A18`, Light `#F3F7F5`) instead of scattered
+  hex values; light mode is redesigned on its own terms rather than an inverted dark
+  theme. Pokémon type-color tokens are unchanged.
+- **Typography**: standardized on Inter (Regular/Semibold/Bold), self-hosted via
+  `next/font` — no external font request, no new dependency.
+- **AppShell**: header now shows a clean, single-weight "PokeStudio" wordmark with a
+  documented integration point for the official logo SVG once it's supplied (not yet in
+  the repo — no substitute mark invented).
+- **Universal Pokédex numbering**: dex numbers (`#001`, `#133`, …) are now locale-independent
+  everywhere, matching the approved identity (previously localized to `N.º` in Spanish).
+
 ### Phase 1C.1 — Abilities and evolutions (2026-09-10)
 
 Extends the Pokédex vertical slice with abilities and evolution relationships (ADR-0011) —

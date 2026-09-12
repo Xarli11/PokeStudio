@@ -25,6 +25,12 @@ export interface PokemonArtSlotProps {
  * than a centered ring, deliberately avoiding the "circle + centered
  * initial" composition that reads as an avatar/badge.
  *
+ * Sizing/gradients stay inline style rather than Tailwind classes: the
+ * type (and therefore every color here) is picked at runtime from data, and
+ * `detailHero` needs a genuine `clamp()` — neither has a static utility
+ * equivalent. Only the variant-independent structural properties below are
+ * Tailwind classes.
+ *
  * Forward-compatible on purpose: when a real sprite/artwork source is
  * reviewed and approved, only the inner `<span>` monogram needs replacing
  * with an `<img>` (object-fit: cover, same sizing) — the outer frame,
@@ -34,7 +40,9 @@ export interface PokemonArtSlotProps {
 export function PokemonArtSlot({ initial, types, variant }: PokemonArtSlotProps) {
   const primaryVar = pokemonTypeColorVar[types[0]!];
   const secondaryVar = pokemonTypeColorVar[types[1] ?? types[0]!];
-  const bracketColor = `color-mix(in srgb, var(${primaryVar}) 65%, transparent)`;
+  // A touch more presence than the wash/monogram — the brackets are the one
+  // "technical" line-work detail in this composition.
+  const bracketColor = `color-mix(in srgb, var(${primaryVar}) 72%, transparent)`;
 
   const sizing: React.CSSProperties =
     variant === 'tile'
@@ -66,58 +74,44 @@ export function PokemonArtSlot({ initial, types, variant }: PokemonArtSlotProps)
 
   const bracketArm = variant === 'tile' ? '18%' : '16%';
 
+  // Restrained in the small grid tile (it shares the card with a dex number
+  // and name right below), fuller presence once it's the hero moment.
+  const monogramOpacity = variant === 'tile' ? 0.26 : variant === 'detailHero' ? 0.38 : 0.3;
+
   return (
     <div
       aria-hidden="true"
+      className="relative flex shrink-0 items-center justify-center overflow-hidden"
       style={{
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
         background: [
           // Faint edge vignette for depth — never a diagonal shine.
           'radial-gradient(circle at 50% 45%, transparent 55%, color-mix(in srgb, var(--ps-color-bg) 32%, transparent) 100%)',
-          `linear-gradient(155deg, color-mix(in srgb, var(${primaryVar}) 26%, var(--ps-color-bg-elevated)), color-mix(in srgb, var(${secondaryVar}) 26%, var(--ps-color-bg-elevated)) 100%)`,
+          `linear-gradient(155deg, color-mix(in srgb, var(${primaryVar}) 23%, var(--ps-color-bg-elevated)), color-mix(in srgb, var(${secondaryVar}) 23%, var(--ps-color-bg-elevated)) 100%)`,
         ].join(', '),
         ...sizing,
       }}
     >
       <span
+        className="absolute top-[12%] left-[12%] rounded-tl-[2px]"
         style={{
-          position: 'absolute',
-          top: '12%',
-          left: '12%',
           width: bracketArm,
           height: bracketArm,
           borderTop: `1.5px solid ${bracketColor}`,
           borderLeft: `1.5px solid ${bracketColor}`,
-          borderTopLeftRadius: '2px',
         }}
       />
       <span
+        className="absolute bottom-[12%] right-[12%] rounded-br-[2px]"
         style={{
-          position: 'absolute',
-          bottom: '12%',
-          right: '12%',
           width: bracketArm,
           height: bracketArm,
           borderBottom: `1.5px solid ${bracketColor}`,
           borderRight: `1.5px solid ${bracketColor}`,
-          borderBottomRightRadius: '2px',
         }}
       />
       <span
-        style={{
-          fontSize: monogramSize,
-          fontWeight: 800,
-          lineHeight: 1,
-          letterSpacing: '-0.02em',
-          color: 'var(--ps-color-text)',
-          opacity: 0.32,
-          userSelect: 'none',
-        }}
+        className="leading-none font-bold tracking-tight text-foreground select-none"
+        style={{ fontSize: monogramSize, opacity: monogramOpacity }}
       >
         {initial}
       </span>

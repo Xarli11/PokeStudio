@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 import { defaultLocale, getDictionary, isLocale } from '@pokestudio/i18n';
 
-import { AppShell } from '@/components/app-shell';
+import { buttonClass } from '@/lib/ui-classes';
 
 /**
  * Replaces Next.js's bare default 404 for every `notFound()` call under
@@ -19,26 +19,12 @@ export default async function NotFound() {
   const dictionary = getDictionary(locale);
 
   return (
-    <AppShell locale={locale} dictionary={dictionary} active="explore">
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          gap: 'var(--ps-space-3)',
-          padding: 'var(--ps-space-6) 0',
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: 'var(--ps-font-size-2xl)' }}>
-          {dictionary.notFound.title}
-        </h1>
-        <p style={{ margin: 0, color: 'var(--ps-color-text-muted)' }}>
-          {dictionary.notFound.description}
-        </p>
-        <Link href={`/${locale}/pokemon`} className="ps-btn ps-btn-primary">
-          {dictionary.notFound.backLink}
-        </Link>
-      </div>
-    </AppShell>
+    <div className="mx-auto flex max-w-text flex-col items-start gap-3 py-8">
+      <h1 className="m-0 text-2xl">{dictionary.notFound.title}</h1>
+      <p className="m-0 text-muted">{dictionary.notFound.description}</p>
+      <Link href={`/${locale}/pokemon`} className={buttonClass('primary')}>
+        {dictionary.notFound.backLink}
+      </Link>
+    </div>
   );
 }

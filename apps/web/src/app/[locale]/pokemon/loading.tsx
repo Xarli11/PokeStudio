@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 
 import { defaultLocale, getDictionary, isLocale } from '@pokestudio/i18n';
 
+import { Skeleton } from '@/components/ui/skeleton';
+
 /**
  * A light placeholder while `listSpeciesPage` resolves (Part K) — not a
  * full skeleton mirroring every card, just enough shape to avoid a blank
@@ -15,22 +17,12 @@ export default async function Loading() {
   const dictionary = getDictionary(locale);
 
   return (
-    <div
-      aria-live="polite"
-      aria-busy="true"
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-6)' }}
-    >
-      <span className="ps-visually-hidden">{dictionary.pokedex.loading}</span>
-      <div className="ps-skeleton" style={{ height: '2rem', width: '10rem' }} />
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          gap: 'var(--ps-space-3)',
-        }}
-      >
+    <div aria-live="polite" aria-busy="true" className="mx-auto flex max-w-wide flex-col gap-8">
+      <span className="sr-only">{dictionary.pokedex.loading}</span>
+      <Skeleton className="h-8 w-40 rounded-md" />
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="ps-skeleton" style={{ height: '88px' }} />
+          <Skeleton key={index} className="h-22 rounded-md" />
         ))}
       </div>
     </div>

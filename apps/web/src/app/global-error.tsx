@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { themeInitScript } from '@pokestudio/ui';
 
 import { captureException } from '@/lib/observability';
+import { buttonClass } from '@/lib/ui-classes';
 
 import './globals.css';
 
@@ -31,30 +32,19 @@ export default function GlobalError({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <div
-          style={{
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 'var(--ps-space-4)',
-            padding: 'var(--ps-space-6)',
-            textAlign: 'center',
-          }}
-        >
-          <h1 style={{ margin: 0, fontSize: 'var(--ps-font-size-2xl)' }}>Something went wrong</h1>
-          <p style={{ margin: 0, color: 'var(--ps-color-text-muted)', maxWidth: '32rem' }}>
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
+          <h1 className="m-0 text-2xl">Something went wrong</h1>
+          <p className="m-0 max-w-lg text-muted">
             An unexpected error occurred. You can try again, or head back to the Pokédex.
           </p>
-          <div style={{ display: 'flex', gap: 'var(--ps-space-3)' }}>
-            <button type="button" onClick={reset} className="ps-btn ps-btn-primary">
+          <div className="flex gap-3">
+            <button type="button" onClick={reset} className={buttonClass('primary')}>
               Try again
             </button>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- this boundary
                 replaces the root layout, including whatever broke it, so it must not depend
                 on Next's client router being intact. */}
-            <a href="/" className="ps-btn">
+            <a href="/" className={buttonClass('default')}>
               Back home
             </a>
           </div>

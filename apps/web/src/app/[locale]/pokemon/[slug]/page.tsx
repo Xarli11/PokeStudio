@@ -5,11 +5,11 @@ import { notFound } from 'next/navigation';
 import { getEvolutionFamily, getSpeciesBySlug, type SpeciesFormDetail } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
-import { AppShell } from '@/components/app-shell';
 import { PokemonEvolutionSection } from '@/components/pokemon/evolution-section';
 import { PokemonFormSection } from '@/components/pokemon/form-section';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { partitionOtherForms } from '@/lib/form-grouping';
+import { buttonClass, cardClass, eyebrowClass, tagClass } from '@/lib/ui-classes';
 
 // Reads live reference data per request — do not attempt to statically
 // prerender this at build time (CI has no Supabase instance during `next build`).
@@ -20,8 +20,10 @@ type PageParams = { locale: string; slug: string };
 /** Cosmetic variants beyond this count collapse behind a native <details> (Alcremie: 63, Unown: 27). */
 const COSMETIC_VARIANTS_COLLAPSE_THRESHOLD = 8;
 
-function dexNumberLabel(dictionary: ReturnType<typeof getDictionary>, n: number): string {
-  return formatMessage(dictionary.pokedex.dexNumber, { number: String(n).padStart(3, '0') });
+// National Dex number is a product identifier, not translatable prose
+// (CLAUDE.md brand-cleanup pass) — always "#NNN", independent of locale.
+function dexNumberLabel(n: number): string {
+  return `#${String(n).padStart(3, '0')}`;
 }
 
 function formSectionProps(
@@ -109,121 +111,73 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
   const hasOtherForms = distinctForms.length > 0 || cosmeticVariants.length > 0;
 
   return (
-    <AppShell locale={locale} dictionary={dictionary} active="explore" contentWidth="detail">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-6)' }}>
-        <Link
-          href={`/${locale}/pokemon`}
-          style={{
-            color: 'var(--ps-color-text-muted)',
-            fontSize: 'var(--ps-font-size-sm)',
-            alignSelf: 'flex-start',
-          }}
-        >
-          ← {dictionary.pokedex.backToPokedex}
-        </Link>
+    <div className="mx-auto flex max-w-detail flex-col gap-8">
+      <Link
+        href={`/${locale}/pokemon`}
+        className="self-start text-sm text-muted no-underline hover:text-foreground"
+      >
+        ← {dictionary.pokedex.backToPokedex}
+      </Link>
 
-        <header style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-2)' }}>
-          <span className="ps-eyebrow" style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {dexNumberLabel(dictionary, species.nationalDexNumber)}
-          </span>
-          <h1 style={{ margin: 0, fontSize: 'var(--ps-font-size-3xl)', letterSpacing: '-0.02em' }}>
-            {species.name[locale]}
-          </h1>
-        </header>
+      <header className="flex flex-col gap-2">
+        <span className={eyebrowClass('tabular-nums')}>
+          {dexNumberLabel(species.nationalDexNumber)}
+        </span>
+        <h1 className="m-0 text-3xl tracking-tight">{species.name[locale]}</h1>
+      </header>
 
-        <PokemonFormSection {...formSectionProps(defaultForm, locale, dictionary, 'primary')} />
+      <PokemonFormSection {...formSectionProps(defaultForm, locale, dictionary, 'primary')} />
 
-        {evolutionFamily ? (
-          <PokemonEvolutionSection
-            family={evolutionFamily}
-            locale={locale}
-            dictionary={dictionary}
-          />
-        ) : null}
+      {evolutionFamily ? (
+        <PokemonEvolutionSection family={evolutionFamily} locale={locale} dictionary={dictionary} />
+      ) : null}
 
-        {hasOtherForms ? (
-          <section
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--ps-space-4)',
-              paddingTop: 'var(--ps-space-5)',
-              borderTop: '1px solid var(--ps-color-border-subtle)',
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: 'var(--ps-font-size-lg)' }}>
-              {dictionary.pokedex.otherForms}
-            </h2>
+      {hasOtherForms ? (
+        <section className="flex flex-col gap-4 border-t border-border-subtle pt-5">
+          <h2 className="m-0 text-lg">{dictionary.pokedex.otherForms}</h2>
 
-            {distinctForms.length > 1 ? (
-              <nav aria-label={dictionary.pokedex.otherForms}>
-                <ul
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 'var(--ps-space-2)',
-                    margin: 0,
-                    padding: 0,
-                    listStyle: 'none',
-                  }}
-                >
-                  {distinctForms.map((form) => (
-                    <li key={form.slug}>
-                      <a href={`#${form.slug}`} className="ps-btn">
-                        {form.name[locale]}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            ) : null}
-
-            {distinctForms.map((form) => (
-              <PokemonFormSection
-                key={form.slug}
-                {...formSectionProps(form, locale, dictionary, 'secondary')}
-              />
-            ))}
-
-            {cosmeticVariants.length > 0 ? (
-              <details
-                className="ps-card"
-                open={cosmeticVariants.length <= COSMETIC_VARIANTS_COLLAPSE_THRESHOLD || undefined}
-                style={{ padding: 'var(--ps-space-4) var(--ps-space-5)' }}
-              >
-                <summary
-                  className="ps-disclosure-summary"
-                  style={{
-                    fontWeight: 600,
-                    fontSize: 'var(--ps-font-size-base)',
-                    color: 'var(--ps-color-text-muted)',
-                  }}
-                >
-                  {formatMessage(dictionary.pokedex.cosmeticVariants, {
-                    count: cosmeticVariants.length,
-                  })}
-                </summary>
-                <ul
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 'var(--ps-space-2)',
-                    margin: 'var(--ps-space-3) 0 0',
-                    padding: 0,
-                    listStyle: 'none',
-                  }}
-                >
-                  {cosmeticVariants.map((form) => (
-                    <li key={form.slug} className="ps-tag">
+          {distinctForms.length > 1 ? (
+            <nav aria-label={dictionary.pokedex.otherForms}>
+              <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+                {distinctForms.map((form) => (
+                  <li key={form.slug}>
+                    <a href={`#${form.slug}`} className={buttonClass('default')}>
                       {form.name[locale]}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ) : null}
-          </section>
-        ) : null}
-      </div>
-    </AppShell>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null}
+
+          {distinctForms.map((form) => (
+            <PokemonFormSection
+              key={form.slug}
+              {...formSectionProps(form, locale, dictionary, 'secondary')}
+            />
+          ))}
+
+          {cosmeticVariants.length > 0 ? (
+            <details
+              className={cardClass('px-5 py-4')}
+              open={cosmeticVariants.length <= COSMETIC_VARIANTS_COLLAPSE_THRESHOLD || undefined}
+            >
+              <summary className="cursor-pointer text-base font-semibold text-muted transition-colors hover:text-foreground">
+                {formatMessage(dictionary.pokedex.cosmeticVariants, {
+                  count: cosmeticVariants.length,
+                })}
+              </summary>
+              <ul className="m-0 mt-3 flex list-none flex-wrap gap-2 p-0">
+                {cosmeticVariants.map((form) => (
+                  <li key={form.slug} className={tagClass()}>
+                    {form.name[locale]}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+        </section>
+      ) : null}
+    </div>
   );
 }

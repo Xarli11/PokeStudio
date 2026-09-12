@@ -1,51 +1,85 @@
 /**
- * PokeStudio design tokens.
- * Dark is the default/primary theme; light is a first-class alternative.
- * Pokémon type colors are semantic accents only — never the core brand palette.
+ * PokeStudio design tokens — Brand 1.0 (approved identity, replaces all
+ * provisional branding). Dark is the default/primary theme; light is a
+ * first-class alternative designed on its own terms, not an inversion.
+ *
+ * Layer 1 below is the canonical brand palette (six fixed colors). Layer 2
+ * maps semantic application roles onto those primitives — components should
+ * only ever reference Layer 2 tokens, never the Layer 1 primitives or a raw
+ * hex value, so the palette stays centralized here.
+ *
+ * Pokémon type colors (bottom of file) are a separate semantic system for
+ * Pokémon data — never the brand palette, never used for product chrome.
  */
 
 :root {
   color-scheme: dark;
 
-  /* Brand neutrals (dark-first) */
-  --ps-color-bg: #0a0b0f;
-  --ps-color-bg-elevated: #14161d;
-  --ps-color-bg-surface: #1b1e27;
-  --ps-color-border: #2a2e3a;
+  /* ---- Layer 1: brand primitives (PokeStudio Brand 1.0, fixed) ---- */
+  --ps-brand-emerald: #10b981;
+  --ps-brand-mint: #34d399;
+  --ps-brand-deep: #047857;
+  --ps-neutral-charcoal: #0a0d0c;
+  --ps-neutral-graphite: #151a18;
+  --ps-neutral-light: #f3f7f5;
+
+  /* ---- Layer 2: semantic application tokens (dark, default) ---- */
+  --ps-color-bg: var(--ps-neutral-charcoal);
+  --ps-color-bg-elevated: color-mix(
+    in srgb,
+    var(--ps-neutral-graphite) 55%,
+    var(--ps-neutral-charcoal)
+  );
+  --ps-color-bg-surface: var(--ps-neutral-graphite);
+  --ps-color-bg-hover: color-mix(in srgb, var(--ps-neutral-graphite) 85%, white);
+  --ps-color-bg-active: color-mix(in srgb, var(--ps-neutral-graphite) 75%, white);
+  /* UI Polish 1.1: quieter than the original 55/78 mix — dark mode read as
+     having "too many visible borders"; both now sit closer to the surface
+     tone so a boundary is felt, not noticed, while staying legible. */
+  --ps-color-border: color-mix(in srgb, var(--ps-neutral-graphite) 70%, var(--ps-neutral-light));
   /* A quieter divider than --ps-color-border, for internal separators
-     (stat rows, list items) that shouldn't read as another boxed card
-     (UX/UI 0.2 Part G — "avoid excessive border outlines around every element"). */
-  --ps-color-border-subtle: #20232c;
-  --ps-color-text: #f4f5f7;
-  --ps-color-text-muted: #a4a9b8;
+     (stat rows, list items) that shouldn't read as another boxed card. */
+  --ps-color-border-subtle: color-mix(
+    in srgb,
+    var(--ps-neutral-graphite) 84%,
+    var(--ps-neutral-light)
+  );
+  --ps-color-text: var(--ps-neutral-light);
+  --ps-color-text-muted: color-mix(
+    in srgb,
+    var(--ps-neutral-light) 62%,
+    var(--ps-neutral-charcoal)
+  );
 
   /*
-   * Brand accent — PROVISIONAL (UX/UI 0.2b Part A), not a final brand
-   * lock-in; revisit once real branding/logo work happens.
-   *
-   * A restrained, cool emerald/teal (hue ~170°) — chosen specifically to
-   * read as a distinct hue family from --ps-type-grass (hue ~127°, a
-   * warmer yellow-green) and from --ps-color-success (hue ~153°, a
-   * brighter grass-adjacent green already used for feedback states). This
-   * is PokeStudio's OWN accent — active nav, focus/emphasis, selected
-   * states, brand details — never reused as, or confusable with, a
-   * Pokémon type color. --ps-type-grass remains the only correct color
-   * for anything actually representing the Grass type (badges, gradients,
-   * etc.); do not substitute --ps-color-primary there, and vice versa.
-   * (Replaces UX/UI 0.2's indigo-violet provisional accent.)
+   * Brand accent — Emerald is PokeStudio's own interactive/identity color:
+   * active nav, focus/emphasis, selected states, primary actions. Never
+   * reused as, or confused with, a Pokémon type color; --ps-type-grass
+   * remains the only correct color for the Grass type.
    */
-  --ps-color-primary: #2fbfa8;
-  --ps-color-primary-contrast: #05060a;
-  /* Low-opacity accent wash/glow, derived from --ps-color-primary so both
-     themes stay in sync automatically — used for soft fills (hidden-ability
-     tag, active nav indicator) and hover glow shadows, never as a flat card
-     background (Part G/H). */
+  --ps-color-primary: var(--ps-brand-emerald);
+  --ps-color-primary-hover: var(--ps-brand-mint);
+  --ps-color-primary-contrast: var(--ps-neutral-charcoal);
+  /* Low-opacity accent wash, derived from --ps-color-primary so both themes
+     stay in sync automatically — soft fills (hidden-ability tag, active nav
+     indicator, "Soon" badges), never a flat card background. */
   --ps-color-primary-soft: color-mix(in srgb, var(--ps-color-primary) 16%, transparent);
-  --ps-shadow-glow:
-    0 0 0 1px color-mix(in srgb, var(--ps-color-primary) 35%, transparent),
-    0 12px 32px -8px color-mix(in srgb, var(--ps-color-primary) 45%, transparent);
+  --ps-color-focus: var(--ps-brand-mint);
 
-  /* Feedback */
+  /*
+   * Filled action surfaces (a primary button's own background) are a
+   * distinct role from --ps-color-primary's job as text/icon emphasis —
+   * conflating them is exactly what made the light-mode primary button read
+   * as too dark/heavy (UI Polish 1.1 follow-up): --ps-color-primary is
+   * deliberately deepened in light mode for AA text-on-light contrast, but
+   * a button's own fill has a different constraint (white text sitting on
+   * top of it, not the color sitting on a light page as text). Dark mode's
+   * treatment was already correct, so it just passes through unchanged.
+   */
+  --ps-color-brand-action: var(--ps-color-primary);
+  --ps-color-brand-action-hover: var(--ps-color-primary-hover);
+
+  /* Feedback (semantic states, distinct from the brand accent) */
   --ps-color-success: #3ecf8e;
   --ps-color-warning: #f5b849;
   --ps-color-danger: #f56d6d;
@@ -55,25 +89,22 @@
   --ps-motion-base: 200ms;
   --ps-motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-  /* Spacing scale (UX/UI 0.1) — one shared scale instead of ad hoc rem values
-     scattered per component. */
-  --ps-space-1: 0.25rem;
-  --ps-space-2: 0.5rem;
-  --ps-space-3: 0.75rem;
-  --ps-space-4: 1rem;
-  --ps-space-5: 1.5rem;
-  --ps-space-6: 2rem;
-  --ps-space-7: 3rem;
-  --ps-space-8: 4rem;
+  /* Spacing is intentionally not a --ps-space-* token scale — Tailwind's own
+     dynamic `--spacing: 0.25rem` × n scale (packages/ui/src/tokens.css's
+     `@theme` block below) already reproduces the same 0.25rem grid these
+     used to define, so it *is* the one source of truth for spacing. */
 
   /* Radius scale */
   --ps-radius-sm: 0.375rem;
   --ps-radius-md: 0.625rem;
   --ps-radius-lg: 1rem;
   --ps-radius-xl: 1.25rem;
-  --ps-radius-pill: 9999px;
+  /* No --ps-radius-pill: it was always 9999px, identical to Tailwind's own
+     built-in `rounded-full` — no alias needed. */
 
-  /* Typography scale */
+  /* Typography — Inter throughout (see globals.css for the font stack).
+     Regular (400) for body/data, Semibold (600) for interactive/section
+     emphasis, Bold (700) for major titles/strong identity. */
   --ps-font-size-xs: 0.75rem;
   --ps-font-size-sm: 0.8125rem;
   --ps-font-size-base: 0.9375rem;
@@ -90,16 +121,12 @@
 
   /* Content widths — text-reading measure, a wider data-grid measure (the
      Pokédex index), and an intermediate measure for the detail page's
-     two-column composition (UX/UI 0.2b Part B) — wide enough to comfortably
-     fit an art+info / stats+abilities grid without going as wide as the
-     card grid, which would leave the page header looking sparse. */
+     two-column composition — wide enough to comfortably fit an art+info /
+     stats+abilities grid without going as wide as the card grid, which
+     would leave the page header looking sparse. */
   --ps-content-width-text: 42rem;
   --ps-content-width-detail: 60rem;
   --ps-content-width-wide: 75rem;
-
-  /* Interactive surface states (hover/active backgrounds for cards/buttons). */
-  --ps-color-bg-hover: #21242f;
-  --ps-color-bg-active: #272b38;
 
   /* Type semantic accents — full 18-type set (Phase 1A, Explore data). */
   --ps-type-normal: #c2c2a3;
@@ -122,29 +149,54 @@
   --ps-type-fairy: #f2a8d8;
 }
 
+/*
+ * Light mode — intentionally designed from Light + dark neutrals, not
+ * merely an inverted dark theme: the accent deepens to --ps-brand-deep for
+ * AA text contrast rather than reusing the bright dark-mode emerald, and
+ * (UI Polish 1.1) surfaces carry a whisper of the same cool/green-tinted
+ * --ps-neutral-light base the page background uses, instead of stark
+ * generic white — mirroring dark mode's own bg/elevated/surface hierarchy
+ * (elevated sits closer to bg, surface is the cleaner, more prominent
+ * tier) rather than collapsing both to one flat value.
+ */
 [data-theme='light'] {
   color-scheme: light;
 
-  --ps-color-bg: #f7f8fa;
-  --ps-color-bg-elevated: #ffffff;
-  --ps-color-bg-surface: #ffffff;
-  --ps-color-border: #e1e3e8;
-  --ps-color-border-subtle: #edeef2;
-  --ps-color-text: #14161d;
-  --ps-color-text-muted: #565c6b;
+  --ps-color-bg: var(--ps-neutral-light);
+  --ps-color-bg-elevated: color-mix(in srgb, var(--ps-neutral-light) 55%, white);
+  --ps-color-bg-surface: color-mix(in srgb, var(--ps-neutral-light) 12%, white);
+  --ps-color-bg-hover: color-mix(in srgb, var(--ps-neutral-charcoal) 6%, var(--ps-neutral-light));
+  --ps-color-bg-active: color-mix(in srgb, var(--ps-neutral-charcoal) 10%, var(--ps-neutral-light));
+  --ps-color-border: color-mix(in srgb, var(--ps-neutral-charcoal) 14%, var(--ps-neutral-light));
+  --ps-color-border-subtle: color-mix(
+    in srgb,
+    var(--ps-neutral-charcoal) 7%,
+    var(--ps-neutral-light)
+  );
+  --ps-color-text: var(--ps-neutral-charcoal);
+  --ps-color-text-muted: color-mix(
+    in srgb,
+    var(--ps-neutral-charcoal) 58%,
+    var(--ps-neutral-light)
+  );
 
-  /* Same provisional emerald/teal hue family as dark mode (~170°), deepened
-     for AA text contrast against a light surface (~5.2:1 against white,
-     reasoned via relative-luminance calculation — see ADR/commit notes;
-     not verified with a contrast-checker tool). */
-  --ps-color-primary: #0b7d68;
+  /* Deepened accent (~5.2:1 against white) — same brand hue family as dark
+     mode, chosen for text/icon contrast rather than the bright emerald. */
+  --ps-color-primary: var(--ps-brand-deep);
+  --ps-color-primary-hover: var(--ps-brand-emerald);
   --ps-color-primary-contrast: #ffffff;
+  --ps-color-focus: var(--ps-brand-deep);
+
+  /* A brighter, more visibly "Emerald" fill than --ps-color-primary — still
+     measured, not assumed: this 20/80 Emerald/Deep blend is ~4.6:1 against
+     white text (AA-clear; pure --ps-brand-emerald is only ~2.5:1 and fails).
+     Hover intensifies to the full Deep tone — darker/stronger, not the
+     brighter flash light mode's --ps-color-primary-hover gives text. */
+  --ps-color-brand-action: color-mix(in srgb, var(--ps-brand-emerald) 20%, var(--ps-brand-deep));
+  --ps-color-brand-action-hover: var(--ps-brand-deep);
 
   --ps-shadow-sm: 0 1px 2px rgba(20, 22, 29, 0.08);
   --ps-shadow-md: 0 8px 24px rgba(20, 22, 29, 0.12);
-
-  --ps-color-bg-hover: #eef0f4;
-  --ps-color-bg-active: #e4e7ed;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -152,4 +204,124 @@
     --ps-motion-fast: 0ms;
     --ps-motion-base: 0ms;
   }
+}
+
+/*
+ * Tailwind consumption layer — Figma → these --ps-* tokens (above) →
+ * Tailwind utilities → components. This block does not define any new
+ * color/spacing value; every line below is a var() alias onto a token
+ * already declared above, so there is exactly one place (this file) that
+ * owns a real value. Because the aliased custom properties already live at
+ * `:root` / `[data-theme='light']`, they keep resolving live through the
+ * cascade after Tailwind copies this block to its own `:root` output —
+ * switching `data-theme` re-resolves every `bg-surface`/`text-brand`/etc.
+ * utility with no JS and no duplicate theme definition.
+ *
+ * Tailwind's own dynamic spacing scale (`--spacing: 0.25rem` × n) already
+ * reproduces --ps-space-1..8 exactly (1/2/3/4/6/8/12/16 → 0.25–4rem), so
+ * spacing is intentionally not re-aliased here — using Tailwind's native
+ * `gap-*`/`p-*`/etc. utilities directly *is* the single source of truth.
+ */
+@theme {
+  /* Breakpoints — the app's existing intentional tiers (card/grid density,
+     AppShell's single-row desktop nav), consolidated into Tailwind's own
+     sm/md/lg/xl instead of one-off `@media` queries per component. */
+  --breakpoint-sm: 30rem; /* 480px */
+  --breakpoint-md: 50rem; /* 800px */
+  --breakpoint-lg: 68.75rem; /* 1100px */
+  --breakpoint-xl: 75rem; /* 1200px */
+
+  /* Surfaces */
+  --color-background: var(--ps-color-bg);
+  --color-surface: var(--ps-color-bg-surface);
+  --color-surface-raised: var(--ps-color-bg-elevated);
+  --color-surface-hover: var(--ps-color-bg-hover);
+  --color-surface-active: var(--ps-color-bg-active);
+
+  /* Text */
+  --color-foreground: var(--ps-color-text);
+  --color-muted: var(--ps-color-text-muted);
+
+  /* Borders */
+  --color-border: var(--ps-color-border);
+  --color-border-subtle: var(--ps-color-border-subtle);
+
+  /* Brand accent */
+  --color-brand: var(--ps-color-primary);
+  --color-brand-hover: var(--ps-color-primary-hover);
+  --color-brand-muted: var(--ps-color-primary-soft);
+  --color-brand-contrast: var(--ps-color-primary-contrast);
+  /* Filled action surfaces (primary button backgrounds) — see the
+     --ps-color-brand-action definitions above for why this is its own
+     token rather than reusing --color-brand. */
+  --color-brand-action: var(--ps-color-brand-action);
+  --color-brand-action-hover: var(--ps-color-brand-action-hover);
+
+  /* Interaction */
+  --color-focus: var(--ps-color-focus);
+
+  /* Feedback */
+  --color-success: var(--ps-color-success);
+  --color-warning: var(--ps-color-warning);
+  --color-danger: var(--ps-color-danger);
+
+  /* Pokémon type accents — a separate semantic system, never brand. */
+  --color-type-normal: var(--ps-type-normal);
+  --color-type-fire: var(--ps-type-fire);
+  --color-type-water: var(--ps-type-water);
+  --color-type-electric: var(--ps-type-electric);
+  --color-type-grass: var(--ps-type-grass);
+  --color-type-ice: var(--ps-type-ice);
+  --color-type-fighting: var(--ps-type-fighting);
+  --color-type-poison: var(--ps-type-poison);
+  --color-type-ground: var(--ps-type-ground);
+  --color-type-flying: var(--ps-type-flying);
+  --color-type-psychic: var(--ps-type-psychic);
+  --color-type-bug: var(--ps-type-bug);
+  --color-type-rock: var(--ps-type-rock);
+  --color-type-ghost: var(--ps-type-ghost);
+  --color-type-dragon: var(--ps-type-dragon);
+  --color-type-dark: var(--ps-type-dark);
+  --color-type-steel: var(--ps-type-steel);
+  --color-type-fairy: var(--ps-type-fairy);
+
+  /* Typography scale — replaces Tailwind's default `text-*` sizes outright
+     (same reasoning as radius/shadow below): one scale, no divergent
+     defaults sitting unused alongside it. */
+  --text-xs: var(--ps-font-size-xs);
+  --text-sm: var(--ps-font-size-sm);
+  --text-base: var(--ps-font-size-base);
+  --text-md: var(--ps-font-size-md);
+  --text-lg: var(--ps-font-size-lg);
+  --text-xl: var(--ps-font-size-xl);
+  --text-2xl: var(--ps-font-size-2xl);
+  --text-3xl: var(--ps-font-size-3xl);
+
+  /* Radius — replaces Tailwind's defaults outright so `rounded-md` etc.
+     always mean PokeStudio's scale, never a divergent Tailwind default. */
+  --radius-sm: var(--ps-radius-sm);
+  --radius-md: var(--ps-radius-md);
+  --radius-lg: var(--ps-radius-lg);
+  --radius-xl: var(--ps-radius-xl);
+
+  /* Elevation — same reasoning: `shadow-sm`/`shadow-md` become ours. No
+     `shadow-glow` (UI Polish 1.1 removed it) — card hover is a restrained
+     border/surface/transform change now, never a colored glow shadow. */
+  --shadow-sm: var(--ps-shadow-sm);
+  --shadow-md: var(--ps-shadow-md);
+
+  /* Motion — the bare `transition` utility (no explicit duration/easing
+     modifier) now defaults to PokeStudio's fast/easing pair, including the
+     existing prefers-reduced-motion zeroing above. `ease-ps` is available
+     for the few transitions that pair our easing with a non-default
+     duration (e.g. `duration-200 ease-ps`). */
+  --default-transition-duration: var(--ps-motion-fast);
+  --default-transition-timing-function: var(--ps-motion-easing);
+  --ease-ps: var(--ps-motion-easing);
+
+  /* Content widths — the layout system's named measures (Pokédex grid,
+     detail page, reading-width text) as `max-w-text|detail|wide`. */
+  --container-text: var(--ps-content-width-text);
+  --container-detail: var(--ps-content-width-detail);
+  --container-wide: var(--ps-content-width-wide);
 }

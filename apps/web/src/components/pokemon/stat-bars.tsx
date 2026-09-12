@@ -25,49 +25,21 @@ export function PokemonStatBars({
   labels: Record<(typeof STAT_KEYS)[number], string>;
 }) {
   return (
-    <dl style={{ display: 'grid', gap: 'var(--ps-space-2)', margin: 0 }}>
+    <dl className="m-0 grid gap-2">
       {STAT_KEYS.map((key) => (
         <div
           key={key}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(4.5rem, 5.5rem) 2.25rem 1fr',
-            alignItems: 'center',
-            gap: 'var(--ps-space-3)',
-          }}
+          className="grid grid-cols-[minmax(4.5rem,5.5rem)_2.25rem_1fr] items-center gap-3"
         >
-          <dt style={{ color: 'var(--ps-color-text-muted)', fontSize: 'var(--ps-font-size-sm)' }}>
-            {labels[key]}
-          </dt>
-          <dd
-            style={{
-              margin: 0,
-              fontVariantNumeric: 'tabular-nums',
-              fontWeight: 700,
-              fontSize: 'var(--ps-font-size-sm)',
-              textAlign: 'right',
-            }}
-          >
-            {stats[key]}
-          </dd>
+          <dt className="text-sm text-muted">{labels[key]}</dt>
+          <dd className="m-0 text-right text-sm font-bold tabular-nums">{stats[key]}</dd>
           <div
             aria-hidden="true"
-            style={{
-              height: '0.4375rem',
-              borderRadius: 'var(--ps-radius-pill)',
-              background: 'var(--ps-color-bg-elevated)',
-              border: '1px solid var(--ps-color-border-subtle)',
-              overflow: 'hidden',
-            }}
+            className="h-[0.4375rem] overflow-hidden rounded-full border border-border-subtle bg-surface-raised"
           >
             <div
-              style={{
-                height: '100%',
-                width: `${Math.min(100, (stats[key] / MAX_DISPLAY_STAT) * 100)}%`,
-                background: `linear-gradient(90deg, color-mix(in srgb, var(--ps-color-primary) 75%, transparent), var(--ps-color-primary))`,
-                borderRadius: 'var(--ps-radius-pill)',
-                transition: `width var(--ps-motion-base) var(--ps-motion-easing)`,
-              }}
+              className="h-full rounded-full bg-gradient-to-r from-brand/75 to-brand transition-[width] duration-200 ease-ps"
+              style={{ width: `${Math.min(100, (stats[key] / MAX_DISPLAY_STAT) * 100)}%` }}
             />
           </div>
         </div>

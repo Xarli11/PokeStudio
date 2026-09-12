@@ -5,11 +5,9 @@ import { notFound } from 'next/navigation';
 import { listSpeciesPage } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
-import { AppShell } from '@/components/app-shell';
 import { PokemonCard } from '@/components/pokemon/card';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
-
-import styles from './pokemon-grid.module.css';
+import { buttonClass, eyebrowClass } from '@/lib/ui-classes';
 
 // Reads live reference data per request — do not attempt to statically
 // prerender this at build time (CI has no Supabase instance during `next build`).
@@ -20,8 +18,10 @@ export const dynamic = 'force-dynamic';
 // client JS/search: the smallest fix that keeps payload size reasonable.
 const PAGE_SIZE = 60;
 
-function dexNumberLabel(dictionary: ReturnType<typeof getDictionary>, n: number): string {
-  return formatMessage(dictionary.pokedex.dexNumber, { number: String(n).padStart(3, '0') });
+// National Dex number is a product identifier, not translatable prose
+// (CLAUDE.md brand-cleanup pass) — always "#NNN", independent of locale.
+function dexNumberLabel(n: number): string {
+  return `#${String(n).padStart(3, '0')}`;
 }
 
 function parsePage(searchParams: { page?: string }): number {
@@ -73,62 +73,62 @@ export default async function PokemonIndexPage({
   const result = await listSpeciesPage(getPokemonDatabaseClient(), { page, pageSize: PAGE_SIZE });
 
   return (
-    <AppShell locale={locale} dictionary={dictionary} active="explore" contentWidth="wide">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-6)' }}>
-        <header style={{ display: 'flex', flexDirection: 'column', gap: 'var(--ps-space-2)' }}>
-          <span className="ps-eyebrow">{dictionary.pokedex.eyebrow}</span>
-          <h1 style={{ margin: 0, fontSize: 'var(--ps-font-size-2xl)', letterSpacing: '-0.01em' }}>
-            {dictionary.pokedex.title}
-          </h1>
-          <p style={{ margin: 0, color: 'var(--ps-color-text-muted)', maxWidth: '36rem' }}>
-            {dictionary.pokedex.tagline}
-          </p>
-        </header>
+    <div className="mx-auto flex max-w-wide flex-col gap-10">
+      <header className="flex flex-col gap-3">
+        <span className={eyebrowClass()}>{dictionary.pokedex.eyebrow}</span>
+        <h1 className="m-0 text-3xl tracking-tight">{dictionary.pokedex.title}</h1>
+        <p className="m-0 max-w-xl text-muted">{dictionary.pokedex.tagline}</p>
+      </header>
 
-        <div className={styles.grid}>
-          {result.items.map((item) => (
-            <PokemonCard
-              key={item.slug}
-              href={`/${locale}/pokemon/${item.slug}`}
-              name={item.name[locale]}
-              dexNumberLabel={dexNumberLabel(dictionary, item.nationalDexNumber)}
-              types={item.defaultForm.types.map((type) => ({
-                type,
-                label: dictionary.types[type],
-              }))}
-            />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {result.items.map((item) => (
+          <PokemonCard
+            key={item.slug}
+            href={`/${locale}/pokemon/${item.slug}`}
+            name={item.name[locale]}
+            dexNumberLabel={dexNumberLabel(item.nationalDexNumber)}
+            types={item.defaultForm.types.map((type) => ({
+              type,
+              label: dictionary.types[type],
+            }))}
+          />
+        ))}
+      </div>
 
-        <nav
-          aria-label={formatMessage(dictionary.pokedex.pageLabel, {
+      <nav
+        aria-label={formatMessage(dictionary.pokedex.pageLabel, {
+          page: result.page,
+          totalPages: result.totalPages,
+        })}
+        className="flex items-center justify-between gap-4"
+      >
+        {result.page > 1 ? (
+          <Link
+            href={`/${locale}/pokemon?page=${result.page - 1}`}
+            className={buttonClass('default')}
+          >
+            ← {dictionary.pokedex.previousPage}
+          </Link>
+        ) : (
+          <span aria-hidden="true" />
+        )}
+        <span className="text-sm text-muted tabular-nums">
+          {formatMessage(dictionary.pokedex.pageLabel, {
             page: result.page,
             totalPages: result.totalPages,
           })}
-          className={styles.pagination}
-        >
-          {result.page > 1 ? (
-            <Link href={`/${locale}/pokemon?page=${result.page - 1}`} className="ps-btn">
-              ← {dictionary.pokedex.previousPage}
-            </Link>
-          ) : (
-            <span aria-hidden="true" />
-          )}
-          <span className={styles.pageLabel}>
-            {formatMessage(dictionary.pokedex.pageLabel, {
-              page: result.page,
-              totalPages: result.totalPages,
-            })}
-          </span>
-          {result.page < result.totalPages ? (
-            <Link href={`/${locale}/pokemon?page=${result.page + 1}`} className="ps-btn">
-              {dictionary.pokedex.nextPage} →
-            </Link>
-          ) : (
-            <span aria-hidden="true" />
-          )}
-        </nav>
-      </div>
-    </AppShell>
+        </span>
+        {result.page < result.totalPages ? (
+          <Link
+            href={`/${locale}/pokemon?page=${result.page + 1}`}
+            className={buttonClass('default')}
+          >
+            {dictionary.pokedex.nextPage} →
+          </Link>
+        ) : (
+          <span aria-hidden="true" />
+        )}
+      </nav>
+    </div>
   );
 }

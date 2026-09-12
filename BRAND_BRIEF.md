@@ -1,5 +1,17 @@
 # PokeStudio.app — Brand Brief v1
 
+> The visual identity is final: Figma is the source of truth, its exported SVGs live under
+> `apps/web/public/brand/`, and palette/typography/token mapping/logo usage are documented
+> in `DESIGN_SYSTEM.md` ("Brand 1.0"). This brief remains the source for positioning,
+> naming and legal status.
+
+## Brand language
+
+Approved conceptual line: **"Tools for trainers. Built for what's next."** — reflects
+enabling trainers to explore, build, analyze and battle. Use sparingly (it is brand
+direction, not a slogan to plaster across the UI); product copy should stay confident and
+concise rather than restate it on every page.
+
 ## Current name
 
 **PokeStudio.app**
@@ -54,13 +66,16 @@ Avoid naming every feature “Lab”; use it where experimentation/analysis genu
 
 ## Visual constraints
 
-- dark-first with a complete light theme,
-- original PokeStudio palette,
-- type colors are semantic accents,
+All satisfied by the shipped Brand 1.0 identity — see `DESIGN_SYSTEM.md` for the
+implementation:
+
+- dark-first with a complete, intentionally-designed light theme,
+- original PokeStudio palette (Emerald/Mint/Deep Green/Charcoal/Graphite/Light),
+- type colors are semantic accents, kept separate from the brand palette,
 - subtle motion,
 - minimal information hierarchy with progressive disclosure,
-- no default Poké Ball logo,
-- do not imitate official Pokémon typography/logo treatment.
+- no Poké Ball–derived logo,
+- no imitation of official Pokémon typography/logo treatment.
 
 ## Naming/legal status
 

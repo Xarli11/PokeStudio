@@ -11,7 +11,13 @@
     "title": "PokeStudio",
     "tagline": "Busca. Aprende. Construye. Simula. Combate. Analiza. Mejora. Colecciona.",
     "status": "La base ya está lista. Explorar, Construir y el Laboratorio de Combate están en construcción activa.",
-    "cta": "Ver la hoja de ruta"
+    "cta": "Ver la hoja de ruta",
+    "pillarsTitle": "Construido sobre tres pilares",
+    "pillars": {
+      "explore": "Busca en la Pokédex, compara tipos y estadísticas base, y sigue las evoluciones — rápido y siempre actualizado.",
+      "build": "Arma equipos y valídalos contra las reglas reales de formato y legalidad antes de comprometerte.",
+      "battleLab": "Simula combates, revisa trazas de batalla estructuradas y recibe coaching asistido por IA basado en mecánicas reales."
+    }
   },
   "theme": {
     "toggle": "Cambiar tema",
@@ -53,7 +59,6 @@
     "indexDescription": "Consulta tipos y estadísticas base de {count} Pokémon en la Pokédex de PokeStudio.",
     "detailDescription": "{name}: tipos, estadísticas base{formsNote} en la Pokédex de PokeStudio.",
     "detailDescriptionWithForms": " y {formCount} formas",
-    "dexNumber": "N.º {number}",
     "types": "Tipos",
     "baseStats": "Estadísticas base",
     "baseStatTotal": "Total de estadísticas base",

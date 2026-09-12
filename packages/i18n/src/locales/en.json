@@ -11,7 +11,13 @@
     "title": "PokeStudio",
     "tagline": "Search. Learn. Build. Simulate. Battle. Analyze. Improve. Collect.",
     "status": "The foundation is live. Explore, Build and Battle Lab are under active construction.",
-    "cta": "See the roadmap"
+    "cta": "See the roadmap",
+    "pillarsTitle": "Built around three pillars",
+    "pillars": {
+      "explore": "Search the Pokédex, compare types and base stats, and trace evolutions — fast, and always up to date.",
+      "build": "Assemble teams and validate them against real format and legality rules before you commit.",
+      "battleLab": "Simulate matchups, review structured battle traces, and get AI-assisted coaching grounded in real mechanics."
+    }
   },
   "theme": {
     "toggle": "Toggle theme",
@@ -53,7 +59,6 @@
     "indexDescription": "Browse types and base stats for {count} Pokémon in the PokeStudio Pokédex.",
     "detailDescription": "{name}: types, base stats{formsNote} in the PokeStudio Pokédex.",
     "detailDescriptionWithForms": " and {formCount} forms",
-    "dexNumber": "#{number}",
     "types": "Types",
     "baseStats": "Base stats",
     "baseStatTotal": "Base stat total",
