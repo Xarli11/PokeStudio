@@ -125,6 +125,7 @@ function makeDataset(
             ailmentChance: 0,
             flinchChance: 0,
             statChance: 0,
+            statChanges: [{ stat: 'attack' as const, change: -1 }],
             source: { sourceId: TEST_SOURCE_ID, externalId: 'move-90001' },
           },
         ]

@@ -6,7 +6,7 @@ import type { RawCache } from './cache';
  * This module only fetches and types the raw upstream shape — it does not
  * normalize anything into PokeStudio domain structures (see `normalize.ts`).
  * Keeping fetch and normalize separate lets normalization be unit-tested
- * against fixture JSON without a network call (ROADMAP.md/CLAUDE.md §10:
+ * against fixture JSON without a network call (docs/product/ROADMAP.md/CLAUDE.md §10:
  * PokéAPI is an ingestion-time source, never a runtime dependency).
  */
 
@@ -137,6 +137,12 @@ export interface PokeApiMoveMachineRef {
   version_group: PokeApiNamedResource;
 }
 
+/** One stat-stage change a move causes — a separate top-level array from `meta`, not part of it. */
+export interface PokeApiMoveStatChange {
+  change: number;
+  stat: PokeApiNamedResource;
+}
+
 export interface PokeApiMove {
   id: number;
   name: string;
@@ -154,6 +160,7 @@ export interface PokeApiMove {
   target: PokeApiNamedResource;
   type: PokeApiNamedResource;
   machines: PokeApiMoveMachineRef[];
+  stat_changes: PokeApiMoveStatChange[];
 }
 
 export interface PokeApiVersionGroup {

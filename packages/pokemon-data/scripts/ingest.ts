@@ -173,7 +173,8 @@ async function main() {
   console.warn(
     `Moves upserted: ${persistResult.movesUpserted}, version groups upserted: ${persistResult.versionGroupsUpserted}, ` +
       `learn methods upserted: ${persistResult.learnMethodsUpserted}, learnset entries written: ` +
-      `${persistResult.learnsetEntriesWritten}, machines upserted: ${persistResult.machinesUpserted}`,
+      `${persistResult.learnsetEntriesWritten}, machines upserted: ${persistResult.machinesUpserted}, ` +
+      `move stat changes written: ${persistResult.moveStatChangesWritten}`,
   );
 }
 

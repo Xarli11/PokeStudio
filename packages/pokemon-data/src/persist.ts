@@ -137,6 +137,18 @@ export interface IngestSchema {
         Update: never;
         Relationships: [];
       };
+      move_stat_change: {
+        Row: { id: string; move_id: string; source_id: string };
+        Insert: {
+          move_id: string;
+          stat: string;
+          change: number;
+          sort_order: number;
+          source_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       move_learn_method: {
         Row: { slug: string; source_id: string; external_id: string };
         Insert: { slug: string; source_id: string; external_id: string };
@@ -221,6 +233,7 @@ export interface PersistResult {
   learnMethodsUpserted: number;
   learnsetEntriesWritten: number;
   machinesUpserted: number;
+  moveStatChangesWritten: number;
   batches: number;
 }
 
@@ -303,7 +316,7 @@ async function upsertDataSource(client: IngestClient, provenance: DataProvenance
  * upsert is idempotent. A single cross-batch transaction was deliberately
  * not built: it would need a bespoke Postgres function/RPC for a dev
  * ingestion tool, for a failure mode (mid-run crash) re-running already
- * recovers from (DATABASE.md "Ingestion write strategy").
+ * recovers from (docs/engineering/DATABASE.md "Ingestion write strategy").
  */
 export async function persistDataset(
   client: IngestClient,
@@ -613,6 +626,35 @@ export async function persistDataset(
   );
   const versionGroupIdBySlug = new Map(versionGroupIdRows.map((row) => [row.slug, row.id]));
 
+  // move_stat_change has no independent identity of its own upstream
+  // (PokéAPI's move.stat_changes entries are array positions, not
+  // addressable resources — same reasoning as pokemon_form_move), so it is
+  // fully replaced per source_id per run rather than upserted by identity.
+  const moveStatChangesPayload = dataset.moves.flatMap((move) => {
+    const moveId = moveIdBySlug.get(move.slug);
+    if (!moveId) throw new Error(`Orphan move stat change: unknown move "${move.slug}"`);
+    return move.statChanges.map((statChange, index) => ({
+      move_id: moveId,
+      stat: statChange.stat,
+      change: statChange.change,
+      sort_order: index,
+      source_id: dataset.provenance.sourceId,
+    }));
+  });
+
+  const { error: deleteMoveStatChangeError } = await client
+    .from('move_stat_change')
+    .delete()
+    .eq('source_id', dataset.provenance.sourceId);
+  if (deleteMoveStatChangeError) {
+    throw new Error(`Failed to clear move_stat_change: ${deleteMoveStatChangeError.message}`);
+  }
+  for (const batch of chunk(moveStatChangesPayload, BATCH_SIZE)) {
+    const { error } = await client.from('move_stat_change').insert(batch);
+    if (error) throw new Error(`Failed to insert move_stat_change batch: ${error.message}`);
+    batches++;
+  }
+
   // pokemon_form_move has no independent identity of its own upstream
   // (PokéAPI's version_group_details entries are array positions, not
   // addressable resources — same reasoning as pokemon_form_ability/
@@ -690,6 +732,7 @@ export async function persistDataset(
     learnMethodsUpserted: learnMethodsPayload.length,
     learnsetEntriesWritten: learnsetPayload.length,
     machinesUpserted: machinesPayload.length,
+    moveStatChangesWritten: moveStatChangesPayload.length,
     batches,
   };
 }

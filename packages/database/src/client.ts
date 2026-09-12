@@ -16,7 +16,7 @@ export interface SupabaseSecretConfig extends SupabasePublicConfig {
 }
 
 /**
- * PokeStudio's Supabase identity/storage boundary (ARCHITECTURE.md, DATABASE.md).
+ * PokeStudio's Supabase identity/storage boundary (docs/architecture/ARCHITECTURE.md, docs/engineering/DATABASE.md).
  * Client code should call this instead of constructing `@supabase/supabase-js`
  * clients directly, so the provider can be swapped without touching call sites.
  */
@@ -26,7 +26,7 @@ export function createPublicDatabaseClient(config: SupabasePublicConfig): PokeSt
 
 /**
  * Secret-key client. Must only be constructed in trusted server contexts —
- * the secret key bypasses Row Level Security (SECURITY.md, DATABASE.md
+ * the secret key bypasses Row Level Security (docs/engineering/SECURITY.md, docs/engineering/DATABASE.md
  * "Supabase API keys").
  */
 export function createServiceDatabaseClient(

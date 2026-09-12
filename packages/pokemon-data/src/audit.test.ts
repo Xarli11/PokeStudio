@@ -77,6 +77,7 @@ const dataset: NormalizedDataset = {
       ailmentChance: 0,
       flinchChance: 0,
       statChance: 0,
+      statChanges: [],
       source: { sourceId: 'pokeapi', externalId: '33' },
     },
   ],

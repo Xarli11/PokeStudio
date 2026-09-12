@@ -172,7 +172,7 @@ export type DamageClass = 'physical' | 'special' | 'status';
  * same shape as `NormalizedAbility`. `effectEs` is expected `undefined` for
  * every move at least initially — PokéAPI has never been observed to publish
  * a Spanish move effect (same documented gap as ability effects,
- * DATA_SOURCES.md) — never invented (CLAUDE.md §14).
+ * docs/engineering/DATA_SOURCES.md) — never invented (CLAUDE.md §14).
  */
 export interface NormalizedMove {
   slug: string;
@@ -213,7 +213,18 @@ export interface NormalizedMove {
   ailmentChance: number;
   flinchChance: number;
   statChance: number;
+  /** The move's own stat-stage changes, in PokéAPI's original order (relevant for multi-stat moves like Shell Smash) — the direction (user vs. target) is not encoded here; see `apps/web/src/lib/move-mechanics.ts` for the verified category-based rule that resolves it. Empty, never invented, for moves with no stat effect. */
+  statChanges: NormalizedMoveStatChange[];
   source: SourceRef;
+}
+
+/** PokéAPI's move-stat vocabulary (the 6 battle stats plus accuracy/evasion — not the same domain as the 6 base stats alone). */
+export type MoveStat =
+  'attack' | 'defense' | 'special-attack' | 'special-defense' | 'speed' | 'accuracy' | 'evasion';
+
+export interface NormalizedMoveStatChange {
+  stat: MoveStat;
+  change: number;
 }
 
 /** PokéAPI's version_group reference data — the game-context granularity learnsets/machines are scoped to. */

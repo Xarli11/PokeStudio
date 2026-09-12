@@ -1,4 +1,4 @@
-import type { DamageClass, FormCategory, NormalizedDataset, PokemonType } from './types';
+import type { DamageClass, FormCategory, MoveStat, NormalizedDataset, PokemonType } from './types';
 
 export interface ValidationIssue {
   recordId: string;
@@ -33,6 +33,15 @@ const KNOWN_TYPES: ReadonlySet<PokemonType> = new Set<PokemonType>([
 ]);
 const STAT_KEYS = ['hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed'] as const;
 const KNOWN_DAMAGE_CLASSES: readonly DamageClass[] = ['physical', 'special', 'status'];
+const KNOWN_MOVE_STATS: ReadonlySet<MoveStat> = new Set<MoveStat>([
+  'attack',
+  'defense',
+  'special-attack',
+  'special-defense',
+  'speed',
+  'accuracy',
+  'evasion',
+]);
 
 /**
  * Validates dataset invariants (Phase 1B §9, ADR-0010). Returns an empty
@@ -291,6 +300,25 @@ export function validateExploreDataset(dataset: NormalizedDataset): ValidationIs
         recordId: move.slug,
         message: `Move generation must be 1-9, got ${move.generation}.`,
       });
+    }
+    for (const statChange of move.statChanges) {
+      if (!KNOWN_MOVE_STATS.has(statChange.stat)) {
+        issues.push({
+          recordId: move.slug,
+          message: `Unknown stat "${statChange.stat}" in stat_changes.`,
+        });
+      }
+      if (
+        !Number.isInteger(statChange.change) ||
+        statChange.change === 0 ||
+        statChange.change < -6 ||
+        statChange.change > 6
+      ) {
+        issues.push({
+          recordId: move.slug,
+          message: `Stat change must be a nonzero integer in -6..6, got ${statChange.change}.`,
+        });
+      }
     }
 
     if (!move.source.sourceId || !move.source.externalId) {

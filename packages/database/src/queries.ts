@@ -3,13 +3,14 @@ import type {
   DamageClass,
   FormCategory,
   LocalizedName,
+  MoveStat,
   PokemonType,
 } from '@pokestudio/pokemon-data';
 
 import type { PokeStudioDatabaseClient } from './client';
 
 /**
- * Domain-shaped Pokémon reference-data queries (DATABASE.md, ADR-0010).
+ * Domain-shaped Pokémon reference-data queries (docs/engineering/DATABASE.md, ADR-0010).
  *
  * The Pokédex UI must call these instead of querying `species`/`pokemon_form`
  * directly — this is the one place that knows the table shape.
@@ -536,6 +537,13 @@ export interface MoveDetail extends MoveSummary {
   ailmentChance: number;
   flinchChance: number;
   statChance: number;
+  /** In PokéAPI's original order (relevant for multi-stat moves like Shell Smash). Empty, never invented, for moves with no stat effect. */
+  statChanges: MoveStatChange[];
+}
+
+export interface MoveStatChange {
+  stat: MoveStat;
+  change: number;
 }
 
 export interface VersionGroupSummary {
@@ -573,6 +581,7 @@ function toMoveSummary(row: MoveRow): MoveSummary {
 }
 
 interface MoveDetailRow extends MoveRow {
+  id: string;
   target: string;
   generation: number;
   effect_en: string | null;
@@ -592,7 +601,7 @@ interface MoveDetailRow extends MoveRow {
   stat_chance: number;
 }
 
-function toMoveDetail(row: MoveDetailRow): MoveDetail {
+function toMoveDetail(row: MoveDetailRow, statChanges: MoveStatChange[]): MoveDetail {
   return {
     ...toMoveSummary(row),
     target: row.target,
@@ -612,11 +621,17 @@ function toMoveDetail(row: MoveDetailRow): MoveDetail {
     ailmentChance: row.ailment_chance,
     flinchChance: row.flinch_chance,
     statChance: row.stat_chance,
+    statChanges,
   };
 }
 
 const MOVE_DETAIL_COLUMNS =
-  'slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority, target, generation, effect_en, effect_es, effect_chance, ailment, category, min_hits, max_hits, min_turns, max_turns, drain, healing, crit_rate, ailment_chance, flinch_chance, stat_chance';
+  'id, slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority, target, generation, effect_en, effect_es, effect_chance, ailment, category, min_hits, max_hits, min_turns, max_turns, drain, healing, crit_rate, ailment_chance, flinch_chance, stat_chance';
+
+interface MoveStatChangeRow {
+  stat: string;
+  change: number;
+}
 
 /** A single move by slug (move detail page). Null if the slug doesn't exist. */
 export async function getMoveBySlug(
@@ -630,7 +645,22 @@ export async function getMoveBySlug(
     .maybeSingle();
   if (result.error) throw new Error(`getMoveBySlug failed: ${result.error.message}`);
   if (!result.data) return null;
-  return toMoveDetail(result.data as MoveDetailRow);
+  const row = result.data as MoveDetailRow;
+
+  const statChangesResult = await client
+    .from('move_stat_change')
+    .select('stat, change')
+    .eq('move_id', row.id)
+    .order('sort_order', { ascending: true });
+  if (statChangesResult.error) {
+    throw new Error(`getMoveBySlug (stat changes) failed: ${statChangesResult.error.message}`);
+  }
+  const statChanges = (statChangesResult.data as MoveStatChangeRow[]).map((r) => ({
+    stat: r.stat as MoveStat,
+    change: r.change,
+  }));
+
+  return toMoveDetail(row, statChanges);
 }
 
 /**

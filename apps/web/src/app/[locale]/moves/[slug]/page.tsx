@@ -6,6 +6,7 @@ import { getDefaultVersionGroup, getMoveBySlug, getMoveLearners } from '@pokestu
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
 import { PokemonTypeBadge } from '@/components/pokemon/type-badge';
+import { describeMoveMechanics, shouldShowMoveDescription } from '@/lib/move-mechanics';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import {
   buttonClass,
@@ -14,6 +15,11 @@ import {
   interactiveCardClass,
   tagClass,
 } from '@/lib/ui-classes';
+
+/** Signed integer display for move priority (e.g. "+1", "-6") — never hides the sign on a nonzero value (task §A "priority as signed integer where relevant"). */
+function signedPriority(priority: number): string {
+  return priority > 0 ? `+${priority}` : `${priority}`;
+}
 
 // Reads live reference data per request — do not attempt to statically
 // prerender this at build time (CI has no Supabase instance during `next build`).
@@ -80,6 +86,26 @@ export default async function MoveDetailPage({
 
   const name = locale === 'es' ? (move.nameEs ?? move.nameEn) : move.nameEn;
   const effect = locale === 'es' ? move.effectEs : move.effectEn;
+  const mechanicsLines = describeMoveMechanics(
+    {
+      target: move.target,
+      category: move.category,
+      statChanges: move.statChanges,
+      statChance: move.statChance,
+      ailment: move.ailment,
+      ailmentChance: move.ailmentChance,
+      flinchChance: move.flinchChance,
+      drain: move.drain,
+      healing: move.healing,
+      minHits: move.minHits,
+      maxHits: move.maxHits,
+      minTurns: move.minTurns,
+      maxTurns: move.maxTurns,
+      critRate: move.critRate,
+    },
+    dictionary,
+    locale,
+  );
 
   return (
     <div className="mx-auto flex max-w-detail flex-col gap-8">
@@ -126,14 +152,57 @@ export default async function MoveDetailPage({
           <span className="text-xs font-semibold uppercase tracking-wide text-muted">
             {dictionary.moves.priority}
           </span>
-          <span className="text-lg tabular-nums">{move.priority}</span>
+          <span className="text-lg tabular-nums">{signedPriority(move.priority)}</span>
         </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {dictionary.moves.target}
+          </span>
+          <span className="text-lg">
+            {dictionary.moves.targetValue[
+              move.target as keyof typeof dictionary.moves.targetValue
+            ] ?? move.target}
+          </span>
+        </div>
+        {move.effectChance !== undefined ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+              {dictionary.moves.effectChance}
+            </span>
+            <span className="text-lg tabular-nums">{move.effectChance}%</span>
+          </div>
+        ) : null}
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="m-0 text-lg">{dictionary.moves.effect}</h2>
-        <p className="m-0 text-muted">{effect ?? dictionary.moves.noEffect}</p>
-      </section>
+      {/* A missing prose description never implies PokeStudio knows nothing
+          about the move (Phase 1C.2 polish) — when structured technical
+          effects exist, they carry the real information below, so an empty
+          "Description" block here would just look broken for no reason.
+          Only shown empty as a last resort, when there's truly nothing
+          else on the page to say about the move. */}
+      {shouldShowMoveDescription(effect, mechanicsLines.length) ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="m-0 text-lg">{dictionary.moves.effect}</h2>
+          <p className="m-0 text-muted">{effect ?? dictionary.moves.noEffect}</p>
+        </section>
+      ) : null}
+
+      {mechanicsLines.length > 0 ? (
+        <section className={cardClass('flex flex-col gap-3 px-5 py-4')}>
+          <h2 className="m-0 text-lg">{dictionary.moves.mechanics.title}</h2>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {mechanicsLines.map((line) => (
+              <li key={line} className="flex items-start gap-2 text-sm text-foreground">
+                <span
+                  aria-hidden="true"
+                  className="mt-[0.4375rem] h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
+                />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-4 border-t border-border-subtle pt-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">

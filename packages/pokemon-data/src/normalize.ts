@@ -19,6 +19,7 @@ import type {
   DamageClass,
   FormCategory,
   LocalizedName,
+  MoveStat,
   NormalizedAbility,
   NormalizedEvolution,
   NormalizedForm,
@@ -333,7 +334,7 @@ function findEffectText(
 /**
  * Normalizes one canonical ability (Phase 1C.1, Part A). Spanish name/effect
  * are left `undefined` — never invented — when PokéAPI doesn't provide them;
- * see DATA_SOURCES.md for how common that gap is at full-dataset scale.
+ * see docs/engineering/DATA_SOURCES.md for how common that gap is at full-dataset scale.
  */
 export function normalizeAbility(params: {
   ability: PokeApiAbility;
@@ -434,7 +435,7 @@ function sanitizeMoveSlug(rawName: string): string {
  * Normalizes one canonical move (Phase 1C.2, Part A). `effectEs` is left
  * `undefined` — never invented — because PokéAPI's move `effect_entries` has
  * never been observed to contain an "es" entry (same documented gap as
- * ability effects, DATA_SOURCES.md). `meta`-derived fields are left
+ * ability effects, docs/engineering/DATA_SOURCES.md). `meta`-derived fields are left
  * `undefined` when PokéAPI's `meta` block is entirely absent — a genuine,
  * current gap for ~110 of 937 moves at full-dataset scale (mostly very
  * recent Generation IX moves and unreleased-game placeholders) — never
@@ -479,6 +480,10 @@ export function normalizeMove(params: { move: PokeApiMove; sourceId: string }): 
     ailmentChance: meta?.ailment_chance ?? 0,
     flinchChance: meta?.flinch_chance ?? 0,
     statChance: meta?.stat_chance ?? 0,
+    statChanges: params.move.stat_changes.map((sc) => ({
+      stat: sc.stat.name as MoveStat,
+      change: sc.change,
+    })),
     source: { sourceId: params.sourceId, externalId: String(params.move.id) },
   };
 }

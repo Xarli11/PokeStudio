@@ -290,6 +290,51 @@ export type Database = {
           },
         ]
       }
+      move_stat_change: {
+        Row: {
+          change: number
+          created_at: string
+          id: string
+          move_id: string
+          sort_order: number
+          source_id: string
+          stat: string
+        }
+        Insert: {
+          change: number
+          created_at?: string
+          id?: string
+          move_id: string
+          sort_order: number
+          source_id: string
+          stat: string
+        }
+        Update: {
+          change?: number
+          created_at?: string
+          id?: string
+          move_id?: string
+          sort_order?: number
+          source_id?: string
+          stat?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "move_stat_change_move_id_fkey"
+            columns: ["move_id"]
+            isOneToOne: false
+            referencedRelation: "move"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "move_stat_change_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
       pokemon_form: {
         Row: {
           base_stats: Json

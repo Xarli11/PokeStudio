@@ -103,6 +103,7 @@ function makeMove(overrides: Partial<NormalizedMove> = {}): NormalizedMove {
     ailmentChance: 0,
     flinchChance: 0,
     statChance: 0,
+    statChanges: [],
     source: { sourceId: 'pokeapi', externalId: '33' },
     ...overrides,
   };
@@ -688,6 +689,33 @@ describe('validateExploreDataset — moves and learnsets', () => {
     expect(issues.some((issue) => issue.message.includes('Accuracy must be'))).toBe(true);
     expect(issues.some((issue) => issue.message.includes('Power must be'))).toBe(true);
     expect(issues.some((issue) => issue.message.includes('PP must be'))).toBe(true);
+  });
+
+  it('flags an unknown stat name and an out-of-range stat change', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [
+          makeMove({
+            statChanges: [
+              { stat: 'nonsense' as never, change: 1 },
+              { stat: 'attack', change: 0 as never },
+              { stat: 'defense', change: 7 },
+            ],
+          }),
+        ],
+      }),
+    );
+    expect(issues.some((issue) => issue.message.includes('Unknown stat'))).toBe(true);
+    expect(issues.filter((issue) => issue.message.includes('Stat change must be')).length).toBe(2);
+  });
+
+  it('accepts a real multi-stat change (Growl: -1 Attack)', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        moves: [makeMove({ statChanges: [{ stat: 'attack', change: -1 }] })],
+      }),
+    );
+    expect(issues).toEqual([]);
   });
 
   it('flags a learnset entry referencing an unknown form, move, version group or method', () => {

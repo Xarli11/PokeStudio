@@ -714,6 +714,7 @@ describe('normalizeMove', () => {
       target: { name: 'selected-pokemon', url: '' },
       type: { name: 'electric', url: '' },
       machines: [],
+      stat_changes: [],
       ...overrides,
     };
   }
@@ -750,6 +751,7 @@ describe('normalizeMove', () => {
       ailmentChance: 10,
       flinchChance: 0,
       statChance: 0,
+      statChanges: [],
       source: { sourceId: 'pokeapi', externalId: '85' },
     });
   });
@@ -821,6 +823,36 @@ describe('normalizeMove', () => {
     });
     expect(physical.slug).toBe('breakneck-blitz-physical');
     expect(special.slug).toBe('breakneck-blitz-special');
+  });
+
+  it("normalizes stat_changes, preserving PokéAPI's array order for multi-stat moves (Shell Smash)", () => {
+    const normalized = normalizeMove({
+      move: move({
+        id: 503,
+        name: 'shell-smash',
+        target: { name: 'user', url: '' },
+        stat_changes: [
+          { change: -1, stat: { name: 'defense', url: '' } },
+          { change: -1, stat: { name: 'special-defense', url: '' } },
+          { change: 2, stat: { name: 'attack', url: '' } },
+          { change: 2, stat: { name: 'special-attack', url: '' } },
+          { change: 2, stat: { name: 'speed', url: '' } },
+        ],
+      }),
+      sourceId: 'pokeapi',
+    });
+    expect(normalized.statChanges).toEqual([
+      { stat: 'defense', change: -1 },
+      { stat: 'special-defense', change: -1 },
+      { stat: 'attack', change: 2 },
+      { stat: 'special-attack', change: 2 },
+      { stat: 'speed', change: 2 },
+    ]);
+  });
+
+  it('leaves statChanges empty for a move with no stat effect (never invented)', () => {
+    const normalized = normalizeMove({ move: move({ id: 1, name: 'pound' }), sourceId: 'pokeapi' });
+    expect(normalized.statChanges).toEqual([]);
   });
 
   it('treats literal power/accuracy 0 the same as null — both mean "no fixed power"/"never misses" upstream', () => {

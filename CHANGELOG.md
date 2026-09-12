@@ -73,6 +73,35 @@ no new product scope, no data/routing change.
 - Table row density tightened (`py-2` → `py-1.5`); the "All moves" clarifying hint capped to
   `max-w-prose` so it reads as a caption, not a banner.
 
+### Phase 1C.2c — Move mechanics (2026-09-12)
+
+Adds the exact technical mechanics a move causes — the move detail page's "lowers Defense" claims
+now say "lowers Defense by 1 stage," backed by real structured data instead of prose guesses.
+
+- **Schema**: new `move_stat_change` table (one row per stat-stage change a move causes, e.g.
+  Growl: attack -1) sourced from PokéAPI's `move.stat_changes` — a separate top-level array from
+  `move.meta`, never captured until now. Fully replaced per `source_id` per ingestion run, same
+  idempotency pattern as `pokemon_form_move`. `move.ailment`/`move.category` made nullable
+  (follow-up migration) to stop silently coercing PokéAPI's genuine "no data" gap into a false
+  value.
+- **Ingestion**: `pokeapi-client`/`normalize`/`validate`/`persist` extended end-to-end for
+  `stat_changes` (validated against the real 7-value stat vocabulary: the 6 battle stats plus
+  accuracy/evasion, and a -6..6 nonzero stage range).
+- **Move detail page**: new "Technical effects" section renders deterministic, localized (EN/ES)
+  sentences for every mechanic actually present — stat-stage changes, status ailments (hand-verified
+  phrasing for burn/freeze/paralysis/poison/sleep/confusion, honest slug-derived fallback for the
+  rest — never machine-translated), flinch chance, drain/recoil, healing, multi-hit and multi-turn
+  ranges. Stat-change direction (self vs. target) resolves via a verified rule: `damage-raise`
+  category moves always affect the user's own stat even when the move's `target` is the opponent
+  (Superpower/Close Combat lower the user's own Attack/Defense); every other category follows the
+  move's own `target` field literally. Also added the move's target (localized) and effect chance
+  to the stat grid, and a signed-integer priority display (e.g. "+1", "-6").
+- Ingested against the local dataset: 919 moves, 245 stat-change rows, 0 validation issues.
+- **Polish**: an empty "Description" block no longer renders above real Technical Effects (e.g.
+  Stone Edge) — a missing prose description never implied PokeStudio knew nothing about the move,
+  but showing it that way did. Technical Effects promoted into its own card, `text-foreground`
+  instead of muted, so it reads as the authoritative content it is.
+
 ### Phase 1C.2 — Moves + Learnsets (2026-09-12)
 
 Adds a full move + learnset data foundation (ADR-0013) and Explore integration — the schema

@@ -215,6 +215,30 @@ describe.skipIf(!hasLocalSupabase)(
       expect(toxic!.power).toBeUndefined();
     });
 
+    it("getMoveBySlug returns Growl's exact stat change (-1 Attack), not a vague description", async () => {
+      const growl = await getMoveBySlug(client(), 'growl');
+      expect(growl).not.toBeNull();
+      expect(growl!.statChanges).toEqual([{ stat: 'attack', change: -1 }]);
+    });
+
+    it("getMoveBySlug returns Shell Smash's 5 stat changes in PokéAPI's original order", async () => {
+      const shellSmash = await getMoveBySlug(client(), 'shell-smash');
+      expect(shellSmash).not.toBeNull();
+      expect(shellSmash!.statChanges).toEqual([
+        { stat: 'defense', change: -1 },
+        { stat: 'special-defense', change: -1 },
+        { stat: 'attack', change: 2 },
+        { stat: 'special-attack', change: 2 },
+        { stat: 'speed', change: 2 },
+      ]);
+    });
+
+    it('getMoveBySlug returns an empty statChanges array for a move with no stat effect', async () => {
+      const tackle = await getMoveBySlug(client(), 'tackle');
+      expect(tackle).not.toBeNull();
+      expect(tackle!.statChanges).toEqual([]);
+    });
+
     it('listMovesPage paginates the full ~937-move roster without duplicates', async () => {
       const page = await listMovesPage(client(), { page: 1, pageSize: 20 });
       expect(page.items).toHaveLength(20);
