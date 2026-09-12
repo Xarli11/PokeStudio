@@ -20,7 +20,12 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "build:cf": "pnpm --filter @pokestudio/web build:cf",
     "preview:cf": "pnpm --filter @pokestudio/web preview:cf",
-    "deploy:cf": "pnpm --filter @pokestudio/web deploy:cf"
+    "deploy:cf": "pnpm --filter @pokestudio/web deploy:cf",
+    "dev:pi": "bash scripts/dev-pi.sh",
+    "db:pi:check": "bash scripts/db-pi-check.sh",
+    "db:pi:migrate": "bash scripts/db-pi-migrate.sh",
+    "db:pi:types": "bash scripts/db-pi-types.sh",
+    "ingest:pi": "bash scripts/ingest-pi.sh"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

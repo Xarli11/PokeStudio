@@ -257,3 +257,24 @@ Do not jump to community feeds, public ranking, tournaments, mobile-native apps 
 If a decision materially changes architecture, licensing, recurring cost, privacy, security, IP exposure or user-visible product direction, surface it to the owner instead of silently choosing.
 
 For normal implementation details, use your judgment and keep moving.
+
+## 21. Local Development Database — Source of Truth
+
+Normal PokeStudio development runs the web app on the Mac but talks to a self-hosted Supabase
+stack on a Raspberry Pi (`192.168.1.236`) over the LAN. That Pi is the canonical local-development
+database — **not** a Supabase stack started on the Mac. Full architecture (port map, command
+table, guard behavior) lives in `docs/engineering/DATABASE.md` "Raspberry Pi local development" —
+this is the rule to carry on every task, not the reference detail:
+
+- For normal PokeStudio development, **never** run `supabase start` on the Mac, and **never**
+  assume `localhost`/`127.0.0.1` Postgres or Supabase — normal dev has none.
+- **Never** create a temporary local Supabase stack unless the user explicitly asks for an
+  isolated test environment (e.g. CI, a throwaway migration experiment). Label it clearly as
+  exceptional, and tear it down when done.
+- Use `pnpm dev:pi`, `db:pi:check`, `db:pi:migrate`, `db:pi:types`, `ingest:pi` for normal work —
+  each refuses to run against anything but the Pi. Before any schema-changing or destructive
+  operation, run `db:pi:check` first if there's any doubt about the target.
+- The deployed Cloudflare Worker DEV environment is unrelated — it keeps using Supabase Cloud,
+  never the Pi (unreachable from Cloudflare's network anyway).
+- Never print or request secrets in chat. Never hardcode credentials in the repository. Expected
+  `.env.local` variables are listed in `.env.example`.

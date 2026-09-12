@@ -25,49 +25,58 @@ This repository should not claim feature completeness until the corresponding ro
 
 ## Start developing
 
-Read `START_HERE.md`, then use `MASTER_PROMPT.md` with Claude Code.
-
-Claude Code must also read `CLAUDE.md` before changing the project.
+Claude Code reads `CLAUDE.md` automatically as mandatory operating context before changing
+anything in this repository — it is the execution entry point. See `docs/README.md` for the full
+documentation index (product, architecture, engineering, design, community, legal, ADRs).
+`docs/product/MASTER_PROMPT.md` is kept as the original Phase 0 project brief for historical
+reference, not an active instruction set.
 
 ## Development setup
 
 Requirements: Node **24 LTS** (see `.nvmrc`) and pnpm **9.15.0** (`packageManager` in `package.json`;
-`corepack enable` picks it up automatically). Docker (or another Docker-compatible runtime) is
-required only for the Supabase local stack.
+`corepack enable` picks it up automatically).
+
+Normal local development does **not** run Supabase on the Mac — it talks to a self-hosted Supabase
+instance on a Raspberry Pi over the LAN (CLAUDE.md §21 "Local Development Database"). Docker is not
+required for normal development.
 
 ```bash
 pnpm install                                        # install all workspace packages
 
-pnpm --filter @pokestudio/web dev                    # run the web app (http://localhost:3000)
+# Copy .env.example to .env.local and fill in the Raspberry Pi's URL/keys, then:
+pnpm db:pi:check                                    # confirm .env.local really points at the Pi
+pnpm dev:pi                                          # run the web app (http://localhost:3000) against it
 
-pnpm --filter @pokestudio/database db:start          # start local Supabase (Postgres/Auth/Storage/…)
-pnpm --filter @pokestudio/database db:reset          # apply migrations only — schema, not Pokémon data
-pnpm --filter @pokestudio/database db:stop           # stop the local stack
+pnpm db:pi:migrate                                   # apply packages/database/supabase/migrations/*.sql to the Pi
+pnpm ingest:pi                                       # fetch -> normalize -> validate -> persist the Pokédex to the Pi
+pnpm --filter @pokestudio/pokemon-data audit          # same pipeline, report-only, no DB writes
 
-# Populate the database with the full Pokédex (requires db:start above, and
-# SUPABASE_URL / SUPABASE_SECRET_KEY — `supabase start`'s output above prints
-# SECRET_KEY (sb_secret_...); see .env.example):
-pnpm --filter @pokestudio/pokemon-data ingest                # fetch -> normalize -> validate -> persist
-pnpm --filter @pokestudio/pokemon-data audit                 # same pipeline, report-only, no DB writes
-
-pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build   # all TS/JS gates
+pnpm validate:full     # format, lint, typecheck, all tests, Next build, Cloudflare build — full gate
+pnpm validate:changed  # same checks scoped to changed packages/dependents — for use mid-implementation
 
 cd research/python && pip install -e ".[dev]" && ruff check . && mypy . && pytest   # Python lane
 ```
 
-See `packages/database/README.md` for the full local Supabase workflow and `packages/pokemon-data/README.md`
+See `docs/engineering/DATABASE.md` "Raspberry Pi local development" for the full workflow and
+architecture, `packages/database/README.md` for migrations, and `packages/pokemon-data/README.md`
 for the full ingestion pipeline (fetch/cache, idempotent upsert, classification audit). See
 `research/python/README.md` for the Python research lane.
 
-## Cloudflare Workers (DEV/staging — not deployed yet)
+A local Supabase stack started with `supabase start` (Docker) is exceptional — an isolated test
+environment, never the normal dev path. See `packages/database/README.md` "Isolated local Supabase
+(exceptional)".
 
-`apps/web` builds and runs as a Cloudflare Worker via `@opennextjs/cloudflare` (ADR-0005). Normal
-local development is unaffected — `pnpm --filter @pokestudio/web dev` still runs plain `next dev`.
+## Cloudflare Workers (DEV/staging)
+
+`apps/web` builds and runs as a Cloudflare Worker via `@opennextjs/cloudflare` (ADR-0005), deployed
+manually (no CI auto-deploy) to a `*.workers.dev` subdomain — DEV/staging only, no custom domain or
+production routes configured yet (`apps/web/wrangler.jsonc`). Normal local development is
+unaffected — `pnpm --filter @pokestudio/web dev` still runs plain `next dev`.
 
 ```bash
 pnpm build:cf     # Cloudflare-target build (opennextjs-cloudflare build) — outputs apps/web/.open-next
 pnpm preview:cf   # build + run the Worker locally via Wrangler (real workerd runtime, not next dev)
-pnpm deploy:cf    # build + deploy to Cloudflare (do not run until DEV deployment is actually approved)
+pnpm deploy:cf    # build + deploy to Cloudflare — confirm with the project owner before running
 ```
 
 The deployed Worker needs these environment variables set in Cloudflare (dashboard or
@@ -78,5 +87,5 @@ The deployed Worker needs these environment variables set in Cloudflare (dashboa
 
 `SUPABASE_SECRET_KEY` must **never** be configured on this Worker — species/form reference data is
 public-read, so the publishable key is sufficient for everything `apps/web` does server-side
-(DATABASE.md "Supabase API keys"). For local Worker preview, put the same two variables in
+(docs/engineering/DATABASE.md "Supabase API keys"). For local Worker preview, put the same two variables in
 `apps/web/.dev.vars` (gitignored, never committed).

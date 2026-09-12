@@ -7,17 +7,21 @@ wrote to Postgres, via `@pokestudio/database`.
 
 ## Commands
 
-Requires a running local Supabase instance with the schema migrations applied
-(`pnpm --filter @pokestudio/database db:start && pnpm --filter @pokestudio/database db:reset`)
-and `SUPABASE_URL`/`SUPABASE_SECRET_KEY` set (`db:start` prints `SECRET_KEY`; see `.env.example`
-and DATABASE.md "Supabase API keys"). To target Supabase Cloud instead of local, set `SUPABASE_URL`
-to the project's URL and `SUPABASE_SECRET_KEY` to its secret key (`sb_secret_...`, from the
-project's API settings) — never commit either.
+Normal development targets the Raspberry Pi Supabase instance (CLAUDE.md §21 "Local Development
+Database"), with the schema migrations already applied (`pnpm db:pi:migrate`) and
+`SUPABASE_URL`/`SUPABASE_SECRET_KEY` set in `.env.local` to the Pi's API gateway/secret key (see
+`.env.example` and docs/engineering/DATABASE.md "Supabase API keys").
 
 ```bash
-pnpm --filter @pokestudio/pokemon-data ingest   # full pipeline: fetches, normalizes, validates, writes
-pnpm --filter @pokestudio/pokemon-data audit     # same pipeline, report-only — no DB writes, no secret key needed
+pnpm ingest:pi                                   # full pipeline against the Pi — refuses any other SUPABASE_URL
+pnpm --filter @pokestudio/pokemon-data ingest     # same pipeline, targets whatever SUPABASE_URL/SUPABASE_SECRET_KEY are set to
+pnpm --filter @pokestudio/pokemon-data audit      # same pipeline, report-only — no DB writes, no secret key needed
 ```
+
+`pnpm ingest:pi` is the normal entry point — it guards against an accidental localhost or Supabase
+Cloud target (`scripts/ingest-pi.sh`). The unguarded `pnpm --filter @pokestudio/pokemon-data ingest`
+still exists for an isolated test instance or Supabase Cloud; point `SUPABASE_URL`/`SUPABASE_SECRET_KEY`
+at that target explicitly when using it.
 
 Both accept:
 
@@ -79,7 +83,7 @@ shrink when a re-fetch drops a row).
   not per-`pokemon-form`, so every cosmetic sub-form under one variety gets the same ability links
   as its variety (same rule already applied to types/base stats).
 - `normalizeAbility({ability, sourceId})` — canonical ability row; leaves Spanish name/effect
-  `undefined` (never invented) when PokéAPI has no entry — see DATA_SOURCES.md for how often that
+  `undefined` (never invented) when PokéAPI has no entry — see docs/engineering/DATA_SOURCES.md for how often that
   happens (effect: always; name: rarely).
 - `normalizeEvolutionChain({chain, sourceId})` — walks one PokéAPI evolution-chain tree into flat
   edges. The chain's root produces no edge; every other node produces one edge per entry in its
@@ -122,5 +126,5 @@ non-standard `"shadow"` type (Pokémon Colosseum/XD's Shadow Pokémon mechanic �
 overlay PokeStudio's `PokemonType` domain doesn't model) and their learnset entries, rather than
 letting them surface as validation orphans.
 
-See `src/audit.ts`'s `moves`/`learnsets` report sections and DATA_SOURCES.md "Moves and learnsets"
+See `src/audit.ts`'s `moves`/`learnsets` report sections and docs/engineering/DATA_SOURCES.md "Moves and learnsets"
 for the full list of full-dataset-only findings and how each was handled.

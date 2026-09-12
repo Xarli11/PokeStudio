@@ -16,8 +16,10 @@ export function getPokemonDatabaseClient(): PokeStudioDatabaseClient {
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !publishableKey) {
     throw new Error(
-      'NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are not set. Start the ' +
-        'local Supabase stack (pnpm --filter @pokestudio/database db:start) and copy .env.example to .env.local.',
+      'NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are not set. Copy ' +
+        '.env.example to .env.local and point them at the Raspberry Pi Supabase instance ' +
+        '(CLAUDE.md §21 "Local Development Database") — normal development does not run a ' +
+        'local Supabase stack.',
     );
   }
 

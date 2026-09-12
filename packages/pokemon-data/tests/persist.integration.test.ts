@@ -6,13 +6,13 @@ import type { NormalizedDataset } from '../src/types';
 
 /**
  * Proves the identity-based upsert is idempotent and update-in-place
- * (Phase 1B §3/§18) against the real local Supabase instance. Uses a
+ * (Phase 1B §3/§18) against a real Supabase instance. Uses a
  * dedicated fake `source_id` ("pokestudio-test") so it never touches real
  * ingested PokéAPI rows, and cleans up after itself.
  *
- * Requires a running local Supabase instance seeded via `db:reset`. Skipped
- * automatically when SUPABASE_URL is not set (see packages/database's
- * *.integration.test.ts for the same pattern).
+ * Requires a reachable Supabase instance with migrations applied — normally the Raspberry Pi
+ * (`pnpm db:pi:migrate`; CLAUDE.md §21). Skipped automatically when SUPABASE_URL is not set (see
+ * packages/database's *.integration.test.ts for the same pattern).
  */
 const supabaseUrl = process.env.SUPABASE_URL;
 const secretKey = process.env.SUPABASE_SECRET_KEY;
@@ -403,7 +403,7 @@ describe.skipIf(!hasLocalSupabase)('persistDataset idempotency', () => {
 });
 
 describe.skipIf(hasLocalSupabase)('persistDataset idempotency (no local Supabase)', () => {
-  it.skip('set SUPABASE_URL and SUPABASE_SECRET_KEY against a running local Supabase instance to run this suite', () => {
-    // See db:start in packages/database/package.json.
+  it.skip('set SUPABASE_URL and SUPABASE_SECRET_KEY against a reachable Supabase instance to run this suite', () => {
+    // Normally the Raspberry Pi (pnpm db:pi:migrate) — see CLAUDE.md §21.
   });
 });

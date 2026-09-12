@@ -66,7 +66,8 @@ async function main() {
   if (!supabaseUrl || !secretKey) {
     console.error(
       '[ingest] Missing SUPABASE_URL / SUPABASE_SECRET_KEY.\n' +
-        '  Start local Supabase first: pnpm --filter @pokestudio/database db:start',
+        '  Normal development targets the Raspberry Pi — run: pnpm ingest:pi\n' +
+        '  (see CLAUDE.md §21 "Local Development Database" and .env.example).',
     );
     process.exitCode = 1;
     return;

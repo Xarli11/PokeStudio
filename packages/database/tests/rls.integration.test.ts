@@ -3,13 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { createPublicDatabaseClient } from '../src/client';
 
 /**
- * RLS proof for the Phase 1A reference schema (DATABASE.md "RLS" section,
+ * RLS proof for the Phase 1A reference schema (docs/engineering/DATABASE.md "RLS" section,
  * ADR-0010).
  *
- * Requires a running local Supabase instance (`pnpm --filter @pokestudio/database db:start`,
- * which needs Docker). Skipped automatically when SUPABASE_URL is not set — CI/local
- * environments without Docker still get a green run, but this test is the executable
- * spec for the RLS guarantee and must be run before shipping further Explore data.
+ * Requires a reachable Supabase instance — normally the Raspberry Pi (`pnpm db:pi:check` to
+ * confirm; CLAUDE.md §21), or an isolated local Supabase stack (`pnpm --filter
+ * @pokestudio/database db:start`, exceptional — see that package's README) for CI/offline work.
+ * Skipped automatically when SUPABASE_URL is not set — environments without either still get a
+ * green run, but this test is the executable spec for the RLS guarantee and must be run before
+ * shipping further Explore data.
  */
 const supabaseUrl = process.env.SUPABASE_URL;
 const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -328,8 +330,8 @@ describe.skipIf(!hasLocalSupabase)(
 describe.skipIf(hasLocalSupabase)(
   'species/pokemon_form reference data RLS (no local Supabase)',
   () => {
-    it.skip('set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY against a running local Supabase instance to run this suite', () => {
-      // See db:start in packages/database/package.json.
+    it.skip('set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY against a reachable Supabase instance to run this suite', () => {
+      // Normally the Raspberry Pi (pnpm db:pi:check) — see CLAUDE.md §21.
     });
   },
 );

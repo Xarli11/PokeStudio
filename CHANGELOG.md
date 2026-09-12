@@ -6,6 +6,35 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Raspberry Pi local-development database (2026-09-12)
+
+Establishes a self-hosted Supabase instance on a Raspberry Pi (`192.168.1.236`) as the canonical
+local-development database, replacing an ad hoc Mac-local Supabase-CLI stack that a prior session
+had incorrectly treated as normal workflow.
+
+- **CLAUDE.md §21** ("Local Development Database — Source of Truth"): normal development never
+  runs `supabase start` on the Mac or assumes localhost Postgres/Supabase; the Pi's API gateway
+  (`:8002`) serves app/runtime + ingestion, its direct Postgres (`:5434`) serves migrations/admin.
+  The deployed Cloudflare Worker DEV environment is unaffected — it keeps using Supabase Cloud.
+- **New guarded commands** (root `package.json`, `scripts/`): `pnpm dev:pi`, `db:pi:check`,
+  `db:pi:migrate` (`supabase db push --db-url`, not linked-project-dependent), `db:pi:types`,
+  `ingest:pi` — each refuses to run unless its target env var actually points at the Pi
+  (`scripts/db-pi-guard.sh`), so an accidental localhost/other-host operation aborts instead of
+  silently doing the wrong thing.
+- **Docs**: `docs/engineering/DATABASE.md` gained a "Raspberry Pi local development" section
+  (architecture diagram, command/guard table); `README.md`/`packages/database/README.md`/
+  `packages/pokemon-data/README.md` now lead with the Pi workflow and relabel the old
+  Supabase-CLI flow "Isolated local Supabase (exceptional)" — kept for genuinely disposable test
+  instances, never the default. `.env.example` documents `POKESTUDIO_PI_DB_URL` and the Pi-pointed
+  values for the existing Supabase variables.
+- **Verified against the real Pi**: the one migration Phase 1C.2c had only validated locally
+  (`20260912150000_move_stat_change.sql`) was pending on the Pi; `db:pi:migrate` applied it, then
+  `ingest:pi` ran the full pipeline (0 validation issues, 245 `move_stat_change` rows) and the
+  `persist.integration.test.ts` suite passed against it directly.
+- Left unresolved: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`/`SUPABASE_PUBLISHABLE_KEY` are not yet in
+  `.env.local` — deliberately not fetched/written this session (never handle secrets unasked); the
+  app and the RLS/queries integration suites need it added before `dev:pi` can read real data.
+
 ### Phase 1C.2b — Explore UX polish + documentation reorganization (2026-09-12)
 
 Part A: closes real UX gaps found by auditing Phase 1C.2 against live data, not speculative polish.
