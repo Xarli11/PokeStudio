@@ -275,7 +275,10 @@ this is the rule to carry on every task, not the reference detail:
   each refuses to run against anything but the Pi. Before any schema-changing or destructive
   operation, run `db:pi:check` first if there's any doubt about the target.
 - The deployed Cloudflare Worker DEV environment is unrelated — it keeps using Supabase Cloud,
-  never the Pi (unreachable from Cloudflare's network anyway).
+  never the Pi (unreachable from Cloudflare's network anyway). Web code that depends on new Cloud
+  DEV schema/data must not reach the deployed Worker before Cloud DEV is migrated/ingested — see
+  `docs/engineering/DATABASE.md` "Deployed DEV deploy order" for the required sequence and
+  `pnpm smoke:cloud-dev` (checks the RSC payload, not just HTTP status).
 - Never print or request secrets in chat. Never hardcode credentials in the repository. Expected
   `.env.local` variables are listed in `.env.example`.
 

@@ -57,6 +57,32 @@ Commands (root `package.json`, `scripts/db-pi-*.sh`/`dev-pi.sh`/`ingest-pi.sh`):
 Each guard aborts with a clear error (never printing the connection string/key) if the target
 doesn't match `192.168.1.236` on the expected port — see `scripts/db-pi-guard.sh`.
 
+### Deployed DEV deploy order (incident 2026-09-14)
+
+On 2026-09-14 the deployed Worker started failing Pokémon/move detail pages with `Could not find
+the table 'public.pokemon_form_move' in the schema cache`: Phase 1C.2's move-mechanics code
+(`6de8f5f`) reached the deployed Worker via Cloudflare's git integration before Supabase Cloud
+PokeStudio Dev had the matching migrations/data — the Pi had already been migrated/ingested, Cloud
+DEV had not. HTTP status stayed `200` throughout (Next.js renders the error boundary, not a 5xx),
+so the failure was only visible in the React Server Components payload (`"digest":"<id>"`) or
+`wrangler tail` — a plain status check would have missed it entirely.
+
+Deploying web code that depends on new Cloud DEV schema/data must follow this order, never skip a
+step, and use the equivalent parallel command set (`scripts/db-cloud-dev-*.sh`/`ingest-cloud-dev.sh`,
+mirroring the Pi's guard pattern but targeting Supabase Cloud PokeStudio Dev, project ref
+`tofhupgwxsexrburoqys`, via `SUPABASE_CLOUD_DEV_DB_URL`/`SUPABASE_CLOUD_DEV_SECRET_KEY` — see
+`.env.example`):
+
+1. `pnpm db:cloud-dev:check` — confirm target + list pending migrations (read-only).
+2. `pnpm db:cloud-dev:migrate` — apply only what's pending.
+3. `pnpm ingest:cloud-dev` — only when reference data actually changed.
+4. deploy the Worker (push to `main`; Cloudflare's git integration builds/deploys it).
+5. `pnpm smoke:cloud-dev` — hits the deployed Worker's critical routes and fails on either a
+   non-success HTTP status **or** an RSC error digest in the response body (`scripts/smoke-cloud-dev.sh`)
+   — this is the check that would have caught the incident immediately.
+
+Never reorder step 4 ahead of 1–3 for a change that requires new Cloud DEV schema/data.
+
 ## Principles
 
 - migrations live in source control,

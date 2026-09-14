@@ -2,7 +2,13 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // PokeStudio web app on Cloudflare Workers (ADR-0005) via @opennextjs/cloudflare.
   // DEV/staging only — no custom domain, no production routes configured yet.
-  "name": "pokestudio-web-dev",
+  // "name" must match the actual deployed Worker (dashboard/Workers Builds git
+  // integration owns the real target, not this file) — verified via
+  // `wrangler deployments list --name pokestudio` against every deploy since
+  // 2026-09-09; the Worker was never actually named pokestudio-web-dev despite
+  // that being this field's value since the file was introduced, which is why
+  // `wrangler tail pokestudio-web-dev` failed with Cloudflare error 10007.
+  "name": "pokestudio",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-05-05",
   "compatibility_flags": ["nodejs_compat"],

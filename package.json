@@ -26,6 +26,10 @@
     "db:pi:migrate": "bash scripts/db-pi-migrate.sh",
     "db:pi:types": "bash scripts/db-pi-types.sh",
     "ingest:pi": "bash scripts/ingest-pi.sh",
+    "db:cloud-dev:check": "bash scripts/db-cloud-dev-check.sh",
+    "db:cloud-dev:migrate": "bash scripts/db-cloud-dev-migrate.sh",
+    "ingest:cloud-dev": "bash scripts/ingest-cloud-dev.sh",
+    "smoke:cloud-dev": "bash scripts/smoke-cloud-dev.sh",
     "validate:changed": "pnpm format:check && turbo run lint typecheck test --filter='...[HEAD]'",
     "validate:full": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm build:cf"
   },
