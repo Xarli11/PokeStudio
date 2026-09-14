@@ -74,6 +74,14 @@ export function tagClass(
     .join(' ');
 }
 
+/**
+ * The Explore search field family (Search UX v2 — Pokémon combobox, Ability
+ * search): a search icon on the left and room for a clear button on the
+ * right, sized with a touch more presence than an ordinary filter input.
+ */
+export const searchInputClass =
+  'w-full rounded-md border border-border-subtle bg-surface py-2.5 pl-9 pr-9 text-sm text-foreground transition-colors focus:border-brand focus:outline-none';
+
 /** Small uppercase section kicker above a page title (a dot marker + label). */
 export function eyebrowClass(className = ''): string {
   return [

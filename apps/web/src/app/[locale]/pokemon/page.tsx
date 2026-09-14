@@ -1,28 +1,24 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { listSpeciesPage } from '@pokestudio/database';
+import { getSpeciesSearchIndex, listSpeciesPage } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
-import { PokemonCard } from '@/components/pokemon/card';
+import { PokemonExplorer } from '@/components/pokemon/pokemon-explorer';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
-import { buttonClass, eyebrowClass } from '@/lib/ui-classes';
+import { eyebrowClass } from '@/lib/ui-classes';
 
 // Reads live reference data per request — do not attempt to statically
 // prerender this at build time (CI has no Supabase instance during `next build`).
 export const dynamic = 'force-dynamic';
 
 // The full Pokédex is 1000+ species — rendering it all in one response was a
-// ~6MB page (Phase 1B §13 measurement). Simple page-number navigation, no
-// client JS/search: the smallest fix that keeps payload size reasonable.
+// ~6MB page (Phase 1B §13 measurement). Simple page-number navigation for the
+// *default* (no search) view keeps that payload reasonable; whole-Pokédex
+// search (Phase 1C.3) instead ships a separate, much smaller search-only
+// dataset (`getSpeciesSearchIndex`, measured ~19KB gzip) that the client
+// filters instantly — see `PokemonExplorer`.
 const PAGE_SIZE = 60;
-
-// National Dex number is a product identifier, not translatable prose
-// (CLAUDE.md brand-cleanup pass) — always "#NNN", independent of locale.
-function dexNumberLabel(n: number): string {
-  return `#${String(n).padStart(3, '0')}`;
-}
 
 function parsePage(searchParams: { page?: string }): number {
   const page = Number.parseInt(searchParams.page ?? '1', 10);
@@ -70,7 +66,11 @@ export default async function PokemonIndexPage({
 
   const dictionary = getDictionary(locale);
   const page = parsePage(await searchParams);
-  const result = await listSpeciesPage(getPokemonDatabaseClient(), { page, pageSize: PAGE_SIZE });
+  const client = getPokemonDatabaseClient();
+  const [result, searchIndex] = await Promise.all([
+    listSpeciesPage(client, { page, pageSize: PAGE_SIZE }),
+    getSpeciesSearchIndex(client),
+  ]);
 
   return (
     <div className="mx-auto flex max-w-wide flex-col gap-10">
@@ -80,55 +80,32 @@ export default async function PokemonIndexPage({
         <p className="m-0 max-w-xl text-muted">{dictionary.pokedex.tagline}</p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {result.items.map((item) => (
-          <PokemonCard
-            key={item.slug}
-            href={`/${locale}/pokemon/${item.slug}`}
-            name={item.name[locale]}
-            dexNumberLabel={dexNumberLabel(item.nationalDexNumber)}
-            types={item.defaultForm.types.map((type) => ({
-              type,
-              label: dictionary.types[type],
-            }))}
-          />
-        ))}
-      </div>
-
-      <nav
-        aria-label={formatMessage(dictionary.pokedex.pageLabel, {
+      <PokemonExplorer
+        locale={locale}
+        searchIndex={searchIndex}
+        defaultView={{
+          items: result.items.map((item) => ({
+            slug: item.slug,
+            nationalDexNumber: item.nationalDexNumber,
+            name: item.name,
+            types: item.defaultForm.types,
+          })),
           page: result.page,
           totalPages: result.totalPages,
-        })}
-        className="flex items-center justify-between gap-4"
-      >
-        {result.page > 1 ? (
-          <Link
-            href={`/${locale}/pokemon?page=${result.page - 1}`}
-            className={buttonClass('default')}
-          >
-            ← {dictionary.pokedex.previousPage}
-          </Link>
-        ) : (
-          <span aria-hidden="true" />
-        )}
-        <span className="text-sm text-muted tabular-nums">
-          {formatMessage(dictionary.pokedex.pageLabel, {
-            page: result.page,
-            totalPages: result.totalPages,
-          })}
-        </span>
-        {result.page < result.totalPages ? (
-          <Link
-            href={`/${locale}/pokemon?page=${result.page + 1}`}
-            className={buttonClass('default')}
-          >
-            {dictionary.pokedex.nextPage} →
-          </Link>
-        ) : (
-          <span aria-hidden="true" />
-        )}
-      </nav>
+        }}
+        typeLabels={dictionary.types}
+        searchLabel={dictionary.pokedex.search}
+        searchPlaceholder={dictionary.pokedex.searchPlaceholder}
+        searchHelperTitle={dictionary.pokedex.searchHelperTitle}
+        searchHelperExample={dictionary.pokedex.searchHelperExample}
+        multipleFormsMatchTemplate={dictionary.pokedex.multipleFormsMatch}
+        resultCountTemplate={dictionary.pokedex.searchResultCount}
+        noResultsLabel={dictionary.pokedex.noSearchResults}
+        clearSearchLabel={dictionary.pokedex.clearSearch}
+        pageLabelTemplate={dictionary.pokedex.pageLabel}
+        previousPageLabel={dictionary.pokedex.previousPage}
+        nextPageLabel={dictionary.pokedex.nextPage}
+      />
     </div>
   );
 }

@@ -6,17 +6,24 @@ export type {
 } from './client';
 export type { Database } from './types';
 export {
+  getAbilityBySlug,
   getDefaultVersionGroup,
   getEvolutionFamily,
   getFormLearnsetAllVersionGroups,
   getMoveBySlug,
   getMoveLearners,
+  getPokemonForAbility,
   getSpeciesBySlug,
+  getSpeciesSearchIndex,
+  listAbilities,
   listMovesPage,
   listSpecies,
   listSpeciesPage,
 } from './queries';
 export type {
+  AbilityListItem,
+  AbilityPokemonItem,
+  AbilityPokemonPage,
   AbilitySummary,
   EvolutionCondition,
   EvolutionEdge,
@@ -36,5 +43,8 @@ export type {
   SpeciesFormSummary,
   SpeciesListItem,
   SpeciesPage,
+  SpeciesSearchAlias,
+  SpeciesSearchIndex,
+  SpeciesSearchItem,
   VersionGroupSummary,
 } from './queries';

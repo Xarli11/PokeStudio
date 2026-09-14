@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-import { listMovesPage, listSpecies } from '@pokestudio/database';
+import { listAbilities, listMovesPage, listSpecies } from '@pokestudio/database';
 import { locales } from '@pokestudio/i18n';
 
 import { captureException } from '@/lib/observability';
@@ -30,6 +30,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly' as const,
   }));
 
+  const abilityIndexEntries = locales.map((locale) => ({
+    url: `${SITE_URL}/${locale}/abilities`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+  }));
+
   // Best-effort: a sitemap missing the small, currently-fixed set of detail
   // pages is a minor SEO gap, not a broken page — never 500 the sitemap over it.
   try {
@@ -54,15 +60,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })),
     );
 
+    // Abilities (Phase 1C.3) — 313 rows, one request, same "small reference
+    // set" reasoning as moves above.
+    const abilities = await listAbilities(getPokemonDatabaseClient());
+    const abilityDetailEntries = locales.flatMap((locale) =>
+      abilities.map((ability) => ({
+        url: `${SITE_URL}/${locale}/abilities/${ability.slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+      })),
+    );
+
     return [
       ...localeEntries,
       ...pokemonIndexEntries,
       ...pokemonDetailEntries,
       ...moveIndexEntries,
       ...moveDetailEntries,
+      ...abilityIndexEntries,
+      ...abilityDetailEntries,
     ];
   } catch (error) {
-    captureException(error, { context: 'sitemap: listSpecies/listMovesPage failed' });
-    return [...localeEntries, ...pokemonIndexEntries, ...moveIndexEntries];
+    captureException(error, {
+      context: 'sitemap: listSpecies/listMovesPage/listAbilities failed',
+    });
+    return [...localeEntries, ...pokemonIndexEntries, ...moveIndexEntries, ...abilityIndexEntries];
   }
 }

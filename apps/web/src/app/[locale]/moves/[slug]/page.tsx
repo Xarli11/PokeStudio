@@ -39,8 +39,9 @@ export async function generateMetadata({
 }: {
   params: Promise<PageParams>;
 }): Promise<Metadata> {
-  const { locale, slug } = await params;
+  const { locale, slug: rawSlug } = await params;
   if (!isLocale(locale)) return {};
+  const slug = rawSlug.toLowerCase();
   const dictionary = getDictionary(locale);
   const move = await getMoveBySlug(getPokemonDatabaseClient(), slug);
   if (!move) return {};
@@ -67,6 +68,7 @@ export default async function MoveDetailPage({
 }) {
   const { locale, slug } = await params;
   if (!isLocale(locale)) notFound();
+  const rawSearchParams = await searchParams;
 
   const dictionary = getDictionary(locale);
   const client = getPokemonDatabaseClient();
@@ -76,7 +78,7 @@ export default async function MoveDetailPage({
   ]);
   if (!move) notFound();
 
-  const learnersPage = parsePage(await searchParams);
+  const learnersPage = parsePage(rawSearchParams);
   const learners = defaultVersionGroup
     ? await getMoveLearners(client, slug, defaultVersionGroup.slug, {
         page: learnersPage,

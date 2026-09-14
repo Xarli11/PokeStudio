@@ -5,7 +5,9 @@
     "battleLab": "Laboratorio de Combate",
     "soon": "Pronto",
     "skipToContent": "Saltar al contenido",
-    "mainNavigation": "Navegación principal"
+    "mainNavigation": "Navegación principal",
+    "pokemon": "Pokémon",
+    "exploreNavigation": "Secciones de Explorar"
   },
   "home": {
     "title": "PokeStudio",
@@ -78,6 +80,14 @@
     "previousPage": "Anterior",
     "nextPage": "Siguiente",
     "loading": "Cargando…",
+    "search": "Buscar",
+    "searchPlaceholder": "Buscar Pokémon por nombre o #…",
+    "searchResultCount": "{count} de {total} Pokémon",
+    "noSearchResults": "Ningún Pokémon coincide con tu búsqueda.",
+    "clearSearch": "Borrar búsqueda",
+    "searchHelperTitle": "Busca por nombre o número de Pokédex",
+    "searchHelperExample": "Pikachu · Mew · #025",
+    "multipleFormsMatch": "{count} formas coinciden",
     "stat": {
       "hp": "PS",
       "attack": "Ataque",
@@ -261,5 +271,22 @@
       "turnsRange": "Continúa durante {min} a {max} turnos.",
       "critRate": "Tiene una probabilidad de golpe crítico aumentada."
     }
+  },
+  "abilities": {
+    "title": "Habilidades",
+    "tagline": "El efecto exacto de cada habilidad y qué Pokémon pueden tenerla.",
+    "indexDescription": "Consulta el efecto de {count} habilidades Pokémon en la base de datos de PokeStudio.",
+    "detailDescription": "{name}: efecto y qué Pokémon pueden tener esta habilidad, en la base de datos de PokeStudio.",
+    "search": "Buscar",
+    "searchPlaceholder": "Buscar habilidades…",
+    "resultCount": "{count} de {total} habilidades",
+    "noResults": "Ninguna habilidad coincide con tu búsqueda.",
+    "clearSearch": "Borrar búsqueda",
+    "backToAbilities": "Volver a Habilidades",
+    "effect": "Efecto",
+    "englishName": "Nombre en inglés",
+    "pokemonWithThisAbility": "Pokémon con esta habilidad",
+    "noPokemon": "Ningún Pokémon conocido tiene esta habilidad.",
+    "onlyOnForm": "Solo en {form}"
   }
 }

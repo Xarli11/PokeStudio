@@ -71,6 +71,7 @@ function formSectionProps(
         locale === 'es' ? (ability.effectEs ?? pokeStudioEs ?? ability.effectEn) : ability.effectEn;
       return {
         slug: ability.slug,
+        href: `/${locale}/abilities/${ability.slug}`,
         name: locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn,
         description,
         descriptionIsFallback:
@@ -91,8 +92,9 @@ export async function generateMetadata({
 }: {
   params: Promise<PageParams>;
 }): Promise<Metadata> {
-  const { locale, slug } = await params;
+  const { locale, slug: rawSlug } = await params;
   if (!isLocale(locale)) return {};
+  const slug = rawSlug.toLowerCase();
   const dictionary = getDictionary(locale);
   const species = await getSpeciesBySlug(getPokemonDatabaseClient(), slug);
   if (!species) return {};
@@ -111,6 +113,11 @@ export async function generateMetadata({
       formsNote,
     }),
     alternates: {
+      // Always the lowercase canonical slug, regardless of the request's own
+      // casing (task §13/§17: "canonical metadata lowercase") — middleware
+      // already redirects a non-canonical-case request before this page ever
+      // renders for a real visitor (see middleware.ts), but this stays
+      // correct on its own regardless.
       canonical: `/${locale}/pokemon/${slug}`,
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/pokemon/${slug}`])),
     },

@@ -5,7 +5,9 @@
     "battleLab": "Battle Lab",
     "soon": "Soon",
     "skipToContent": "Skip to content",
-    "mainNavigation": "Main navigation"
+    "mainNavigation": "Main navigation",
+    "pokemon": "Pokémon",
+    "exploreNavigation": "Explore sections"
   },
   "home": {
     "title": "PokeStudio",
@@ -78,6 +80,14 @@
     "previousPage": "Previous",
     "nextPage": "Next",
     "loading": "Loading…",
+    "search": "Search",
+    "searchPlaceholder": "Search Pokémon by name or #…",
+    "searchResultCount": "{count} of {total} Pokémon",
+    "noSearchResults": "No Pokémon match your search.",
+    "clearSearch": "Clear search",
+    "searchHelperTitle": "Search by name or Pokédex number",
+    "searchHelperExample": "Pikachu · Mew · #025",
+    "multipleFormsMatch": "{count} forms match",
     "stat": {
       "hp": "HP",
       "attack": "Attack",
@@ -261,5 +271,22 @@
       "turnsRange": "Continues for {min}–{max} turns.",
       "critRate": "Has an increased critical-hit ratio."
     }
+  },
+  "abilities": {
+    "title": "Abilities",
+    "tagline": "Every ability's exact effect, and which Pokémon can have it.",
+    "indexDescription": "Browse effects for {count} Pokémon abilities in the PokeStudio database.",
+    "detailDescription": "{name}: effect and which Pokémon can have this ability, in the PokeStudio database.",
+    "search": "Search",
+    "searchPlaceholder": "Search abilities…",
+    "resultCount": "{count} of {total} abilities",
+    "noResults": "No abilities match your search.",
+    "clearSearch": "Clear search",
+    "backToAbilities": "Back to Abilities",
+    "effect": "Effect",
+    "englishName": "English name",
+    "pokemonWithThisAbility": "Pokémon with this ability",
+    "noPokemon": "No known Pokémon have this ability.",
+    "onlyOnForm": "Only on {form}"
   }
 }

@@ -6,6 +6,45 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Phase 1C.3 — Explore Discovery & Abilities (2026-09-14)
+
+Makes the Pokédex searchable across the whole dataset and promotes abilities to a first-class,
+navigable entity, alongside a fix for a real case-insensitive-routing bug this phase surfaced.
+
+- **Whole-Pokédex search** (`/[locale]/pokemon`): instant client-side filtering by English/Spanish
+  name, national Dex number (`25`, `025`, `#25` all equivalent), and non-default form names (e.g.
+  "Alolan Meowth" resolves to the Meowth species card, never a separate entry — task's species-
+  oriented semantics). Measured the whole-dataset search index first (`getSpeciesSearchIndex`,
+  packages/database): 1025 species + 554 form aliases, ~95KB JSON / ~19KB gzip — small enough to
+  ship whole and filter client-side (`apps/web/src/lib/pokemon-search.ts`), so the decision didn't
+  need a server-side search endpoint. The existing paginated server-rendered view is unchanged and
+  still what search reverts to when the query is empty.
+- **Abilities as a first-class entity**: new `/[locale]/abilities` (instant client search over the
+  313-row table, ~12.5KB gzip, same "measure first" reasoning) and `/[locale]/abilities/[slug]`
+  (effect text with the existing PokeStudio-owned Spanish fallback chain, and a species-oriented
+  "Pokémon with this ability" list — one card per species, naming the specific form only when the
+  ability belongs to a non-default form). New query layer: `listAbilities`, `getAbilityBySlug`,
+  `getPokemonForAbility` (`packages/database`). Ability names on the Pokémon detail page are now
+  real links to their detail page. No `generation` column exists on `ability` upstream — "Generation
+  introduced" was deliberately not added rather than inferred (task §15).
+- **Case-insensitive canonical entity routes** (`/pokemon/[slug]`, `/moves/[slug]`,
+  `/abilities/[slug]`): `/es/pokemon/MEW` now 308-redirects to `/es/pokemon/mew`, etc. This
+  surfaced a real bug during implementation: a page-level `redirect()`/`permanentRedirect()` call
+  only produces a real HTTP redirect when nothing has streamed yet, and all three routes have a
+  `loading.tsx` sibling — the Suspense boundary that creates means Next streams a 200 shell before
+  the page's own redirect can commit, so the "redirect" only ever reached non-JS clients (curl,
+  crawlers, status-code checks) as a 200 with the redirect instruction buried in the RSC payload.
+  Moved the check to `middleware.ts` instead (`apps/web/src/lib/entity-slug.ts`), which runs before
+  any rendering and both issues a real top-level 308 and preserves the query string for free.
+- **Explore subnav**: Pokémon / Moves / Abilities, rendered from `PersistentShell` — Explore-local,
+  not crowding the primary Explore/Build/Battle Lab header nav.
+- **Sitemap**: ability index + detail entries added; `apps/web/src/app/sitemap.test.ts` (new)
+  proves the URL count formula against live data and that no URL is ever uppercase.
+- **i18n**: all new copy in `@pokestudio/i18n` (EN/ES) — Pokémon search, ability search/detail,
+  hidden-ability/form-specific labels. No hardcoded UI strings.
+- Deliberately deferred: type/generation filters on the Pokédex index (search was the priority);
+  fuzzy/typo-tolerant search (substring matching is enough at this scale).
+
 ### Raspberry Pi local-development database (2026-09-12)
 
 Establishes a self-hosted Supabase instance on a Raspberry Pi (`192.168.1.236`) as the canonical

@@ -2,12 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { createPublicDatabaseClient } from '../src/client';
 import {
+  getAbilityBySlug,
   getDefaultVersionGroup,
   getEvolutionFamily,
   getFormLearnsetAllVersionGroups,
   getMoveBySlug,
   getMoveLearners,
+  getPokemonForAbility,
   getSpeciesBySlug,
+  getSpeciesSearchIndex,
+  listAbilities,
   listMovesPage,
   listSpecies,
 } from '../src/queries';
@@ -347,6 +351,69 @@ describe.skipIf(!hasLocalSupabase)(
       for (let i = 1; i < powers.length; i++) {
         expect(powers[i - 1]!).toBeGreaterThanOrEqual(powers[i]!);
       }
+    });
+  },
+);
+
+describe.skipIf(!hasLocalSupabase)(
+  'ability/search-index queries against the full ingested dataset (Phase 1C.3)',
+  () => {
+    const client = () =>
+      createPublicDatabaseClient({ url: supabaseUrl!, publishableKey: publishableKey! });
+
+    it('getSpeciesSearchIndex returns every species plus every non-default form as an alias', async () => {
+      const index = await getSpeciesSearchIndex(client());
+      expect(index.items.length).toBeGreaterThan(1000);
+      expect(new Set(index.items.map((i) => i.slug)).size).toBe(index.items.length);
+      expect(index.items.every((i) => i.types.length >= 1 && i.types.length <= 2)).toBe(true);
+      // Meowth's regional forms ("Alolan Meowth", "Galarian Meowth") must resolve back to
+      // the species "meowth", never become their own index entries (task §6).
+      const meowthAliases = index.aliases.filter((a) => a.speciesSlug === 'meowth');
+      expect(meowthAliases.length).toBeGreaterThanOrEqual(2);
+      expect(index.items.some((i) => i.slug === 'meowth-alola')).toBe(false);
+      // Every alias carries its own form's types (Search UX v2 §2), not the
+      // default form's — needed to honestly caption a form-match card.
+      expect(index.aliases.every((a) => a.types.length >= 1 && a.types.length <= 2)).toBe(true);
+    });
+
+    it('listAbilities returns all 313+ abilities, alphabetically, with 313/313 PokeStudio-owned Spanish coverage available', async () => {
+      const abilities = await listAbilities(client());
+      expect(abilities.length).toBeGreaterThanOrEqual(313);
+      const names = abilities.map((a) => a.nameEn);
+      expect([...names].sort((a, b) => a.localeCompare(b))).toEqual(names);
+    });
+
+    it('getAbilityBySlug returns null for an unknown slug', async () => {
+      expect(await getAbilityBySlug(client(), 'does-not-exist')).toBeNull();
+    });
+
+    it('getAbilityBySlug returns Overgrow with its English effect', async () => {
+      const overgrow = await getAbilityBySlug(client(), 'overgrow');
+      expect(overgrow).not.toBeNull();
+      expect(overgrow!.nameEn).toBe('Overgrow');
+      expect(overgrow!.effectEn).toBeTruthy();
+    });
+
+    it('getPokemonForAbility returns null for an unknown ability', async () => {
+      expect(
+        await getPokemonForAbility(client(), 'does-not-exist', { page: 1, pageSize: 10 }),
+      ).toBeNull();
+    });
+
+    it('getPokemonForAbility(Chlorophyll) includes species-oriented results with no duplicate species', async () => {
+      const page = await getPokemonForAbility(client(), 'chlorophyll', { page: 1, pageSize: 200 });
+      expect(page).not.toBeNull();
+      expect(page!.totalCount).toBeGreaterThan(0);
+      const slugs = page!.items.map((i) => i.speciesSlug);
+      expect(new Set(slugs).size).toBe(slugs.length);
+    });
+
+    it('getPokemonForAbility(Levitate) — a heavily shared ability — paginates correctly', async () => {
+      const page = await getPokemonForAbility(client(), 'levitate', { page: 1, pageSize: 5 });
+      expect(page).not.toBeNull();
+      expect(page!.totalCount).toBeGreaterThan(5);
+      expect(page!.items.length).toBe(5);
+      expect(page!.totalPages).toBeGreaterThan(1);
     });
   },
 );

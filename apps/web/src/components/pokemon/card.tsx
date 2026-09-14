@@ -13,6 +13,19 @@ export interface PokemonCardProps {
   name: string;
   dexNumberLabel: string;
   types: { type: PokemonType; label: string }[];
+  /**
+   * Present when this card is shown because non-default form alias(es)
+   * matched the search query, not the species' own name (Search UX v2
+   * §2/§3). `label` is the secondary text line — either the matched form's
+   * own localized name (e.g. "Meowth de Alola"), or, when several of the
+   * species' forms matched equally, an "N forms match" line rather than
+   * picking one arbitrarily. `types`, when present, is that one matched
+   * form's own types shown instead of the default form's `types` above; it
+   * is omitted in the ambiguous case, so the card correctly keeps showing
+   * the species' own default types/art rather than recoloring itself for a
+   * form that wasn't uniquely identified.
+   */
+  matchContext?: { label: string; types?: { type: PokemonType; label: string }[] } | undefined;
 }
 
 /**
@@ -24,12 +37,17 @@ export interface PokemonCardProps {
  * artwork zone into the data zone below it, instead of the two zones
  * reading as unrelated blocks.
  */
-export function PokemonCard({ href, name, dexNumberLabel, types }: PokemonCardProps) {
-  const primaryVar = pokemonTypeColorVar[types[0]!.type];
+export function PokemonCard({ href, name, dexNumberLabel, types, matchContext }: PokemonCardProps) {
+  const displayTypes = matchContext?.types ?? types;
+  const primaryVar = pokemonTypeColorVar[displayTypes[0]!.type];
 
   return (
     <Link href={href} className={interactiveCardClass('flex flex-col overflow-hidden')}>
-      <PokemonArtSlot initial={name.charAt(0)} types={types.map((t) => t.type)} variant="tile" />
+      <PokemonArtSlot
+        initial={name.charAt(0)}
+        types={displayTypes.map((t) => t.type)}
+        variant="tile"
+      />
       <div
         className="flex min-w-0 flex-col gap-1.5 pt-3 px-4 pb-4"
         style={{
@@ -42,8 +60,13 @@ export function PokemonCard({ href, name, dexNumberLabel, types }: PokemonCardPr
         <span className="overflow-hidden text-lg font-bold tracking-tight text-ellipsis whitespace-nowrap">
           {name}
         </span>
+        {matchContext ? (
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[0.6875rem] font-semibold text-muted">
+            {matchContext.label}
+          </span>
+        ) : null}
         <div className="flex flex-wrap gap-1 pt-0.5">
-          {types.map(({ type, label }) => (
+          {displayTypes.map(({ type, label }) => (
             <PokemonTypeBadge key={type} type={type} label={label} />
           ))}
         </div>

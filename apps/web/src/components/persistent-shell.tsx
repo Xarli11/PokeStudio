@@ -6,6 +6,7 @@ import type { Dictionary, Locale } from '@pokestudio/i18n';
 import { brandAssets } from '@/lib/brand-assets';
 import { soonBadgeClass } from '@/lib/ui-classes';
 
+import { ExploreSubnav } from './explore-subnav';
 import { LocaleSwitcher } from './locale-switcher';
 import { ThemeToggle } from './theme-toggle';
 
@@ -146,6 +147,23 @@ export function PersistentShell({ locale, dictionary, children }: PersistentShel
           </div>
         </div>
       </header>
+
+      {/*
+        Explore-local subnav (Phase 1C.3 §16) — Pokémon/Moves/Abilities are
+        Explore's three current areas, not top-level product destinations
+        (those are Explore/Build/Battle Lab, above), so this is its own
+        secondary nav rather than crowding the primary header. Every current
+        route lives under Explore, so this always renders (no
+        section-detection needed) — see `CURRENT_SECTION`'s comment above.
+      */}
+      <ExploreSubnav
+        ariaLabel={dictionary.nav.exploreNavigation}
+        items={[
+          { key: 'pokemon', label: dictionary.nav.pokemon, href: `/${locale}/pokemon` },
+          { key: 'moves', label: dictionary.moves.title, href: `/${locale}/moves` },
+          { key: 'abilities', label: dictionary.abilities.title, href: `/${locale}/abilities` },
+        ]}
+      />
 
       <main id="main-content" className="w-full flex-1 px-4 pt-6 pb-8 sm:pt-12 sm:pb-16">
         {children}

@@ -939,6 +939,286 @@ export interface MoveLearnerPage {
   totalPages: number;
 }
 
+/** One species, as needed for the whole-Pokédex client-side search index (Phase 1C.3). */
+export interface SpeciesSearchItem {
+  slug: string;
+  nationalDexNumber: number;
+  name: LocalizedName;
+  types: PokemonType[];
+}
+
+/**
+ * A non-default form's name, mapped back to its owning species — lets a
+ * form-name search (e.g. "Alolan Meowth", "Rotom Heat") resolve to the one
+ * species card rather than inventing a separate Pokédex entry per form
+ * (task §6: "one primary result per species... do not pretend cosmetic
+ * forms are distinct Pokédex species"). Deliberately uniform across
+ * distinct/cosmetic/battle form categories — the alias always resolves to
+ * the same species card either way, so there is nothing category-specific
+ * to get wrong here.
+ *
+ * `types` is that form's own types (Search UX v2 §2) — so a card shown only
+ * because a non-default form matched can honestly caption itself with the
+ * form that matched and *its* types, instead of silently substituting the
+ * default form's types. Free to add: `pokemon_form.types` was already
+ * selected for every form row below to find the default form's types; this
+ * just also keeps it on the non-default rows instead of discarding it.
+ */
+export interface SpeciesSearchAlias {
+  name: LocalizedName;
+  speciesSlug: string;
+  types: PokemonType[];
+}
+
+export interface SpeciesSearchIndex {
+  /** One entry per species — the whole Pokédex (measured ~95KB JSON / ~19KB gzip at 1025 species, Phase 1C.3), safe to ship whole for instant client-side filtering. */
+  items: SpeciesSearchItem[];
+  aliases: SpeciesSearchAlias[];
+}
+
+/**
+ * The whole-Pokédex search dataset (Phase 1C.3 §3/§4) — deliberately not
+ * `listSpecies` reused as-is: this trims `category`/`baseStats` (unused by
+ * search/the card it renders), and additionally joins every non-default
+ * form's name as a searchable alias back to its species. Measured small
+ * enough (~1025 species + ~554 form aliases) that a single whole-dataset
+ * fetch beats a server-side search endpoint (task §4 "measure first").
+ */
+export async function getSpeciesSearchIndex(
+  client: PokeStudioDatabaseClient,
+): Promise<SpeciesSearchIndex> {
+  const [speciesRows, formRows] = await Promise.all([
+    selectAllRows<{
+      id: string;
+      slug: string;
+      national_dex_number: number;
+      name_en: string;
+      name_es: string;
+    }>((from, to) =>
+      client
+        .from('species')
+        .select('id, slug, national_dex_number, name_en, name_es')
+        .order('national_dex_number', { ascending: true })
+        .range(from, to),
+    ),
+    selectAllRows<{
+      species_id: string;
+      name_en: string;
+      name_es: string;
+      is_default: boolean;
+      types: string[];
+    }>((from, to) =>
+      client
+        .from('pokemon_form')
+        .select('species_id, name_en, name_es, is_default, types')
+        .range(from, to),
+    ),
+  ]);
+
+  const defaultFormBySpeciesId = new Map(
+    formRows.filter((form) => form.is_default).map((form) => [form.species_id, form]),
+  );
+
+  const speciesSlugById = new Map(speciesRows.map((species) => [species.id, species.slug]));
+  const aliases: SpeciesSearchAlias[] = formRows
+    .filter((form) => !form.is_default)
+    .map((form) => ({
+      name: { en: form.name_en, es: form.name_es },
+      speciesSlug: speciesSlugById.get(form.species_id) ?? '',
+      types: form.types as PokemonType[],
+    }))
+    .filter((alias) => alias.speciesSlug !== '');
+
+  const items: SpeciesSearchItem[] = speciesRows.map((species) => {
+    const defaultForm = defaultFormBySpeciesId.get(species.id);
+    if (!defaultForm) {
+      throw new Error(`Species "${species.slug}" has no default form — data integrity issue.`);
+    }
+    return {
+      slug: species.slug,
+      nationalDexNumber: species.national_dex_number,
+      name: { en: species.name_en, es: species.name_es },
+      types: defaultForm.types as PokemonType[],
+    };
+  });
+
+  return { items, aliases };
+}
+
+/** One ability, as needed by the ability index (Phase 1C.3) — small enough (313 rows) to ship whole for instant client-side search, same reasoning as `getSpeciesSearchIndex`. */
+export interface AbilityListItem {
+  slug: string;
+  nameEn: string;
+  nameEs?: string | undefined;
+  effectEn?: string | undefined;
+  effectEs?: string | undefined;
+}
+
+interface AbilityListRow {
+  slug: string;
+  name_en: string;
+  name_es: string | null;
+  effect_en: string | null;
+  effect_es: string | null;
+}
+
+function toAbilityListItem(row: AbilityListRow): AbilityListItem {
+  return {
+    slug: row.slug,
+    nameEn: row.name_en,
+    nameEs: row.name_es ?? undefined,
+    effectEn: row.effect_en ?? undefined,
+    effectEs: row.effect_es ?? undefined,
+  };
+}
+
+/** Every ability (Phase 1C.3 ability index) — 313 rows, well under PostgREST's 1000-row page cap, so a single request. */
+export async function listAbilities(client: PokeStudioDatabaseClient): Promise<AbilityListItem[]> {
+  const result = await client
+    .from('ability')
+    .select('slug, name_en, name_es, effect_en, effect_es')
+    .order('name_en', { ascending: true });
+  if (result.error) throw new Error(`listAbilities failed: ${result.error.message}`);
+  return (result.data as AbilityListRow[]).map(toAbilityListItem);
+}
+
+/**
+ * A single ability by slug (ability detail page). Null if the slug doesn't
+ * exist. Same shape as `AbilityListItem` — the `ability` table has no
+ * detail-only columns beyond what the index already needs (no `generation`
+ * column exists upstream; see docs/adr — never inferred, task §15), unlike
+ * `move`/`MoveDetail` which genuinely has extra fields.
+ */
+export async function getAbilityBySlug(
+  client: PokeStudioDatabaseClient,
+  slug: string,
+): Promise<AbilityListItem | null> {
+  const result = await client
+    .from('ability')
+    .select('slug, name_en, name_es, effect_en, effect_es')
+    .eq('slug', slug)
+    .maybeSingle();
+  if (result.error) throw new Error(`getAbilityBySlug failed: ${result.error.message}`);
+  if (!result.data) return null;
+  return toAbilityListItem(result.data as AbilityListRow);
+}
+
+/**
+ * One species that can have a given ability (ability detail's "Pokémon with
+ * this ability" section) — species-oriented, same principle
+ * `getMoveLearners`/the Pokédex index already use: one card per species, not
+ * one per form (task §11 "avoid noisy duplication from multiple forms").
+ * `formName` is only ever present when the ability belongs to a *non-default*
+ * form of that species (e.g. a battle-form-exclusive ability) — naming the
+ * specific form instead of silently attributing it to the species' default
+ * form, which would misrepresent which form actually has it.
+ */
+export interface AbilityPokemonItem {
+  speciesSlug: string;
+  nationalDexNumber: number;
+  name: LocalizedName;
+  isHidden: boolean;
+  formName?: LocalizedName | undefined;
+}
+
+export interface AbilityPokemonPage {
+  items: AbilityPokemonItem[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+/** Forms (grouped to their species) that can have a given ability. Null if the ability doesn't exist; an empty page would mean a real data-integrity issue (every ability is linked to at least one form by construction), not a normal empty state. */
+export async function getPokemonForAbility(
+  client: PokeStudioDatabaseClient,
+  abilitySlug: string,
+  options: { page: number; pageSize: number },
+): Promise<AbilityPokemonPage | null> {
+  const abilityResult = await client
+    .from('ability')
+    .select('id')
+    .eq('slug', abilitySlug)
+    .maybeSingle();
+  if (abilityResult.error) {
+    throw new Error(`getPokemonForAbility (ability) failed: ${abilityResult.error.message}`);
+  }
+  if (!abilityResult.data) return null;
+  const abilityId = abilityResult.data.id;
+
+  const links = await selectAllRows<{ pokemon_form_id: string; is_hidden: boolean }>((from, to) =>
+    client
+      .from('pokemon_form_ability')
+      .select('pokemon_form_id, is_hidden')
+      .eq('ability_id', abilityId)
+      .range(from, to),
+  );
+  const isHiddenByFormId = new Map(links.map((link) => [link.pokemon_form_id, link.is_hidden]));
+  const formIds = [...isHiddenByFormId.keys()];
+
+  const emptyPage = {
+    items: [],
+    page: options.page,
+    pageSize: options.pageSize,
+    totalCount: 0,
+    totalPages: 1,
+  };
+  if (formIds.length === 0) return emptyPage;
+
+  const formsResult = await client
+    .from('pokemon_form')
+    .select('id, species_id, slug, name_en, name_es, is_default')
+    .in('id', formIds);
+  if (formsResult.error) {
+    throw new Error(`getPokemonForAbility (forms) failed: ${formsResult.error.message}`);
+  }
+
+  const formsBySpeciesId = new Map<string, (typeof formsResult.data)[number][]>();
+  for (const form of formsResult.data) {
+    const list = formsBySpeciesId.get(form.species_id) ?? [];
+    list.push(form);
+    formsBySpeciesId.set(form.species_id, list);
+  }
+
+  const speciesIds = [...formsBySpeciesId.keys()];
+  const speciesResult = await client
+    .from('species')
+    .select('id, slug, national_dex_number, name_en, name_es')
+    .in('id', speciesIds);
+  if (speciesResult.error) {
+    throw new Error(`getPokemonForAbility (species) failed: ${speciesResult.error.message}`);
+  }
+
+  const items: AbilityPokemonItem[] = speciesResult.data
+    .map((species) => {
+      const forms = [...(formsBySpeciesId.get(species.id) ?? [])].sort((a, b) =>
+        a.slug.localeCompare(b.slug),
+      );
+      const defaultForm = forms.find((form) => form.is_default);
+      const representativeForm = defaultForm ?? forms[0]!;
+      return {
+        speciesSlug: species.slug,
+        nationalDexNumber: species.national_dex_number,
+        name: { en: species.name_en, es: species.name_es },
+        isHidden: isHiddenByFormId.get(representativeForm.id) ?? false,
+        formName: defaultForm
+          ? undefined
+          : { en: representativeForm.name_en, es: representativeForm.name_es },
+      };
+    })
+    .sort((a, b) => a.nationalDexNumber - b.nationalDexNumber);
+
+  const from = (options.page - 1) * options.pageSize;
+  const to = from + options.pageSize;
+  return {
+    items: items.slice(from, to),
+    page: options.page,
+    pageSize: options.pageSize,
+    totalCount: items.length,
+    totalPages: Math.max(1, Math.ceil(items.length / options.pageSize)),
+  };
+}
+
 /**
  * Forms that can learn a given move in a given version group (move detail's
  * "Pokémon that can learn it" section). Null if the move doesn't exist; an
