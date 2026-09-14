@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { listAbilities } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
 import { AbilityIndexExplorer } from '@/components/abilities/ability-search';
-import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
+import { getCachedAbilitiesList, getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { eyebrowClass } from '@/lib/ui-classes';
 
 // Reads live reference data per request — do not attempt to statically
@@ -20,7 +19,7 @@ export async function generateMetadata({
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const dictionary = getDictionary(locale);
-  const abilities = await listAbilities(getPokemonDatabaseClient());
+  const abilities = await getCachedAbilitiesList(getPokemonDatabaseClient());
 
   return {
     metadataBase: new URL('https://pokestudio.app'),
@@ -57,7 +56,7 @@ export default async function AbilityIndexPage({
   if (!isLocale(locale)) notFound();
 
   const dictionary = getDictionary(locale);
-  const abilities = await listAbilities(getPokemonDatabaseClient());
+  const abilities = await getCachedAbilitiesList(getPokemonDatabaseClient());
 
   return (
     <div className="mx-auto flex max-w-wide flex-col gap-10">

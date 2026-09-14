@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation';
 import {
   getEvolutionFamily,
   getFormLearnsetAllVersionGroups,
-  getSpeciesBySlug,
   type SpeciesFormDetail,
 } from '@pokestudio/database';
 import {
@@ -19,7 +18,7 @@ import {
 import { PokemonEvolutionSection } from '@/components/pokemon/evolution-section';
 import { PokemonFormSection } from '@/components/pokemon/form-section';
 import { PokemonMovesSection, type MovesExplorerMove } from '@/components/pokemon/moves-section';
-import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
+import { getCachedSpeciesBySlug, getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { partitionOtherForms } from '@/lib/form-grouping';
 import { pickDefaultVersionGroup } from '@/lib/moves-explorer';
 import { buttonClass, cardClass, eyebrowClass, tagClass } from '@/lib/ui-classes';
@@ -96,7 +95,7 @@ export async function generateMetadata({
   if (!isLocale(locale)) return {};
   const slug = rawSlug.toLowerCase();
   const dictionary = getDictionary(locale);
-  const species = await getSpeciesBySlug(getPokemonDatabaseClient(), slug);
+  const species = await getCachedSpeciesBySlug(getPokemonDatabaseClient(), slug);
   if (!species) return {};
 
   const otherFormCount = species.forms.length - 1;
@@ -137,7 +136,7 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
   const dictionary = getDictionary(locale);
   const client = getPokemonDatabaseClient();
   const [species, evolutionFamily] = await Promise.all([
-    getSpeciesBySlug(client, slug),
+    getCachedSpeciesBySlug(client, slug),
     getEvolutionFamily(client, slug),
   ]);
   if (!species) notFound();

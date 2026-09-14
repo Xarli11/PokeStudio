@@ -1230,16 +1230,17 @@ export async function getMoveLearners(
   versionGroupSlug: string,
   options: { page: number; pageSize: number },
 ): Promise<MoveLearnerPage | null> {
-  const moveResult = await client.from('move').select('id').eq('slug', moveSlug).maybeSingle();
+  // Neither lookup depends on the other's result — both are independent
+  // slug→id resolutions, so there's no reason to pay for them sequentially
+  // (Performance pass §2/§3, one of five round trips this function makes).
+  const [moveResult, versionGroupResult] = await Promise.all([
+    client.from('move').select('id').eq('slug', moveSlug).maybeSingle(),
+    client.from('version_group').select('id').eq('slug', versionGroupSlug).maybeSingle(),
+  ]);
   if (moveResult.error)
     throw new Error(`getMoveLearners (move) failed: ${moveResult.error.message}`);
   if (!moveResult.data) return null;
 
-  const versionGroupResult = await client
-    .from('version_group')
-    .select('id')
-    .eq('slug', versionGroupSlug)
-    .maybeSingle();
   if (versionGroupResult.error) {
     throw new Error(`getMoveLearners (version group) failed: ${versionGroupResult.error.message}`);
   }

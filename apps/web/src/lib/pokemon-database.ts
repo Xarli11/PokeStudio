@@ -1,4 +1,13 @@
-import { createPublicDatabaseClient, type PokeStudioDatabaseClient } from '@pokestudio/database';
+import { cache } from 'react';
+
+import {
+  createPublicDatabaseClient,
+  getAbilityBySlug,
+  getMoveBySlug,
+  getSpeciesBySlug,
+  listAbilities,
+  type PokeStudioDatabaseClient,
+} from '@pokestudio/database';
 
 /**
  * Server-only accessor for the Pokémon reference-data database client.
@@ -26,3 +35,20 @@ export function getPokemonDatabaseClient(): PokeStudioDatabaseClient {
   cachedClient = createPublicDatabaseClient({ url, publishableKey });
   return cachedClient;
 }
+
+/**
+ * React `cache()`-wrapped versions of the queries every detail/index page's
+ * `generateMetadata` fetches a second time (the page component itself needs
+ * the same row) — Performance pass, measured: `getSpeciesBySlug` ran twice
+ * per `/pokemon/[slug]` request, 15ms apart, before this. `cache()` scopes
+ * memoization to one request's render (Next resets it per request), keyed
+ * on these arguments; `getPokemonDatabaseClient()` returns the same
+ * singleton every call, so the (client, slug) key matches between
+ * `generateMetadata` and the page, collapsing two Supabase round trips into
+ * one. Callers should prefer these over importing the raw query functions
+ * directly for any route where the same lookup happens in both places.
+ */
+export const getCachedSpeciesBySlug = cache(getSpeciesBySlug);
+export const getCachedMoveBySlug = cache(getMoveBySlug);
+export const getCachedAbilityBySlug = cache(getAbilityBySlug);
+export const getCachedAbilitiesList = cache(listAbilities);

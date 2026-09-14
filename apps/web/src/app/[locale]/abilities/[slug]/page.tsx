@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getAbilityBySlug, getPokemonForAbility } from '@pokestudio/database';
+import { getPokemonForAbility } from '@pokestudio/database';
 import {
   abilityEffectsEs,
   formatMessage,
@@ -11,7 +11,7 @@ import {
   locales,
 } from '@pokestudio/i18n';
 
-import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
+import { getCachedAbilityBySlug, getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { buttonClass, cardClass, eyebrowClass, tagClass } from '@/lib/ui-classes';
 
 // Reads live reference data per request — do not attempt to statically
@@ -53,7 +53,7 @@ export async function generateMetadata({
   if (!isLocale(locale)) return {};
   const slug = rawSlug.toLowerCase();
   const dictionary = getDictionary(locale);
-  const ability = await getAbilityBySlug(getPokemonDatabaseClient(), slug);
+  const ability = await getCachedAbilityBySlug(getPokemonDatabaseClient(), slug);
   if (!ability) return {};
 
   const name = locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn;
@@ -89,14 +89,17 @@ export default async function AbilityDetailPage({
 
   const dictionary = getDictionary(locale);
   const client = getPokemonDatabaseClient();
-  const ability = await getAbilityBySlug(client, slug);
-  if (!ability) notFound();
-
   const page = parsePage(rawSearchParams.page);
-  const pokemonPage = await getPokemonForAbility(client, slug, {
-    page,
-    pageSize: POKEMON_PAGE_SIZE,
-  });
+  // `getPokemonForAbility` is keyed on `slug` alone, not on the `ability`
+  // row's data — genuinely independent, so it doesn't need to wait for the
+  // ability lookup to resolve first (Performance pass §7). The rare 404
+  // case fetches one extra page it then discards; every real hit saves a
+  // full round trip's worth of latency.
+  const [ability, pokemonPage] = await Promise.all([
+    getCachedAbilityBySlug(client, slug),
+    getPokemonForAbility(client, slug, { page, pageSize: POKEMON_PAGE_SIZE }),
+  ]);
+  if (!ability) notFound();
 
   const name = locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn;
   const { text: effectText, isFallback } = abilityEffect(ability, locale);

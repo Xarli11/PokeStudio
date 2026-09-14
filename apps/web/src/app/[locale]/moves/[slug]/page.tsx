@@ -2,12 +2,12 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getDefaultVersionGroup, getMoveBySlug, getMoveLearners } from '@pokestudio/database';
+import { getDefaultVersionGroup, getMoveLearners } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
 import { PokemonTypeBadge } from '@/components/pokemon/type-badge';
 import { describeMoveMechanics, shouldShowMoveDescription } from '@/lib/move-mechanics';
-import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
+import { getCachedMoveBySlug, getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import {
   buttonClass,
   cardClass,
@@ -43,7 +43,7 @@ export async function generateMetadata({
   if (!isLocale(locale)) return {};
   const slug = rawSlug.toLowerCase();
   const dictionary = getDictionary(locale);
-  const move = await getMoveBySlug(getPokemonDatabaseClient(), slug);
+  const move = await getCachedMoveBySlug(getPokemonDatabaseClient(), slug);
   if (!move) return {};
 
   const name = locale === 'es' ? (move.nameEs ?? move.nameEn) : move.nameEn;
@@ -73,7 +73,7 @@ export default async function MoveDetailPage({
   const dictionary = getDictionary(locale);
   const client = getPokemonDatabaseClient();
   const [move, defaultVersionGroup] = await Promise.all([
-    getMoveBySlug(client, slug),
+    getCachedMoveBySlug(client, slug),
     getDefaultVersionGroup(client),
   ]);
   if (!move) notFound();
