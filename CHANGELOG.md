@@ -118,6 +118,14 @@ Scarlet/Violet-only restriction and closes the gap between "no known errors" and
   ingestion, not a Pokédex-correctness problem today. See `docs/engineering/DATA_SOURCES.md`'s
   "Classification findings" section (marked RESOLVED, with the correction left visible) for the
   full record.
+- **Correction (2026-09-16, follow-up branch): the "external_id drift" item directly above was
+  itself a false alarm** — an audit methodology error (comparing PokéAPI's `pokemon` variety
+  resource id against this project's `pokemon_form.external_id`, which has always come from the
+  distinct `pokemon-form` resource id instead). Re-verified against the correct endpoint: zero
+  drift across every example previously cited. A reusable read-only diagnostic
+  (`pnpm --filter @pokestudio/pokemon-data diagnose-form-identity`) confirmed 0/1579 Pi rows would
+  change on a fresh ingest. No schema or ingestion change was needed or made — see
+  `docs/engineering/DATA_SOURCES.md` for the full corrected record.
 
 ### Phase 1C.3 — Explore Discovery & Abilities (2026-09-14)
 

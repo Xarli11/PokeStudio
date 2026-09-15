@@ -13,6 +13,7 @@
     "test": "vitest run",
     "ingest": "tsx scripts/ingest.ts",
     "audit": "tsx scripts/audit.ts",
+    "diagnose-form-identity": "tsx scripts/diagnose-form-identity.ts",
     "clean": "rm -rf dist .cache"
   },
   "dependencies": {

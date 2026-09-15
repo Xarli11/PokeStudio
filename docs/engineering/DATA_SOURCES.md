@@ -154,24 +154,31 @@ pokeapi`. Breakdown:
   filtered, deleted, or excluded.** The originally proposed
   "filter by real ingested version_group" remediation is retracted — had
   it been executed, it would have deleted 49 genuinely official rows.
-- **A real, separate issue found during this same audit: PokéAPI's
-  numeric ids for non-default "variety" forms are not stable over time.**
-  Comparing this project's stored `pokemon_form.external_id` against
-  PokéAPI's current live ids for the same named resources shows
-  consistent drift (e.g. `venusaur-mega` stored as `10133`, now live at
-  `10033`; `clefable-mega` stored as `10503`, now live at `10278`) —
-  different offsets for different id ranges, consistent with PokéAPI
-  having inserted the whole Legends: Z-A/Mega Dimension id block and
-  shifted every later id down. **554 of 1579 `pokemon_form` rows
-  (~35%) have an `external_id` ≥ 10000** and are potentially affected.
-  This is a real idempotency risk for the next ingestion run: the
-  upsert-by-`(source_id, external_id)` key (ADR-0011) would not match
-  these rows against their new upstream ids, so a naive re-ingestion could
-  insert 554 duplicate rows rather than update the existing ones, leaving
-  the old rows stale. Species/move/ability primary ids (low, stable
-  numbers) are not affected — this is specific to the non-default
-  "variety" id space. **Not fixed here — flagged for the next ingestion
-  planning pass.**
+- **RETRACTED (2026-09-16, same-day correction): the "external_id drift"
+  finding below was a false alarm caused by an audit methodology error, not
+  a real upstream data-stability problem.** The original comparison queried
+  PokéAPI's `pokemon/{name}` (variety) resource's own `.id` and compared it
+  against this project's stored `pokemon_form.external_id` — but
+  `normalize.ts` has always sourced `external_id` from the **`pokemon-form`**
+  resource's `.id` instead (a different, independent numbering sequence).
+  Re-verified directly against the correct endpoint for every example
+  previously cited (`venusaur-mega`, `clefable-mega`, `raichu-mega-x`,
+  `garchomp-mega-z`, `baxcalibur-mega`, `charizard-mega-x`,
+  `charizard-gmax`, `pikachu-alola-cap`): **all match exactly, zero drift**.
+  A follow-up branch (`fix/pokemon-form-ingestion-identity`) additionally
+  built a reusable, read-only diagnostic
+  (`packages/pokemon-data/scripts/diagnose-form-identity.ts` —
+  `pnpm --filter @pokestudio/pokemon-data diagnose-form-identity`) that
+  fetches fresh upstream data through the real ingestion pipeline and
+  compares it against the live Pi `pokemon_form` table by slug; run
+  2026-09-16 against the actual Pi data, it confirmed **0 of 1579 rows
+  would update, 0 new, 0 missing — the current `(source_id, external_id)`
+  upsert identity is safe as-is.** No schema or ingestion-identity change
+  was made. The speculative migration and `persist.ts` change drafted
+  before this correction was found were reverted (Ponytail/YAGNI — no bug
+  to fix). Kept: the diagnostic script itself, as a reusable, zero-risk
+  health check for the next time this is worth re-verifying (e.g. before
+  a Cloud DEV ingestion).
 - **User-facing exposure**: since these are all genuinely official forms,
   their appearance in Explore search / Compare / Build's add-Pokémon
   picker (via `getSpeciesSearchIndex`'s non-default-form aliases) is
