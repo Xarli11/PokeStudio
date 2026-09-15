@@ -1,5 +1,8 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import type { Dictionary, Locale } from '@pokestudio/i18n';
 
@@ -10,17 +13,21 @@ import { ExploreSubnav } from './explore-subnav';
 import { LocaleSwitcher } from './locale-switcher';
 import { ThemeToggle } from './theme-toggle';
 
-type NavSection = 'explore' | 'build' | 'battleLab';
+type NavSection = 'explore' | 'build' | 'battleLab' | undefined;
 
 /**
- * Explore is the only destination that actually exists yet (Build/Battle Lab
- * are reserved but unlinked — CLAUDE.md §14 "no fake completeness"), so it's
- * the current section on literally every route today; this mirrors that
- * exactly rather than inventing pathname-matching logic for sections that
- * don't have routes to match against. Once Build/Battle Lab ship real
- * routes, replace this with real `usePathname()`-based detection.
+ * Real pathname-based section detection (Milestone 2, Stage 2B — Build now
+ * has real routes, so "Explore is current everywhere" no longer holds).
+ * Strips the locale prefix first so this doesn't need per-locale path
+ * knowledge.
  */
-const CURRENT_SECTION: NavSection = 'explore';
+function currentSectionFor(pathname: string, locale: Locale): NavSection {
+  const path = pathname.startsWith(`/${locale}`) ? pathname.slice(locale.length + 1) : pathname;
+  const exploreRoutes = ['/pokemon', '/moves', '/abilities', '/compare'];
+  if (exploreRoutes.some((route) => path.startsWith(route))) return 'explore';
+  if (path.startsWith('/build')) return 'build';
+  return undefined;
+}
 
 export interface PersistentShellProps {
   locale: Locale;
@@ -62,9 +69,11 @@ const WORDMARK_SIZE = 'col-start-1 row-start-1 block h-7 w-auto md:h-8 xl:h-11';
  * costs nothing at desktop widths.
  */
 export function PersistentShell({ locale, dictionary, children }: PersistentShellProps) {
+  const pathname = usePathname();
+  const currentSection = currentSectionFor(pathname, locale);
   const navItems: { key: NavSection; label: string; href: string | null }[] = [
     { key: 'explore', label: dictionary.nav.explore, href: `/${locale}/pokemon` },
-    { key: 'build', label: dictionary.nav.build, href: null },
+    { key: 'build', label: dictionary.nav.build, href: `/${locale}/build` },
     { key: 'battleLab', label: dictionary.nav.battleLab, href: null },
   ];
 
@@ -122,7 +131,7 @@ export function PersistentShell({ locale, dictionary, children }: PersistentShel
                 <Link
                   key={item.key}
                   href={item.href}
-                  aria-current={item.key === CURRENT_SECTION ? 'page' : undefined}
+                  aria-current={item.key === currentSection ? 'page' : undefined}
                   className="relative inline-flex items-center gap-1 border-b border-transparent py-1 pb-2 text-sm font-semibold whitespace-nowrap text-muted no-underline transition-colors hover:text-foreground aria-[current=page]:border-brand aria-[current=page]:text-foreground"
                 >
                   {item.label}
@@ -152,18 +161,20 @@ export function PersistentShell({ locale, dictionary, children }: PersistentShel
         Explore-local subnav (Phase 1C.3 §16) — Pokémon/Moves/Abilities are
         Explore's three current areas, not top-level product destinations
         (those are Explore/Build/Battle Lab, above), so this is its own
-        secondary nav rather than crowding the primary header. Every current
-        route lives under Explore, so this always renders (no
-        section-detection needed) — see `CURRENT_SECTION`'s comment above.
+        secondary nav rather than crowding the primary header. Only shown on
+        Explore's own routes now that Build has real routes of its own
+        (Milestone 2, Stage 2B) — it would be confusing chrome on a Build page.
       */}
-      <ExploreSubnav
-        ariaLabel={dictionary.nav.exploreNavigation}
-        items={[
-          { key: 'pokemon', label: dictionary.nav.pokemon, href: `/${locale}/pokemon` },
-          { key: 'moves', label: dictionary.moves.title, href: `/${locale}/moves` },
-          { key: 'abilities', label: dictionary.abilities.title, href: `/${locale}/abilities` },
-        ]}
-      />
+      {currentSection === 'explore' ? (
+        <ExploreSubnav
+          ariaLabel={dictionary.nav.exploreNavigation}
+          items={[
+            { key: 'pokemon', label: dictionary.nav.pokemon, href: `/${locale}/pokemon` },
+            { key: 'moves', label: dictionary.moves.title, href: `/${locale}/moves` },
+            { key: 'abilities', label: dictionary.abilities.title, href: `/${locale}/abilities` },
+          ]}
+        />
+      ) : null}
 
       <main id="main-content" className="w-full flex-1 px-4 pt-6 pb-8 sm:pt-12 sm:pb-16">
         {children}

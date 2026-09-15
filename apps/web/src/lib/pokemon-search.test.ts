@@ -4,11 +4,18 @@ import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database
 
 import {
   MAX_POKEMON_SUGGESTIONS,
+  applyPokemonIndexFilters,
   dexNumberLabel,
   filterSpeciesSearchIndex,
   getPokemonSuggestions,
   parsePokemonQuery,
+  type SpeciesSearchMatch,
 } from './pokemon-search';
+
+// Fixture base stats are irrelevant to every test in this file except the
+// dedicated filter/sort suite below (which sets its own per-item values) —
+// one flat, neutral spread keeps every other fixture's intent readable.
+const STATS = { hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 };
 
 const ITEMS: SpeciesSearchItem[] = [
   {
@@ -16,24 +23,32 @@ const ITEMS: SpeciesSearchItem[] = [
     nationalDexNumber: 1,
     name: { en: 'Bulbasaur', es: 'Bulbasaur' },
     types: ['grass', 'poison'],
+    baseStats: STATS,
+    formSlug: 'bulbasaur',
   },
   {
     slug: 'pikachu',
     nationalDexNumber: 25,
     name: { en: 'Pikachu', es: 'Pikachu' },
     types: ['electric'],
+    baseStats: STATS,
+    formSlug: 'pikachu',
   },
   {
     slug: 'mewtwo',
     nationalDexNumber: 150,
     name: { en: 'Mewtwo', es: 'Mewtwo' },
     types: ['psychic'],
+    baseStats: STATS,
+    formSlug: 'mewtwo',
   },
   {
     slug: 'meowth',
     nationalDexNumber: 52,
     name: { en: 'Meowth', es: 'Meowth' },
     types: ['normal'],
+    baseStats: STATS,
+    formSlug: 'meowth',
   },
 ];
 
@@ -43,11 +58,13 @@ const ALIASES: SpeciesSearchAlias[] = [
     name: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
     speciesSlug: 'meowth',
     types: ['dark'],
+    formSlug: 'meowth-alola',
   },
   {
     name: { en: 'Galarian Meowth', es: 'Meowth de Galar' },
     speciesSlug: 'meowth',
     types: ['steel'],
+    formSlug: 'meowth-galar',
   },
 ];
 
@@ -139,6 +156,8 @@ describe('filterSpeciesSearchIndex', () => {
         nationalDexNumber: 500,
         name: { en: 'Accentmon', es: 'Camión' },
         types: ['normal'],
+        baseStats: STATS,
+        formSlug: 'accentmon',
       },
     ];
     expect(filterSpeciesSearchIndex(items, [], 'camion', 'es').map((m) => m.item.slug)).toEqual([
@@ -186,36 +205,53 @@ describe('filterSpeciesSearchIndex', () => {
 
 describe('getPokemonSuggestions', () => {
   const SUGGEST_ITEMS: SpeciesSearchItem[] = [
-    { slug: 'mew', nationalDexNumber: 151, name: { en: 'Mew', es: 'Mew' }, types: ['psychic'] },
+    {
+      slug: 'mew',
+      nationalDexNumber: 151,
+      name: { en: 'Mew', es: 'Mew' },
+      types: ['psychic'],
+      baseStats: STATS,
+      formSlug: 'mew',
+    },
     {
       slug: 'mewtwo',
       nationalDexNumber: 150,
       name: { en: 'Mewtwo', es: 'Mewtwo' },
       types: ['psychic'],
+      baseStats: STATS,
+      formSlug: 'mewtwo',
     },
     {
       slug: 'charmander',
       nationalDexNumber: 4,
       name: { en: 'Charmander', es: 'Charmander' },
       types: ['fire'],
+      baseStats: STATS,
+      formSlug: 'charmander',
     },
     {
       slug: 'charmeleon',
       nationalDexNumber: 5,
       name: { en: 'Charmeleon', es: 'Charmeleon' },
       types: ['fire'],
+      baseStats: STATS,
+      formSlug: 'charmeleon',
     },
     {
       slug: 'charizard',
       nationalDexNumber: 6,
       name: { en: 'Charizard', es: 'Charizard' },
       types: ['fire', 'flying'],
+      baseStats: STATS,
+      formSlug: 'charizard',
     },
     {
       slug: 'meowth',
       nationalDexNumber: 52,
       name: { en: 'Meowth', es: 'Meowth' },
       types: ['normal'],
+      baseStats: STATS,
+      formSlug: 'meowth',
     },
   ];
 
@@ -245,6 +281,8 @@ describe('getPokemonSuggestions', () => {
         nationalDexNumber: 999,
         name: { en: 'Armorpoke', es: 'Armorpoke' },
         types: ['steel'],
+        baseStats: STATS,
+        formSlug: 'armorpoke',
       },
     ];
     const result = getPokemonSuggestions(items, ALIASES, 'arm', 'en');
@@ -263,6 +301,7 @@ describe('getPokemonSuggestions', () => {
         name: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
         speciesSlug: 'meowth',
         types: ['dark'],
+        formSlug: 'meowth-alola',
       },
     });
   });
@@ -299,6 +338,7 @@ describe('getPokemonSuggestions', () => {
           name: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
           speciesSlug: 'meowth',
           types: ['dark'],
+          formSlug: 'meowth-alola',
         },
       });
     });
@@ -312,6 +352,7 @@ describe('getPokemonSuggestions', () => {
           name: { en: 'Galarian Meowth', es: 'Meowth de Galar' },
           speciesSlug: 'meowth',
           types: ['steel'],
+          formSlug: 'meowth-galar',
         },
       });
     });
@@ -325,6 +366,7 @@ describe('getPokemonSuggestions', () => {
           name: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
           speciesSlug: 'meowth',
           types: ['dark'],
+          formSlug: 'meowth-alola',
         },
       });
     });
@@ -341,6 +383,8 @@ describe('getPokemonSuggestions', () => {
       nationalDexNumber: 900 + i,
       name: { en: `Testmon${i}`, es: `Testmon${i}` },
       types: ['normal'],
+      baseStats: STATS,
+      formSlug: `test-${i}`,
     }));
     expect(getPokemonSuggestions(manyItems, [], 'testmon', 'en')).toHaveLength(
       MAX_POKEMON_SUGGESTIONS,
@@ -376,12 +420,16 @@ describe('getPokemonSuggestions', () => {
         nationalDexNumber: 20,
         name: { en: 'HDL', es: 'HDL' },
         types: ['normal'],
+        baseStats: STATS,
+        formSlug: 'high-dex-locale',
       },
       {
         slug: 'low-dex-source',
         nationalDexNumber: 10,
         name: { en: 'LDS', es: 'LDS' },
         types: ['normal'],
+        baseStats: STATS,
+        formSlug: 'low-dex-source',
       },
     ];
     const aliases: SpeciesSearchAlias[] = [
@@ -390,12 +438,14 @@ describe('getPokemonSuggestions', () => {
         name: { en: 'Zzz Form', es: 'Forma Alfa' },
         speciesSlug: 'high-dex-locale',
         types: ['normal'],
+        formSlug: 'high-dex-locale-alt',
       },
       // en field starts with "forma"; es field does not.
       {
         name: { en: 'Forma Beta', es: 'Otra Cosa' },
         speciesSlug: 'low-dex-source',
         types: ['normal'],
+        formSlug: 'low-dex-source-alt',
       },
     ];
 
@@ -418,5 +468,138 @@ describe('dexNumberLabel', () => {
     expect(dexNumberLabel(25)).toBe('#025');
     expect(dexNumberLabel(150)).toBe('#150');
     expect(dexNumberLabel(1025)).toBe('#1025');
+  });
+});
+
+describe('applyPokemonIndexFilters (Explore Pro, Milestone 2 Stage 2A)', () => {
+  // Distinct, easily-comparable stats per species so sort tests are unambiguous.
+  const bulbasaur: SpeciesSearchItem = {
+    slug: 'bulbasaur',
+    nationalDexNumber: 1,
+    name: { en: 'Bulbasaur', es: 'Bulbasaur' },
+    types: ['grass', 'poison'],
+    baseStats: {
+      hp: 45,
+      attack: 49,
+      defense: 49,
+      specialAttack: 65,
+      specialDefense: 65,
+      speed: 45,
+    },
+    formSlug: 'bulbasaur',
+  };
+  const charmander: SpeciesSearchItem = {
+    slug: 'charmander',
+    nationalDexNumber: 4,
+    name: { en: 'Charmander', es: 'Charmander' },
+    types: ['fire'],
+    baseStats: {
+      hp: 39,
+      attack: 52,
+      defense: 43,
+      specialAttack: 60,
+      specialDefense: 50,
+      speed: 65,
+    },
+    formSlug: 'charmander',
+  };
+  const charizard: SpeciesSearchItem = {
+    slug: 'charizard',
+    nationalDexNumber: 6,
+    name: { en: 'Charizard', es: 'Charizard' },
+    types: ['fire', 'flying'],
+    baseStats: {
+      hp: 78,
+      attack: 84,
+      defense: 78,
+      specialAttack: 109,
+      specialDefense: 85,
+      speed: 100,
+    },
+    formSlug: 'charizard',
+  };
+  const squirtle: SpeciesSearchItem = {
+    slug: 'squirtle',
+    nationalDexNumber: 7,
+    name: { en: 'Squirtle', es: 'Squirtle' },
+    types: ['water'],
+    baseStats: {
+      hp: 44,
+      attack: 48,
+      defense: 65,
+      specialAttack: 50,
+      specialDefense: 64,
+      speed: 43,
+    },
+    formSlug: 'squirtle',
+  };
+  const ALL: SpeciesSearchMatch[] = [bulbasaur, charmander, charizard, squirtle].map((item) => ({
+    item,
+  }));
+
+  it('filters by type', () => {
+    const result = applyPokemonIndexFilters(ALL, { type: 'fire' }, 'en');
+    expect(result.map((m) => m.item.slug).sort()).toEqual(['charizard', 'charmander']);
+  });
+
+  it('filters by generation (derived from Dex number, all these are Gen 1)', () => {
+    const result = applyPokemonIndexFilters(ALL, { generation: 1 }, 'en');
+    expect(result).toHaveLength(4);
+    const result2 = applyPokemonIndexFilters(ALL, { generation: 2 }, 'en');
+    expect(result2).toHaveLength(0);
+  });
+
+  it('sorts by base stat total, descending', () => {
+    const result = applyPokemonIndexFilters(ALL, { sortBy: 'bst', sortDirection: 'desc' }, 'en');
+    expect(result.map((m) => m.item.slug)).toEqual([
+      'charizard',
+      'bulbasaur',
+      'squirtle',
+      'charmander',
+    ]);
+  });
+
+  it('sorts by a single stat (Speed), ascending', () => {
+    const result = applyPokemonIndexFilters(ALL, { sortBy: 'speed', sortDirection: 'asc' }, 'en');
+    expect(result.map((m) => m.item.slug)).toEqual([
+      'squirtle',
+      'bulbasaur',
+      'charmander',
+      'charizard',
+    ]);
+  });
+
+  it('sorts by name', () => {
+    const result = applyPokemonIndexFilters(ALL, { sortBy: 'name' }, 'en');
+    expect(result.map((m) => m.item.slug)).toEqual([
+      'bulbasaur',
+      'charizard',
+      'charmander',
+      'squirtle',
+    ]);
+  });
+
+  it('composes search + type filter + sort predictably ("char" + Fire + sort Speed desc)', () => {
+    const items = [bulbasaur, charmander, charizard, squirtle];
+    const searched = filterSpeciesSearchIndex(items, [], 'char', 'en');
+    expect(searched.map((m) => m.item.slug)).toEqual(['charmander', 'charizard']);
+
+    const result = applyPokemonIndexFilters(
+      searched,
+      { type: 'fire', sortBy: 'speed', sortDirection: 'desc' },
+      'en',
+    );
+    expect(result.map((m) => m.item.slug)).toEqual(['charizard', 'charmander']);
+  });
+
+  it('ties on the sorted stat break by national Dex number for determinism', () => {
+    const tiedA: SpeciesSearchItem = { ...squirtle, slug: 'tied-a', nationalDexNumber: 500 };
+    const tiedB: SpeciesSearchItem = { ...squirtle, slug: 'tied-b', nationalDexNumber: 5 };
+    const result = applyPokemonIndexFilters(
+      [{ item: tiedA }, { item: tiedB }],
+      { sortBy: 'speed', sortDirection: 'asc' },
+      'en',
+    );
+    expect(result.map((m) => m.item.slug)).toEqual(['tied-b', 'tied-a']);
   });
 });

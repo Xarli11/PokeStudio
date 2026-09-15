@@ -6,10 +6,12 @@ import type {
   NormalizedEvolution,
   NormalizedForm,
   NormalizedFormAbility,
+  NormalizedItem,
   NormalizedLearnMethod,
   NormalizedLearnsetEntry,
   NormalizedMachine,
   NormalizedMove,
+  NormalizedNature,
   NormalizedSpecies,
   NormalizedVersionGroup,
 } from './types';
@@ -146,6 +148,27 @@ function makeMachine(overrides: Partial<NormalizedMachine> = {}): NormalizedMach
   };
 }
 
+function makeNature(overrides: Partial<NormalizedNature> = {}): NormalizedNature {
+  return {
+    slug: 'adamant',
+    nameEn: 'Adamant',
+    increasedStat: 'attack',
+    decreasedStat: 'special-attack',
+    source: { sourceId: 'pokeapi', externalId: '11' },
+    ...overrides,
+  };
+}
+
+function makeItem(overrides: Partial<NormalizedItem> = {}): NormalizedItem {
+  return {
+    slug: 'leftovers',
+    nameEn: 'Leftovers',
+    category: 'held-items',
+    source: { sourceId: 'pokeapi', externalId: '211' },
+    ...overrides,
+  };
+}
+
 function makeDataset(
   species: NormalizedSpecies[],
   forms: NormalizedForm[],
@@ -158,6 +181,8 @@ function makeDataset(
     learnMethods?: NormalizedLearnMethod[];
     learnsetEntries?: NormalizedLearnsetEntry[];
     machines?: NormalizedMachine[];
+    natures?: NormalizedNature[];
+    items?: NormalizedItem[];
   } = {},
 ): NormalizedDataset {
   return {
@@ -178,6 +203,8 @@ function makeDataset(
     learnMethods: options.learnMethods ?? [],
     learnsetEntries: options.learnsetEntries ?? [],
     machines: options.machines ?? [],
+    natures: options.natures ?? [],
+    items: options.items ?? [],
   };
 }
 
@@ -780,5 +807,74 @@ describe('validateExploreDataset — moves and learnsets', () => {
       }),
     );
     expect(issues.some((i) => i.message.includes('Orphan machine: unknown move'))).toBe(true);
+  });
+
+  it('accepts a valid modifying nature and a valid neutral nature', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        natures: [
+          makeNature(),
+          makeNature({
+            slug: 'hardy',
+            increasedStat: undefined,
+            decreasedStat: undefined,
+            source: { sourceId: 'pokeapi', externalId: '1' },
+          }),
+        ],
+      }),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it('flags a nature with only one of increasedStat/decreasedStat set', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        natures: [makeNature({ decreasedStat: undefined })],
+      }),
+    );
+    expect(
+      issues.some((i) => i.message.includes('must have both increasedStat and decreasedStat')),
+    ).toBe(true);
+  });
+
+  it('flags a nature where increasedStat equals decreasedStat', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        natures: [makeNature({ increasedStat: 'attack', decreasedStat: 'attack' })],
+      }),
+    );
+    expect(issues.some((i) => i.message.includes('must differ'))).toBe(true);
+  });
+
+  it('flags a duplicate nature slug', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        natures: [makeNature(), makeNature({ source: { sourceId: 'pokeapi', externalId: '99' } })],
+      }),
+    );
+    expect(issues.some((i) => i.message === 'Duplicate nature slug.')).toBe(true);
+  });
+
+  it('accepts a valid held item', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], { items: [makeItem()] }),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  it('flags a duplicate item slug', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], {
+        items: [makeItem(), makeItem({ source: { sourceId: 'pokeapi', externalId: '99' } })],
+      }),
+    );
+    expect(issues.some((i) => i.message === 'Duplicate item slug.')).toBe(true);
+  });
+
+  it('flags an item missing its category', () => {
+    const issues = validateExploreDataset(
+      makeDataset([makeSpecies()], [makeForm()], { items: [makeItem({ category: '' })] }),
+    );
+    expect(issues.some((i) => i.message === 'Missing item category.')).toBe(true);
   });
 });

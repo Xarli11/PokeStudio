@@ -10,7 +10,7 @@
  * a class-string helper composes more simply than a polymorphic wrapper.
  */
 
-export type ButtonVariant = 'default' | 'primary';
+export type ButtonVariant = 'default' | 'primary' | 'danger';
 
 const BUTTON_BASE =
   'inline-flex items-center justify-center gap-2 rounded-sm font-semibold leading-none no-underline transition-colors disabled:cursor-default disabled:opacity-55 aria-disabled:cursor-default aria-disabled:opacity-55';
@@ -25,6 +25,11 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   // on a light page, so it gets its own semantic token (see tokens.css).
   primary:
     'border border-transparent bg-brand-action text-brand-contrast px-5 py-3 text-base cursor-pointer hover:bg-brand-action-hover active:brightness-95',
+  // The one destructive action in the product so far (delete a team) — its
+  // own semantic token (`--ps-color-danger`, same absolute value in both
+  // themes), never the brand color repurposed as a warning color.
+  danger:
+    'border border-transparent bg-danger text-white px-3 py-2 text-sm cursor-pointer hover:brightness-95 active:brightness-90',
 };
 
 export function buttonClass(variant: ButtonVariant = 'default', className = ''): string {

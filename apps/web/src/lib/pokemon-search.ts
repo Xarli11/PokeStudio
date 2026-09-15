@@ -1,5 +1,7 @@
 import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database';
 import type { Locale } from '@pokestudio/i18n';
+import { generationForNationalDexNumber } from '@pokestudio/pokemon-data';
+import type { PokemonType } from '@pokestudio/pokemon-data';
 
 /**
  * Whole-Pokédex client-side search (Phase 1C.3 §3/§4, Search UX v2) — pure
@@ -13,9 +15,11 @@ import type { Locale } from '@pokestudio/i18n';
 /**
  * Case/whitespace/accent-insensitive. Accent-insensitivity matters for
  * Spanish queries (Search UX v2 §1) — a query typed without accents must
- * still match an accented source name, and vice versa.
+ * still match an accented source name, and vice versa. Exported for reuse by
+ * `move-search.ts` (Build's move picker, Milestone 2 Stage 2B polish) —
+ * same normalization rule, no reason to duplicate the diacritic regex.
  */
-function normalizeText(value: string): string {
+export function normalizeText(value: string): string {
   return value
     .trim()
     .replace(/\s+/g, ' ')
@@ -285,4 +289,98 @@ export function getPokemonSuggestions(
     )
     .slice(0, limit)
     .map(toSpeciesSearchMatch);
+}
+
+/**
+ * Explore Pro filters/sort (Milestone 2, Stage 2A) — composes on top of
+ * search, never replaces it: a caller passes `filterSpeciesSearchIndex`'s
+ * own output through here (or, with an empty query, the whole unfiltered
+ * item set) so "char" + Fire + sort Speed desc behaves predictably (task
+ * §7 "filters/search/sort should compose correctly").
+ */
+export type PokemonSortKey =
+  | 'dexNumber'
+  | 'name'
+  | 'bst'
+  | 'hp'
+  | 'attack'
+  | 'defense'
+  | 'specialAttack'
+  | 'specialDefense'
+  | 'speed';
+export type SortDirection = 'asc' | 'desc';
+
+export interface PokemonIndexFilters {
+  type?: PokemonType | undefined;
+  generation?: number | undefined;
+  sortBy?: PokemonSortKey | undefined;
+  sortDirection?: SortDirection | undefined;
+}
+
+function baseStatTotal(item: SpeciesSearchItem): number {
+  const s = item.baseStats;
+  return s.hp + s.attack + s.defense + s.specialAttack + s.specialDefense + s.speed;
+}
+
+function sortValue(
+  item: SpeciesSearchItem,
+  sortBy: PokemonSortKey,
+  locale: Locale,
+): number | string {
+  switch (sortBy) {
+    case 'dexNumber':
+      return item.nationalDexNumber;
+    case 'name':
+      return speciesDisplayName(item, locale);
+    case 'bst':
+      return baseStatTotal(item);
+    default:
+      return item.baseStats[sortBy];
+  }
+}
+
+/**
+ * Applies the mandatory Type/Generation filters and optional sort on top of
+ * an already search-matched (or unfiltered) set. Generation is derived from
+ * the national Dex number (no stored column — see
+ * `packages/pokemon-data/src/species-generation.ts`), not part of
+ * `SpeciesSearchMatch` itself.
+ */
+export function applyPokemonIndexFilters(
+  matches: readonly SpeciesSearchMatch[],
+  filters: PokemonIndexFilters,
+  locale: Locale,
+): SpeciesSearchMatch[] {
+  let result: SpeciesSearchMatch[] = [...matches];
+
+  if (filters.type !== undefined) {
+    const type = filters.type;
+    result = result.filter((match) => match.item.types.includes(type));
+  }
+
+  if (filters.generation !== undefined) {
+    const generation = filters.generation;
+    result = result.filter(
+      (match) => generationForNationalDexNumber(match.item.nationalDexNumber) === generation,
+    );
+  }
+
+  if (filters.sortBy !== undefined) {
+    const sortBy = filters.sortBy;
+    const direction = filters.sortDirection === 'desc' ? -1 : 1;
+    result = [...result].sort((a, b) => {
+      const aValue = sortValue(a.item, sortBy, locale);
+      const bValue = sortValue(b.item, sortBy, locale);
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return direction * aValue.localeCompare(bValue);
+      }
+      // Tie-break by Dex number so equal-stat species still order
+      // deterministically instead of depending on sort-algorithm stability
+      // across engines (task §7 "predictably").
+      const primary = direction * ((aValue as number) - (bValue as number));
+      return primary !== 0 ? primary : a.item.nationalDexNumber - b.item.nationalDexNumber;
+    });
+  }
+
+  return result;
 }

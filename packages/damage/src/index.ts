@@ -102,3 +102,14 @@ export function calculateDamage(input: DamageCalculationInput): DamageCalculatio
     koChanceText: result.kochance(false).text,
   };
 }
+
+export {
+  calculateHpStat,
+  calculateOtherStat,
+  calculateStats,
+  natureMultiplierFor,
+  type CalculateStatsInput,
+  type NatureModifiers,
+  type StatKey,
+  type StatSpread,
+} from './stats';

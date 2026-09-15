@@ -183,6 +183,23 @@ export interface PokeApiMachine {
   version_group: PokeApiNamedResource;
 }
 
+/** Null `increased_stat`/`decreased_stat` together means a neutral nature (5 of the 25: Hardy, Docile, Bashful, Quirky, Serious). */
+export interface PokeApiNature {
+  id: number;
+  name: string;
+  names: PokeApiLocalizedName[];
+  increased_stat: PokeApiNamedResource | null;
+  decreased_stat: PokeApiNamedResource | null;
+}
+
+export interface PokeApiItem {
+  id: number;
+  name: string;
+  names: PokeApiLocalizedName[];
+  category: PokeApiNamedResource;
+  effect_entries: PokeApiEffectEntry[];
+}
+
 export interface PokeApiPokemonForm {
   id: number;
   name: string;
@@ -211,6 +228,17 @@ export interface PokeApiClient {
   fetchMoveLearnMethodRefs: () => Promise<PokeApiNamedResource[]>;
   fetchMoveLearnMethod: (url: string) => Promise<PokeApiMoveLearnMethod>;
   fetchMachine: (url: string) => Promise<PokeApiMachine>;
+  fetchNatureRefs: () => Promise<PokeApiNamedResource[]>;
+  fetchNature: (idOrUrl: number | string) => Promise<PokeApiNature>;
+  /**
+   * Refs for exactly the "holdable" item subset (Milestone 2, Stage 2.0) —
+   * PokéAPI's `/item-attribute/holdable` index resource lists precisely the
+   * items carrying that attribute (verified live: 175 of ~2223 total items),
+   * so this fetches that index directly rather than fetching every item's
+   * detail just to inspect its own `attributes` array.
+   */
+  fetchHoldableItemRefs: () => Promise<PokeApiNamedResource[]>;
+  fetchItem: (idOrUrl: number | string) => Promise<PokeApiItem>;
   requestCount: () => number;
 }
 
@@ -281,6 +309,21 @@ export function createPokeApiClient(options: { cache?: RawCache | undefined } = 
     },
     fetchMoveLearnMethod: (url) => fetchJson(url),
     fetchMachine: (url) => fetchJson(url),
+    async fetchNatureRefs() {
+      // 25 natures live upstream (verified live) — one page covers all.
+      const page = await fetchJson<{ results: PokeApiNamedResource[] }>(
+        `${POKEAPI_BASE_URL}/nature?limit=100`,
+      );
+      return page.results;
+    },
+    fetchNature: (idOrUrl) => fetchJson(toUrl(idOrUrl, 'nature')),
+    async fetchHoldableItemRefs() {
+      const attribute = await fetchJson<{ items: PokeApiNamedResource[] }>(
+        `${POKEAPI_BASE_URL}/item-attribute/holdable`,
+      );
+      return attribute.items;
+    },
+    fetchItem: (idOrUrl) => fetchJson(toUrl(idOrUrl, 'item')),
     requestCount: () => requestCount,
   };
 }

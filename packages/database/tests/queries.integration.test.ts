@@ -6,14 +6,18 @@ import {
   getDefaultVersionGroup,
   getEvolutionFamily,
   getFormLearnsetAllVersionGroups,
+  getFormsBySlugs,
   getMoveBySlug,
   getMoveLearners,
   getPokemonForAbility,
   getSpeciesBySlug,
   getSpeciesSearchIndex,
   listAbilities,
+  listItems,
   listMovesPage,
+  listNatures,
   listSpecies,
+  listVersionGroups,
 } from '../src/queries';
 
 /**
@@ -200,6 +204,20 @@ describe.skipIf(!hasLocalSupabase)(
       expect(versionGroup!.slug).toBe('scarlet-violet');
     });
 
+    it('listVersionGroups returns every real version group newest-first, excluding "champions" (niche-method only)', async () => {
+      const versionGroups = await listVersionGroups(client());
+      expect(versionGroups.length).toBeGreaterThan(1);
+      expect(versionGroups.map((vg) => vg.slug)).not.toContain('champions');
+      expect(versionGroups[0]!.slug).toBe('scarlet-violet');
+      for (let i = 1; i < versionGroups.length; i++) {
+        const prev = versionGroups[i - 1]!;
+        const curr = versionGroups[i]!;
+        expect(prev.generation * 1000 + prev.displayOrder).toBeGreaterThanOrEqual(
+          curr.generation * 1000 + curr.displayOrder,
+        );
+      }
+    });
+
     it('getMoveBySlug returns null for an unknown slug', async () => {
       expect(await getMoveBySlug(client(), 'does-not-exist')).toBeNull();
     });
@@ -374,6 +392,45 @@ describe.skipIf(!hasLocalSupabase)(
       // Every alias carries its own form's types (Search UX v2 §2), not the
       // default form's — needed to honestly caption a form-match card.
       expect(index.aliases.every((a) => a.types.length >= 1 && a.types.length <= 2)).toBe(true);
+      // Base stats (Milestone 2, Stage 2A — Explore Pro stat sorting) are
+      // present and real (never all-zero/placeholder) for every item.
+      const bulbasaur = index.items.find((i) => i.slug === 'bulbasaur');
+      expect(bulbasaur?.baseStats).toEqual({
+        hp: 45,
+        attack: 49,
+        defense: 49,
+        specialAttack: 65,
+        specialDefense: 65,
+        speed: 45,
+      });
+      // Form-level identity (Milestone 2, Stage 2A — Compare): every item
+      // and alias carries its own form's stable slug, not just the species'.
+      expect(bulbasaur?.formSlug).toBe('bulbasaur');
+      expect(meowthAliases.every((a) => a.formSlug.length > 0)).toBe(true);
+      expect(new Set(meowthAliases.map((a) => a.formSlug)).size).toBe(meowthAliases.length);
+    });
+
+    it('getFormsBySlugs resolves distinct forms of the same species independently (Meowth vs Alolan Meowth)', async () => {
+      const forms = await getFormsBySlugs(client(), ['meowth', 'meowth-alola']);
+      expect(forms).toHaveLength(2);
+      const meowth = forms.find((f) => f.formSlug === 'meowth');
+      const alolan = forms.find((f) => f.formSlug === 'meowth-alola');
+      expect(meowth?.speciesSlug).toBe('meowth');
+      expect(alolan?.speciesSlug).toBe('meowth');
+      expect(meowth?.types).toEqual(['normal']);
+      expect(alolan?.types).toEqual(['dark']);
+      expect(meowth?.isDefaultForm).toBe(true);
+      expect(alolan?.isDefaultForm).toBe(false);
+      expect(meowth?.abilities.length).toBeGreaterThan(0);
+    });
+
+    it('getFormsBySlugs silently drops unknown slugs instead of erroring', async () => {
+      const forms = await getFormsBySlugs(client(), ['bulbasaur', 'this-form-does-not-exist']);
+      expect(forms.map((f) => f.formSlug)).toEqual(['bulbasaur']);
+    });
+
+    it('getFormsBySlugs returns [] for an empty input without a request', async () => {
+      expect(await getFormsBySlugs(client(), [])).toEqual([]);
     });
 
     it('listAbilities returns all 313+ abilities, alphabetically, with 313/313 PokeStudio-owned Spanish coverage available', async () => {
@@ -414,6 +471,29 @@ describe.skipIf(!hasLocalSupabase)(
       expect(page!.totalCount).toBeGreaterThan(5);
       expect(page!.items.length).toBe(5);
       expect(page!.totalPages).toBeGreaterThan(1);
+    });
+
+    it('listNatures returns exactly 25 natures, 5 of them neutral (Milestone 2, Stage 2.0)', async () => {
+      const natures = await listNatures(client());
+      expect(natures).toHaveLength(25);
+      const neutral = natures.filter(
+        (n) => n.increasedStat === undefined && n.decreasedStat === undefined,
+      );
+      expect(neutral).toHaveLength(5);
+      const adamant = natures.find((n) => n.slug === 'adamant');
+      expect(adamant?.increasedStat).toBe('attack');
+      expect(adamant?.decreasedStat).toBe('special-attack');
+    });
+
+    it('listItems returns only the "holdable" subset, e.g. Leftovers, not the full item catalog', async () => {
+      const items = await listItems(client());
+      expect(items.length).toBeGreaterThan(100);
+      expect(items.length).toBeLessThan(300);
+      const leftovers = items.find((i) => i.slug === 'leftovers');
+      expect(leftovers).toBeDefined();
+      expect(leftovers?.nameEn).toBe('Leftovers');
+      // A key item (never holdable) must not have been ingested.
+      expect(items.some((i) => i.slug === 'bike-voucher')).toBe(false);
     });
   },
 );

@@ -52,6 +52,11 @@ paginates (full-dataset payload size made that necessary, not optional
 polish). Abilities, evolutions, structured search/filtering, game/generation
 context and Pokémon comparison remain Phase 1C+.
 
+**Phase 1C.3 → Milestone 2 Stage 2A (complete)** added structured Type/Generation filters and
+sorting to the Pokédex index, and shipped Pokémon Compare (`/[locale]/compare`, 2-4 Pokémon _or
+forms_, base stats/types/abilities/defensive type matchups side by side) — the last item this
+phase's own goal list named ("compare Pokémon").
+
 ## Phase 2 — Build Core
 
 - Team Builder,
@@ -62,6 +67,25 @@ context and Pokémon comparison remain Phase 1C+.
 - shareable team representation,
 - defensive/offensive coverage,
 - speed/role analysis foundation.
+
+**Build v1 (Milestone 2 Stage 2B, complete)** shipped the first real version of most of this list:
+a `TeamDraft` domain model, a set editor (species/form, nickname, level, ability constrained to the
+form's real abilities, item, Tera type, nature, EVs/IVs, up to 4 moves constrained to what the form
+can actually learn in the selected game), local persistence (`localStorage`, before auth, as
+planned), and team analysis (defensive type-based profile, offensive type-only coverage, and
+Incomplete/Warning/Invalid team warnings). Not yet done: Showdown import/export, full
+tournament/format legality (move legality is honestly scoped to "can this form learn this move in
+this game," not full VGC/Smogon rules), a shareable team representation (still local-only), and
+speed/role analysis.
+
+**Build final product shape pass (Milestone 2, complete)** reversed the temporary
+Scarlet/Violet-only restriction: every historical game/version-group is now selectable, resolved
+through a central `BuildGameCapabilities` model (abilities/natures/held items/modern EV-IV stats/
+Tera/Dynamax/Mega Evolution/Z-Moves/special rulesets) so the Set Editor and team validity adapt
+honestly per game instead of assuming modern mechanics everywhere. Still not modeled: a real
+historical battle-mechanics/legality engine for Gen I/II or special-ruleset games (Let's Go,
+Legends: Arceus) — those contexts are clearly identified as not-fully-validated rather than
+silently treated as complete.
 
 ## Phase 3 — Damage Lab
 

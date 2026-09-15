@@ -283,6 +283,42 @@ export interface NormalizedMachine {
   source: SourceRef;
 }
 
+/** PokéStudio's 6-base-stat vocabulary, in PokéAPI's own stat-name form — the domain `NormalizedNature.increasedStat`/`decreasedStat` share (accuracy/evasion excluded: natures never touch those, unlike `MoveStat`). */
+export type BaseStatKey = 'attack' | 'defense' | 'special-attack' | 'special-defense' | 'speed';
+
+/**
+ * A canonical nature (Milestone 2, Stage 2.0) — exactly 25 upstream, 5 of
+ * them neutral (both stat fields undefined together, never invented as a
+ * fake "no-op" stat pair). Team Builder v1 needs these exact modifiers for
+ * stat calculation.
+ */
+export interface NormalizedNature {
+  slug: string;
+  nameEn: string;
+  nameEs?: string | undefined;
+  /** Undefined together (never just one) for a neutral nature — see `assertNeutralOrBothStats`. */
+  increasedStat?: BaseStatKey | undefined;
+  decreasedStat?: BaseStatKey | undefined;
+  source: SourceRef;
+}
+
+/**
+ * A canonical held item (Milestone 2, Stage 2.0) — only items PokéAPI marks
+ * "holdable" (see `normalizeItem`'s filtering, ~175 of ~2223 total items
+ * upstream), never the full item catalog.
+ */
+export interface NormalizedItem {
+  slug: string;
+  nameEn: string;
+  nameEs?: string | undefined;
+  /** Concise effect text (PokéAPI `short_effect`, falling back to `effect`). */
+  effectEn?: string | undefined;
+  effectEs?: string | undefined;
+  /** PokéAPI's item category name (e.g. "held-items", "choice", "species-specific") — free text, open upstream vocabulary, same treatment as `NormalizedMove.target`. */
+  category: string;
+  source: SourceRef;
+}
+
 /** A normalized, provenance-tagged import batch — species and their forms together. */
 export interface NormalizedDataset {
   provenance: DataProvenance;
@@ -296,4 +332,6 @@ export interface NormalizedDataset {
   learnMethods: NormalizedLearnMethod[];
   learnsetEntries: NormalizedLearnsetEntry[];
   machines: NormalizedMachine[];
+  natures: NormalizedNature[];
+  items: NormalizedItem[];
 }

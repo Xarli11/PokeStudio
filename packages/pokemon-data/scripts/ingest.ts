@@ -96,6 +96,7 @@ async function main() {
       `${result.learnMethods.length} learn methods, ${result.learnsetEntries.length} learnset entries, ` +
       `${result.machines.length} machines.`,
   );
+  console.warn(`[ingest]   ${result.natures.length} natures, ${result.items.length} held items.`);
 
   if (result.normalizationFailures.length > 0) {
     console.error(`[ingest] ${result.normalizationFailures.length} species failed to normalize:`);
@@ -124,6 +125,8 @@ async function main() {
     learnMethods: result.learnMethods,
     learnsetEntries: result.learnsetEntries,
     machines: result.machines,
+    natures: result.natures,
+    items: result.items,
   };
 
   console.warn('[ingest] Validating...');
@@ -176,6 +179,9 @@ async function main() {
       `learn methods upserted: ${persistResult.learnMethodsUpserted}, learnset entries written: ` +
       `${persistResult.learnsetEntriesWritten}, machines upserted: ${persistResult.machinesUpserted}, ` +
       `move stat changes written: ${persistResult.moveStatChangesWritten}`,
+  );
+  console.warn(
+    `Natures upserted: ${persistResult.naturesUpserted}, items upserted: ${persistResult.itemsUpserted}`,
   );
 }
 

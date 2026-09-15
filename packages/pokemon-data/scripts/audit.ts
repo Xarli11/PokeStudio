@@ -65,6 +65,8 @@ async function main() {
     learnMethods: result.learnMethods,
     learnsetEntries: result.learnsetEntries,
     machines: result.machines,
+    natures: result.natures,
+    items: result.items,
   };
 
   const issues = validateExploreDataset(dataset);

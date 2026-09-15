@@ -55,3 +55,34 @@ function humanizeSlug(slug: string): string {
 export function versionGroupDisplayName(slug: string): string {
   return VERSION_GROUP_NAMES[slug] ?? humanizeSlug(slug);
 }
+
+/** One generation's worth of version groups, in the order they should render (see `groupVersionGroupsByGeneration`). */
+export interface VersionGroupGeneration<T extends { generation: number }> {
+  generation: number;
+  versionGroups: T[];
+}
+
+/**
+ * Groups an already generation-sorted version-group list into per-generation
+ * buckets (Build's game selector, Milestone 2 final pass §1 — "restore the
+ * game/version selector across historical games... prefer grouping by
+ * generation"). Assumes the input is already ordered newest-generation-first
+ * (exactly what `listVersionGroups` returns) — this only groups consecutive
+ * runs of the same generation, it never re-sorts, so a caller passing
+ * differently-ordered data gets differently-ordered groups back, not a
+ * silently "corrected" order.
+ */
+export function groupVersionGroupsByGeneration<T extends { generation: number }>(
+  versionGroups: readonly T[],
+): VersionGroupGeneration<T>[] {
+  const groups: VersionGroupGeneration<T>[] = [];
+  for (const versionGroup of versionGroups) {
+    const currentGroup = groups[groups.length - 1];
+    if (currentGroup && currentGroup.generation === versionGroup.generation) {
+      currentGroup.versionGroups.push(versionGroup);
+    } else {
+      groups.push({ generation: versionGroup.generation, versionGroups: [versionGroup] });
+    }
+  }
+  return groups;
+}

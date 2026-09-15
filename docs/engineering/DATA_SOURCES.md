@@ -57,6 +57,22 @@ per-generation power/accuracy/type changes, e.g. Thunderbolt's power was 95 befo
 "Full-dataset ingestion addendum" for exactly how each of the findings above was discovered and
 fixed.
 
+## Natures and items (Milestone 2, Stage 2.0)
+
+Natures (`/nature`) are ingested whole — all 25, including the 5 neutral ones (both
+`increased_stat`/`decreased_stat` null). A first migration's constraint
+(`increased_stat is distinct from decreased_stat`) rejected every neutral nature in practice: `NULL
+IS DISTINCT FROM NULL` evaluates to `false` in Postgres, not `true` as the name suggests — fixed in
+a follow-up migration (`increased_stat is null or increased_stat != decreased_stat`) rather than
+editing the already-applied one, per this repo's migration convention.
+
+Items are the one case in this phase where PokéAPI's raw `/item` list (2223 rows) was deliberately
+**not** ingested whole — most are key items, TMs, mail, and other inventory concepts irrelevant to
+a held-item selector. Rather than a fragile string/category-name heuristic, ingestion calls
+PokéAPI's own `/item-attribute/holdable` index, which returns exactly the 175 items the games
+themselves flag as valid to hold — an authoritative, deterministic filter already modeled upstream,
+not a Ponytail-violating reimplementation of "does this look like a held item."
+
 ## Normalization strategy (Phase 1)
 
 ADR-0010 defines how species/form/regional-form/battle-only-form/cosmetic-form,
@@ -90,6 +106,95 @@ during Phase 1B, both centralized as general rules (not species-specific patches
 Final distribution (full dataset): 1025 `default`, 220 `battle`, 54 `regional`, 280 `cosmetic`.
 Largest cosmetic families: Alcremie (64 forms — flavor/cream combinations), Unown (28 — letters),
 Vivillon/Scatterbug/Spewpa (20 each — regional wing patterns), Arceus (19 — Plates), Silvally (18).
+
+### RESOLVED (audited 2026-09-16, corrected same day): the 49 "Mega Dimension" forms are official, current content — earlier draft of this section was wrong
+
+An earlier version of this section classified 49 of 99 "mega"-slugged
+`pokemon_form` rows as non-canonical fan content, based on their upstream
+`version_group: "mega-dimension"` looking like a fictional/community bucket.
+**That conclusion was incorrect** and is corrected here after the owner
+flagged it and a second, deeper audit was run. Left in place (corrected,
+not deleted) as an honest record of the mistake and the correction, per
+this project's own documentation discipline.
+
+**The facts, re-verified against Bulbapedia (current canonical reference)
+and PokéAPI directly:**
+
+- **99 total** `pokemon_form` rows with a "mega" slug, all `source_id:
+pokeapi`. Breakdown:
+  - **50 classic** Mega Evolutions (X/Y: 28, Omega Ruby/Alpha Sapphire: 18,
+    Charizard/Mewtwo each having X and Y — matches the pre-2025 canonical
+    total).
+  - **26 introduced with Pokémon Legends: Z-A's base game** (released 2025) — e.g. `clefable-mega`, `victreebel-mega`, `starmie-mega`,
+    `dragonite-mega`, `meganium-mega`.
+  - **23 introduced with Z-A's Mega Dimension DLC**, across 18 species,
+    including three species gaining a **second, additional** "Z Mega
+    Evolution" on top of their existing classic Mega
+    (`garchomp-mega-z`, `lucario-mega-z`, `absol-mega-z` — an official
+    game mechanic, confirmed via Bulbapedia's own "Z Mega Evolution"
+    entry, sourced to Pokémon Legends: Z-A – Mega Dimension's own press
+    materials) plus multi-form species counted with more than one row
+    each (`raichu-mega-x`/`-y`, `magearna-mega`/`-original-mega`,
+    `tatsugiri-curly-mega`/`-droopy-mega`/`-stretchy-mega`).
+  - **0 genuinely non-canonical rows.** Every one of the 99 is real,
+    current, official Pokémon content.
+- Both `legends-za` and `mega-dimension` are real PokéAPI `version-group`
+  resources (generation IX) — **and both are already present in this
+  project's own ingested `version_group` table** (32 rows, confirmed by
+  direct query), ingested 2026-09-14. The earlier draft's claim that
+  `mega-dimension` was "not one of the 32 real version groups this project
+  ingests" was simply wrong — it hadn't actually queried the table, only
+  a hardcoded display-name lookup map that happened to be missing an entry
+  for it. `version-group-label.ts`'s human-readable name map has an entry
+  for `legends-za` but not yet for `mega-dimension`/`champions` — not a
+  correctness bug (the humanized-slug fallback already renders "Mega
+  Dimension"/"Champions", never a raw slug), just a small future polish
+  item.
+- **No remediation needed for the forms themselves. No rows should be
+  filtered, deleted, or excluded.** The originally proposed
+  "filter by real ingested version_group" remediation is retracted — had
+  it been executed, it would have deleted 49 genuinely official rows.
+- **A real, separate issue found during this same audit: PokéAPI's
+  numeric ids for non-default "variety" forms are not stable over time.**
+  Comparing this project's stored `pokemon_form.external_id` against
+  PokéAPI's current live ids for the same named resources shows
+  consistent drift (e.g. `venusaur-mega` stored as `10133`, now live at
+  `10033`; `clefable-mega` stored as `10503`, now live at `10278`) —
+  different offsets for different id ranges, consistent with PokéAPI
+  having inserted the whole Legends: Z-A/Mega Dimension id block and
+  shifted every later id down. **554 of 1579 `pokemon_form` rows
+  (~35%) have an `external_id` ≥ 10000** and are potentially affected.
+  This is a real idempotency risk for the next ingestion run: the
+  upsert-by-`(source_id, external_id)` key (ADR-0011) would not match
+  these rows against their new upstream ids, so a naive re-ingestion could
+  insert 554 duplicate rows rather than update the existing ones, leaving
+  the old rows stale. Species/move/ability primary ids (low, stable
+  numbers) are not affected — this is specific to the non-default
+  "variety" id space. **Not fixed here — flagged for the next ingestion
+  planning pass.**
+- **User-facing exposure**: since these are all genuinely official forms,
+  their appearance in Explore search / Compare / Build's add-Pokémon
+  picker (via `getSpeciesSearchIndex`'s non-default-form aliases) is
+  correct behavior, not contamination — no change needed there.
+- **A real, separate, already-known Build limitation this confirms
+  concretely**: Build's species-availability validation
+  (`speciesUnavailableInGeneration`, added in an earlier pass) checks the
+  _species'_ generation of introduction, not the _form's_ — so selecting
+  "Red/Blue" as the game and adding the `clefable-mega` form specifically
+  would currently be treated as available (Clefable-the-species is
+  Generation I) even though Mega Clefable itself is Generation IX-DLC-only
+  content. That earlier pass's own documentation already named this exact
+  gap ("do not invent form introduction data... otherwise keep the
+  existing historical-support honesty warning") — this audit gives it a
+  concrete, confirmed real-world example, not a new bug. Not fixed in
+  this audit (out of scope — Build UX/validation changes were explicitly
+  excluded from this pass).
+- Not verified against Cloud DEV (no Cloud DEV access was used, per
+  instruction). Since both the correct classification and the id-drift
+  finding are properties of the upstream PokéAPI dataset/pipeline, not the
+  Raspberry Pi environment specifically, a Cloud DEV ingestion using the
+  same pipeline would be expected to show the same 99 rows and the same
+  drift — inferred, not confirmed.
 
 ## Localized form names — a PokéAPI data-quality gap
 
@@ -274,7 +379,7 @@ For sprites/artwork/icons:
 - do not assume official assets are commercially reusable,
 - include an unofficial/fan-project disclaimer where appropriate.
 
-### Phase 1A decision: no sprite/artwork source yet
+### Phase 1A decision: no sprite/artwork source yet (Explore/Pokédex)
 
 No sprite/artwork source has been reviewed and approved for use. The Pokédex
 UI (`apps/web/src/components/pokemon/art-slot.tsx`, redesigned in UX/UI 0.2 —
@@ -288,3 +393,119 @@ source is reviewed, its license confirmed, and that review recorded here.
 `art-slot.tsx`'s own doc comment records how a future approved image would
 slot in (replacing just the monogram `<span>`, same outer frame) so that
 day doesn't require a card/page redesign.
+
+### Milestone 2 decision: PokéAPI sprites, PROVISIONAL / dev-only (Build roster)
+
+Build's team roster (`apps/web/src/lib/pokemon-sprite.ts`) now renders real
+Pokémon sprites from PokéAPI's `sprites` GitHub repository
+(`raw.githubusercontent.com/PokeAPI/sprites`), by explicit owner decision
+(2026-09-15), so the Build set-editor UX could be built and visually
+reviewed without a placeholder standing in for every roster slot. This is
+**not** the same thing as the Phase 1A sprite review above, and does not
+supersede it:
+
+- **PROVISIONAL / RIGHTS REVIEW REQUIRED** — approved only as the local/dev
+  visual-prototyping source for this pass, not cleared for production use.
+- Pokémon sprite images remain third-party IP (Nintendo / Game Freak / The
+  Pokémon Company) regardless of the hosting repository's own (permissive,
+  code-focused) license — hosting on GitHub or being freely downloadable
+  does not grant PokeStudio commercial rights to the underlying artwork.
+- These assets are **not to be deployed to production** as part of this
+  pass. Shipping them to real users is a separate licensing decision the
+  owner has not made yet.
+- Coverage/architecture/fallback behavior: see `pokemon-sprite.ts`'s own doc
+  comment — default forms only (species' national Dex number = PokéAPI's
+  base `pokemon` resource id), non-default forms fall back to the existing
+  `art-slot.tsx` placeholder honestly rather than guessing a wrong image.
+
+### Sprite Lab evaluation: PokéSprite (candidate visual source, PROVISIONAL / dev-only)
+
+A dev-only Sprite Lab (`/[locale]/dev/sprites`, not reachable in a production
+build, no nav/sitemap entry — see `pokemon-sprite.ts` and
+`sprite-coverage-audit.ts`) evaluates PokéSprite's box-style icons
+(`github.com/msikma/pokesprite`) alongside the existing PokéAPI sources,
+because the owner likes its visual direction. Recorded here for the same
+reason the PokéAPI entry above is:
+
+- **candidate visual source, PROVISIONAL / EVALUATION ONLY** — not approved
+  for production or commercial use, and not more "rights-cleared" than any
+  other third-party-hosted Pokémon image source.
+- The underlying imagery is third-party Pokémon character IP (Nintendo /
+  Game Freak / The Pokémon Company) regardless of PokéSprite's own
+  (permissive, code/data-focused) repository license. Hosting the files on
+  GitHub, or that repository having an open-source license for its own code,
+  does **not** grant PokeStudio rights to the Pokémon artwork itself — same
+  principle as the PokéAPI sprites entry above, not a weaker one.
+- **Audited coverage (2026-09-16)**, against this project's own
+  `species`/`pokemon_form` tables and PokéSprite's public `data/pokemon.json`
+  - `pokemon-gen8/regular/` file listing: covers National Dex 1-905 only —
+    **zero Generation IX coverage** (must not be assumed complete for the
+    current Pokédex) — and 853/1025 (~83%) of default forms by exact slug
+    match within that range (172 gaps, mostly default-form slugs PokéSprite
+    names differently, e.g. `deoxys-normal`, `unown-a` — not true
+    unavailability, just an unmatched name this audit does not attempt to
+    alias). See `sprite-coverage-audit.ts`'s `POKESPRITE_AUDIT_SNAPSHOT` for
+    the exact numbers and methodology.
+- Real per-form coverage where it does have an entry (regional forms, Rotom
+  formes, etc. each have their own file) — broader form coverage than the
+  existing PokéAPI "modern" strategy, which is default-form only.
+- Do not use as the _sole_ production sprite source until Generation IX
+  coverage is resolved (either PokéSprite adds it upstream, or a documented
+  fallback chain to another source is decided) — see the Sprite Lab's own
+  final-report recommendation for the current thinking.
+
+### Sprite Lab evaluation: Pokémon Showdown / Smogon sprites (candidate, PROVISIONAL / dev-only — stricter rights caveat)
+
+Added to the Sprite Lab as Option D per explicit owner request. This is a
+**separate provenance question from the "Pokémon Showdown server/simulator
+data" entry above** — that entry is about the MIT-licensed simulator
+_code_ (`smogon/pokemon-showdown`); the sprite _images_ live entirely
+outside that repository.
+
+- **Repository fact, verified 2026-09-16**: the client repository
+  (`smogon/pokemon-showdown-client`, AGPL-3.0) explicitly
+  `.gitignore`s `/play.pokemonshowdown.com/sprites/` — the sprite files
+  actually served from `play.pokemonshowdown.com` are **not** part of the
+  public, version-controlled, licensed source repository at all. There is
+  no LICENSE file scoped to these image assets specifically — a less
+  documented provenance trail than PokéAPI's or PokéSprite's own sprite
+  repos (both of which at least commit the image files to a public git
+  history under a stated repository license, even though — as with every
+  source here — that license never covers the Pokémon artwork itself).
+- **A. Official Pokémon-origin sprites**: the static "gen5"-style sprites
+  are extracted/derived from the actual in-game Generation V battle
+  sprites — Nintendo/Game Freak-origin image data, same IP status as every
+  other source on this page.
+- **B. Community-created sprites**: the _animated_ versions of these
+  sprites are a credited community project. The project's own governing
+  thread (Smogon Forums, "XY Battle Sprite Animations") states explicitly:
+  - _"These sprites are free for non-profit use. You must make a credit
+    page and link back to this thread."_
+  - _"These sprites are not open source, because we do not have the
+    rights to the characters depicted."_
+  - _"Any games that charge money will not be accepted as a rule."_
+  - Individual spriters' permission is required for uses beyond Pokémon
+    Showdown/Smogon itself.
+- **C. Repository/code licensing**: irrelevant to the sprites themselves,
+  since (per the `.gitignore` fact above) the sprite assets are not part of
+  the licensed code repository in the first place.
+- **Classification for PokeStudio: reasonable provisional dev source,
+  UNSUITABLE for commercial production as currently sourced.** The
+  community sprite project's own stated terms explicitly rule out
+  for-profit use (_"any games that charge money will not be accepted"_) —
+  a stronger, explicit restriction than the other three sources' merely
+  _undetermined_ commercial status. Do not ship these to production
+  without direct outreach to the sprite project for permission, regardless
+  of how the PokéSprite/PokéAPI question resolves.
+- **Audited coverage (2026-09-16)**, against this project's own
+  `species` table, HEAD-checking `sprites/gen5/{formSlug}.png`: 927/1025
+  (~90%) default forms, including **85/120 (~71%) Generation IX species**
+  — notably better Gen IX coverage than PokéSprite's zero, though still not
+  complete. A sampled (not exhaustive) check found 170/200 non-default
+  forms and 53/61 (stratified sample) animated sprites. See
+  `sprite-coverage-audit.ts`'s `SHOWDOWN_AUDIT_SNAPSHOT` for the exact
+  numbers and methodology. Naming mostly follows this project's own
+  hyphenated `formSlug` convention (`rotom-wash`, `unown-a`) but not
+  universally (`charizard-megax`, no hyphen before the X/Y suffix, unlike
+  `charizard-mega-x`) — the same category of gap as PokéSprite's, not
+  fixed with a per-species alias table here either.

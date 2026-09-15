@@ -6,21 +6,53 @@ import { useRouter } from 'next/navigation';
 
 import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database';
 import { formatMessage, type Locale } from '@pokestudio/i18n';
+import { ALL_POKEMON_TYPES, LATEST_KNOWN_GENERATION } from '@pokestudio/pokemon-data';
 import type { PokemonType } from '@pokestudio/pokemon-data';
 
 import { ClearIcon, SearchIcon } from '@/components/search-field-icons';
 import { buttonClass, searchInputClass } from '@/lib/ui-classes';
 import {
+  applyPokemonIndexFilters,
   dexNumberLabel,
   filterSpeciesSearchIndex,
   getPokemonSuggestions,
   speciesDisplayName,
+  type PokemonSortKey,
   type PokemonSuggestion,
+  type SortDirection,
   type SpeciesSearchMatch,
 } from '@/lib/pokemon-search';
 
 import { PokemonCard } from './card';
 import { PokemonTypeBadge } from './type-badge';
+
+/**
+ * Explore Pro filter/sort UI copy (Milestone 2, Stage 2A) — grouped into one
+ * prop instead of a dozen more flat strings on `PokemonExplorerProps`.
+ * `typeLabel`/`allTypesLabel`/`generationLabel`/`allGenerationsLabel`/
+ * `generationOptionTemplate` deliberately reuse the Moves page's own
+ * `dictionary.moves.*` filter copy at the call site (identical generic UI
+ * text — "Type", "All types", "Generation", "All generations", "Generation
+ * {number}" — not worth a second translated copy to maintain).
+ */
+export interface PokemonIndexFilterLabels {
+  typeLabel: string;
+  allTypesLabel: string;
+  generationLabel: string;
+  allGenerationsLabel: string;
+  generationOptionTemplate: string;
+  sortByLabel: string;
+  sortDexNumberLabel: string;
+  sortNameLabel: string;
+  sortBstLabel: string;
+  statLabels: Record<
+    'hp' | 'attack' | 'defense' | 'specialAttack' | 'specialDefense' | 'speed',
+    string
+  >;
+  sortAscendingLabel: string;
+  sortDescendingLabel: string;
+  clearFiltersLabel: string;
+}
 
 export interface PokemonExplorerProps {
   locale: Locale;
@@ -41,6 +73,7 @@ export interface PokemonExplorerProps {
   pageLabelTemplate: string;
   previousPageLabel: string;
   nextPageLabel: string;
+  filterLabels: PokemonIndexFilterLabels;
 }
 
 /**
@@ -182,11 +215,16 @@ export function PokemonExplorer({
   pageLabelTemplate,
   previousPageLabel,
   nextPageLabel,
+  filterLabels,
 }: PokemonExplorerProps) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [typeFilter, setTypeFilter] = useState<PokemonType | ''>('');
+  const [generationFilter, setGenerationFilter] = useState<number | ''>('');
+  const [sortBy, setSortBy] = useState<PokemonSortKey | ''>('');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
@@ -195,14 +233,46 @@ export function PokemonExplorer({
     () => getPokemonSuggestions(searchIndex.items, searchIndex.aliases, query, locale),
     [searchIndex, query, locale],
   );
-  const results = useMemo(
-    () => filterSpeciesSearchIndex(searchIndex.items, searchIndex.aliases, query, locale),
-    [searchIndex, query, locale],
-  );
   const isSearching = query.trim().length > 0;
+  const isFiltering = isSearching || typeFilter !== '' || generationFilter !== '' || sortBy !== '';
+
+  // Search narrows the whole-dataset set first (task §7); Type/Generation/
+  // Sort then compose on top of whatever search produced — so "char" + Fire
+  // + sort Speed desc behaves predictably regardless of which controls were
+  // touched first or last.
+  const searchedMatches = useMemo<SpeciesSearchMatch[]>(
+    () =>
+      isSearching
+        ? filterSpeciesSearchIndex(searchIndex.items, searchIndex.aliases, query, locale)
+        : searchIndex.items.map((item) => ({ item })),
+    [searchIndex, query, locale, isSearching],
+  );
+  const results = useMemo(
+    () =>
+      applyPokemonIndexFilters(
+        searchedMatches,
+        {
+          type: typeFilter === '' ? undefined : typeFilter,
+          generation: generationFilter === '' ? undefined : generationFilter,
+          sortBy: sortBy === '' ? undefined : sortBy,
+          sortDirection,
+        },
+        locale,
+      ),
+    [searchedMatches, typeFilter, generationFilter, sortBy, sortDirection, locale],
+  );
   const showSuggestions = isOpen && isSearching && suggestions.length > 0;
   const showHelper = isOpen && !isSearching;
   const panelOpen = showSuggestions || showHelper;
+
+  function clearFilters(): void {
+    setQuery('');
+    setTypeFilter('');
+    setGenerationFilter('');
+    setSortBy('');
+    setSortDirection('asc');
+    closePanel();
+  }
 
   function optionId(index: number): string {
     return `${listboxId}-option-${index}`;
@@ -238,95 +308,202 @@ export function PokemonExplorer({
     }
   }
 
+  // "Pokédex #" is deliberately not repeated here — the select's own blank
+  // default option already means "unsorted, natural Dex order" (identical
+  // output), and the direction toggle below promotes that default into an
+  // explicit `sortBy: 'dexNumber'` the moment it's touched, so descending
+  // Dex order stays reachable without a confusing duplicate menu entry.
+  const sortOptions: { value: PokemonSortKey; label: string }[] = [
+    { value: 'name', label: filterLabels.sortNameLabel },
+    { value: 'bst', label: filterLabels.sortBstLabel },
+    { value: 'hp', label: filterLabels.statLabels.hp },
+    { value: 'attack', label: filterLabels.statLabels.attack },
+    { value: 'defense', label: filterLabels.statLabels.defense },
+    { value: 'specialAttack', label: filterLabels.statLabels.specialAttack },
+    { value: 'specialDefense', label: filterLabels.statLabels.specialDefense },
+    { value: 'speed', label: filterLabels.statLabels.speed },
+  ];
+  const generationOptions = Array.from({ length: LATEST_KNOWN_GENERATION }, (_, i) => i + 1);
+
   return (
     <div className="flex flex-col gap-6">
-      <div
-        ref={containerRef}
-        className="relative max-w-md"
-        onBlur={(event) => {
-          if (!containerRef.current?.contains(event.relatedTarget as Node | null)) {
-            closePanel();
-          }
-        }}
-      >
-        <label htmlFor={`${listboxId}-input`} className="flex flex-col gap-1 text-xs text-muted">
-          {searchLabel}
-        </label>
-        <div className="relative mt-1">
-          <SearchIcon />
-          <input
-            ref={inputRef}
-            id={`${listboxId}-input`}
-            role="combobox"
-            aria-expanded={panelOpen}
-            aria-controls={panelOpen ? listboxId : undefined}
-            aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
-            aria-autocomplete="list"
-            type="text"
-            autoComplete="off"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setIsOpen(true);
-              setActiveIndex(-1);
-            }}
-            onFocus={() => setIsOpen(true)}
-            onKeyDown={handleKeyDown}
-            placeholder={searchPlaceholder}
-            aria-label={searchLabel}
-            className={searchInputClass}
-          />
-          {isSearching ? (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery('');
-                closePanel();
-                inputRef.current?.focus();
+      {/* Search + Type/Generation/Sort (task §7/§8) — one compact row on
+          desktop, wrapping to a stacked panel on narrow viewports rather
+          than a giant sidebar. Every control composes with every other
+          (task's "char" + Fire + sort Speed desc example) via the same
+          `results` computation below, never a separate query path. */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div
+          ref={containerRef}
+          className="relative max-w-md flex-1 basis-56"
+          onBlur={(event) => {
+            if (!containerRef.current?.contains(event.relatedTarget as Node | null)) {
+              closePanel();
+            }
+          }}
+        >
+          <label htmlFor={`${listboxId}-input`} className="flex flex-col gap-1 text-xs text-muted">
+            {searchLabel}
+          </label>
+          <div className="relative mt-1">
+            <SearchIcon />
+            <input
+              ref={inputRef}
+              id={`${listboxId}-input`}
+              role="combobox"
+              aria-expanded={panelOpen}
+              aria-controls={panelOpen ? listboxId : undefined}
+              aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
+              aria-autocomplete="list"
+              type="text"
+              autoComplete="off"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setIsOpen(true);
+                setActiveIndex(-1);
               }}
-              aria-label={clearSearchLabel}
-              className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              onFocus={() => setIsOpen(true)}
+              onKeyDown={handleKeyDown}
+              placeholder={searchPlaceholder}
+              aria-label={searchLabel}
+              className={searchInputClass}
+            />
+            {isSearching ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  closePanel();
+                  inputRef.current?.focus();
+                }}
+                aria-label={clearSearchLabel}
+                className="absolute right-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              >
+                <ClearIcon />
+              </button>
+            ) : null}
+          </div>
+
+          {showSuggestions ? (
+            <ul
+              id={listboxId}
+              role="listbox"
+              aria-label={searchLabel}
+              className="absolute z-20 mt-1.5 w-full overflow-hidden rounded-md border border-border-subtle bg-surface-raised shadow-sm"
             >
-              <ClearIcon />
-            </button>
+              {suggestions.map((suggestion, index) => (
+                <SuggestionRow
+                  key={suggestion.item.slug}
+                  suggestion={suggestion}
+                  locale={locale}
+                  typeLabels={typeLabels}
+                  multipleFormsMatchTemplate={multipleFormsMatchTemplate}
+                  active={index === activeIndex}
+                  optionId={optionId(index)}
+                  onHover={() => setActiveIndex(index)}
+                  onSelect={closePanel}
+                />
+              ))}
+            </ul>
+          ) : null}
+
+          {showHelper ? (
+            <div
+              id={listboxId}
+              className="absolute z-20 mt-1.5 w-full rounded-md border border-border-subtle bg-surface-raised px-3 py-2.5 shadow-sm"
+            >
+              <p className="m-0 text-sm text-foreground">{searchHelperTitle}</p>
+              <p className="m-0 mt-0.5 text-xs text-muted">{searchHelperExample}</p>
+            </div>
           ) : null}
         </div>
 
-        {showSuggestions ? (
-          <ul
-            id={listboxId}
-            role="listbox"
-            aria-label={searchLabel}
-            className="absolute z-20 mt-1.5 w-full overflow-hidden rounded-md border border-border-subtle bg-surface-raised shadow-sm"
+        <label className="flex flex-col gap-1 text-xs text-muted">
+          {filterLabels.typeLabel}
+          <select
+            value={typeFilter}
+            onChange={(event) => setTypeFilter(event.target.value as PokemonType | '')}
+            aria-label={filterLabels.typeLabel}
+            className="rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground"
           >
-            {suggestions.map((suggestion, index) => (
-              <SuggestionRow
-                key={suggestion.item.slug}
-                suggestion={suggestion}
-                locale={locale}
-                typeLabels={typeLabels}
-                multipleFormsMatchTemplate={multipleFormsMatchTemplate}
-                active={index === activeIndex}
-                optionId={optionId(index)}
-                onHover={() => setActiveIndex(index)}
-                onSelect={closePanel}
-              />
+            <option value="">{filterLabels.allTypesLabel}</option>
+            {ALL_POKEMON_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {typeLabels[type]}
+              </option>
             ))}
-          </ul>
-        ) : null}
+          </select>
+        </label>
 
-        {showHelper ? (
-          <div
-            id={listboxId}
-            className="absolute z-20 mt-1.5 w-full rounded-md border border-border-subtle bg-surface-raised px-3 py-2.5 shadow-sm"
+        <label className="flex flex-col gap-1 text-xs text-muted">
+          {filterLabels.generationLabel}
+          <select
+            value={generationFilter}
+            onChange={(event) =>
+              setGenerationFilter(event.target.value === '' ? '' : Number(event.target.value))
+            }
+            aria-label={filterLabels.generationLabel}
+            className="rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground"
           >
-            <p className="m-0 text-sm text-foreground">{searchHelperTitle}</p>
-            <p className="m-0 mt-0.5 text-xs text-muted">{searchHelperExample}</p>
+            <option value="">{filterLabels.allGenerationsLabel}</option>
+            {generationOptions.map((generation) => (
+              <option key={generation} value={generation}>
+                {formatMessage(filterLabels.generationOptionTemplate, { number: generation })}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs text-muted">
+          {filterLabels.sortByLabel}
+          <div className="flex gap-1">
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as PokemonSortKey | '')}
+              aria-label={filterLabels.sortByLabel}
+              className="rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground"
+            >
+              <option value="">{filterLabels.sortDexNumberLabel}</option>
+              {sortOptions.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+                // Reversing the *default* (unsorted) state has no visible
+                // effect unless it's promoted to an explicit Dex-number
+                // sort — otherwise "descending" would silently do nothing.
+                setSortBy((current) => (current === '' ? 'dexNumber' : current));
+              }}
+              aria-label={
+                sortDirection === 'asc'
+                  ? filterLabels.sortAscendingLabel
+                  : filterLabels.sortDescendingLabel
+              }
+              className="rounded-md border border-border-subtle bg-surface px-2.5 py-2 text-sm text-foreground transition-colors hover:bg-surface-hover"
+            >
+              {sortDirection === 'asc' ? '↑' : '↓'}
+            </button>
           </div>
+        </label>
+
+        {isFiltering ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className={buttonClass('default', 'self-end')}
+          >
+            {filterLabels.clearFiltersLabel}
+          </button>
         ) : null}
       </div>
 
-      {isSearching ? (
+      {isFiltering ? (
         <>
           <p className="m-0 text-xs text-muted" aria-live="polite">
             {formatMessage(resultCountTemplate, {

@@ -5,9 +5,11 @@ import {
   normalizeEvolutionChain,
   normalizeFormAbilities,
   normalizeFormMoves,
+  normalizeItem,
   normalizeLearnMethod,
   normalizeMachine,
   normalizeMove,
+  normalizeNature,
   normalizeSpeciesGroup,
   normalizeVersionGroup,
   parseGenerationSlug,
@@ -17,9 +19,11 @@ import type {
   PokeApiAbility,
   PokeApiEvolutionChain,
   PokeApiEvolutionDetail,
+  PokeApiItem,
   PokeApiMachine,
   PokeApiMove,
   PokeApiMoveLearnMethod,
+  PokeApiNature,
   PokeApiPokemon,
   PokeApiPokemonAbility,
   PokeApiPokemonForm,
@@ -461,6 +465,120 @@ describe('normalizeAbility', () => {
   it('throws when the English name is missing', () => {
     expect(() =>
       normalizeAbility({ sourceId: 'pokeapi', ability: ability({ id: 1, name: 'no-en-name' }) }),
+    ).toThrow(/Missing en name/);
+  });
+});
+
+describe('normalizeNature', () => {
+  function nature(overrides: Partial<PokeApiNature> & { id: number; name: string }): PokeApiNature {
+    return { names: [], increased_stat: null, decreased_stat: null, ...overrides };
+  }
+
+  it('normalizes a modifying nature (Adamant: +Attack, -Special Attack)', () => {
+    const normalized = normalizeNature({
+      sourceId: 'pokeapi',
+      nature: nature({
+        id: 11,
+        name: 'adamant',
+        names: [
+          { name: 'Adamant', language: { name: 'en', url: '' } },
+          { name: 'Firme', language: { name: 'es', url: '' } },
+        ],
+        increased_stat: { name: 'attack', url: '' },
+        decreased_stat: { name: 'special-attack', url: '' },
+      }),
+    });
+
+    expect(normalized).toEqual({
+      slug: 'adamant',
+      nameEn: 'Adamant',
+      nameEs: 'Firme',
+      increasedStat: 'attack',
+      decreasedStat: 'special-attack',
+      source: { sourceId: 'pokeapi', externalId: '11' },
+    });
+  });
+
+  it('leaves both stats undefined for a neutral nature (Hardy) — never a fake no-op pair', () => {
+    const normalized = normalizeNature({
+      sourceId: 'pokeapi',
+      nature: nature({
+        id: 1,
+        name: 'hardy',
+        names: [{ name: 'Hardy', language: { name: 'en', url: '' } }],
+      }),
+    });
+
+    expect(normalized.increasedStat).toBeUndefined();
+    expect(normalized.decreasedStat).toBeUndefined();
+  });
+
+  it('throws when the English name is missing', () => {
+    expect(() =>
+      normalizeNature({ sourceId: 'pokeapi', nature: nature({ id: 1, name: 'no-en-name' }) }),
+    ).toThrow(/Missing en name/);
+  });
+});
+
+describe('normalizeItem', () => {
+  function item(overrides: Partial<PokeApiItem> & { id: number; name: string }): PokeApiItem {
+    return {
+      names: [],
+      effect_entries: [],
+      category: { name: 'held-items', url: '' },
+      ...overrides,
+    };
+  }
+
+  it('normalizes a well-localized held item (Leftovers)', () => {
+    const normalized = normalizeItem({
+      sourceId: 'pokeapi',
+      item: item({
+        id: 211,
+        name: 'leftovers',
+        names: [
+          { name: 'Leftovers', language: { name: 'en', url: '' } },
+          { name: 'Restos', language: { name: 'es', url: '' } },
+        ],
+        effect_entries: [
+          {
+            effect: 'Held: Heals the holder by 1/16 its max HP at the end of each turn.',
+            short_effect: 'Held: Restores 1/16 (6.25%) holder’s max HP at the end of each turn.',
+            language: { name: 'en', url: '' },
+          },
+        ],
+        category: { name: 'held-items', url: '' },
+      }),
+    });
+
+    expect(normalized).toEqual({
+      slug: 'leftovers',
+      nameEn: 'Leftovers',
+      nameEs: 'Restos',
+      effectEn: 'Held: Restores 1/16 (6.25%) holder’s max HP at the end of each turn.',
+      effectEs: undefined,
+      category: 'held-items',
+      source: { sourceId: 'pokeapi', externalId: '211' },
+    });
+  });
+
+  it('leaves Spanish name/effect undefined rather than inventing a translation', () => {
+    const normalized = normalizeItem({
+      sourceId: 'pokeapi',
+      item: item({
+        id: 999,
+        name: 'test-item',
+        names: [{ name: 'Test Item', language: { name: 'en', url: '' } }],
+      }),
+    });
+
+    expect(normalized.nameEs).toBeUndefined();
+    expect(normalized.effectEs).toBeUndefined();
+  });
+
+  it('throws when the English name is missing', () => {
+    expect(() =>
+      normalizeItem({ sourceId: 'pokeapi', item: item({ id: 1, name: 'no-en-name' }) }),
     ).toThrow(/Missing en name/);
   });
 });

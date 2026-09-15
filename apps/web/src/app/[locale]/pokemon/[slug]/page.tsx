@@ -187,9 +187,17 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
       </Link>
 
       <header className="flex flex-col gap-2">
-        <span className={eyebrowClass('tabular-nums')}>
-          {dexNumberLabel(species.nationalDexNumber)}
-        </span>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <span className={eyebrowClass('tabular-nums')}>
+            {dexNumberLabel(species.nationalDexNumber)}
+          </span>
+          <Link
+            href={`/${locale}/compare?pokemon=${defaultForm.slug}`}
+            className="text-sm font-semibold text-brand no-underline hover:underline"
+          >
+            {dictionary.compare.entryLink} →
+          </Link>
+        </div>
         <h1 className="m-0 text-3xl tracking-tight">{species.name[locale]}</h1>
       </header>
 

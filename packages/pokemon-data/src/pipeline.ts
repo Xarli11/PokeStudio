@@ -2,9 +2,11 @@ import { mapWithConcurrency } from './concurrency';
 import {
   normalizeAbility,
   normalizeEvolutionChain,
+  normalizeItem,
   normalizeLearnMethod,
   normalizeMachine,
   normalizeMove,
+  normalizeNature,
   normalizeSpeciesGroup,
   normalizeVersionGroup,
   type LocalizationNote,
@@ -17,10 +19,12 @@ import type {
   NormalizedEvolution,
   NormalizedForm,
   NormalizedFormAbility,
+  NormalizedItem,
   NormalizedLearnMethod,
   NormalizedLearnsetEntry,
   NormalizedMachine,
   NormalizedMove,
+  NormalizedNature,
   NormalizedSpecies,
   NormalizedVersionGroup,
 } from './types';
@@ -36,6 +40,8 @@ export interface FetchAndNormalizeResult {
   learnMethods: NormalizedLearnMethod[];
   learnsetEntries: NormalizedLearnsetEntry[];
   machines: NormalizedMachine[];
+  natures: NormalizedNature[];
+  items: NormalizedItem[];
   localizationNotes: LocalizationNote[];
   normalizationFailures: { speciesName: string; error: string }[];
   varietyCount: number;
@@ -158,6 +164,20 @@ export async function fetchAndNormalize(
     api.fetchMachine(url),
   );
 
+  // Natures/held items (Milestone 2, Stage 2.0) — own flat, globally-bounded-
+  // concurrency phases, same shape as version groups/learn methods above.
+  // `fetchHoldableItemRefs` already returns only the ~175 "holdable" items,
+  // not PokéAPI's full ~2223-item catalog (see that fetch's own comment).
+  const natureRefs = await api.fetchNatureRefs();
+  const natureDetails = await mapWithConcurrency(natureRefs, options.concurrency, (ref) =>
+    api.fetchNature(ref.url),
+  );
+
+  const holdableItemRefs = await api.fetchHoldableItemRefs();
+  const itemDetails = await mapWithConcurrency(holdableItemRefs, options.concurrency, (ref) =>
+    api.fetchItem(ref.url),
+  );
+
   const fetchDurationMs = Date.now() - startedAt;
 
   const formsByVarietyJobIndex = new Map<number, PokeApiPokemonForm[]>();
@@ -250,6 +270,30 @@ export async function fetchAndNormalize(
     normalizeMachine({ machine, sourceId: SOURCE_ID }),
   );
 
+  const natures: NormalizedNature[] = [];
+  for (const nature of natureDetails) {
+    try {
+      natures.push(normalizeNature({ nature, sourceId: SOURCE_ID }));
+    } catch (error) {
+      normalizationFailures.push({
+        speciesName: `nature:${nature.name}`,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const items: NormalizedItem[] = [];
+  for (const item of itemDetails) {
+    try {
+      items.push(normalizeItem({ item, sourceId: SOURCE_ID }));
+    } catch (error) {
+      normalizationFailures.push({
+        speciesName: `item:${item.name}`,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   return {
     species,
     forms,
@@ -261,6 +305,8 @@ export async function fetchAndNormalize(
     learnMethods,
     learnsetEntries,
     machines,
+    natures,
+    items,
     localizationNotes,
     normalizationFailures,
     varietyCount: varietyJobs.length,

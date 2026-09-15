@@ -26,7 +26,7 @@ const hasLocalSupabase = Boolean(
 );
 
 describe.skipIf(!hasLocalSupabase)('sitemap', () => {
-  it('includes exactly 2 locales × (home + pokemon index + species + moves index + moves + abilities index + abilities)', async () => {
+  it('includes exactly 2 locales × (home + pokemon index + species + compare shell + moves index + moves + abilities index + abilities)', async () => {
     const client = getPokemonDatabaseClient();
     const [species, movesPage, abilities] = await Promise.all([
       listSpecies(client),
@@ -36,8 +36,17 @@ describe.skipIf(!hasLocalSupabase)('sitemap', () => {
 
     const entries = await sitemap();
     const expectedCount =
-      locales.length * (1 + 1 + species.length + 1 + movesPage.totalCount + 1 + abilities.length);
+      locales.length *
+      (1 + 1 + species.length + 1 + 1 + movesPage.totalCount + 1 + abilities.length);
     expect(entries.length).toBe(expectedCount);
+  });
+
+  it('includes the Compare shell but no per-comparison query-state URL (no sitemap cardinality explosion)', async () => {
+    const entries = await sitemap();
+    const urls = entries.map((entry) => entry.url);
+    expect(urls).toContain('https://pokestudio.app/en/compare');
+    expect(urls).toContain('https://pokestudio.app/es/compare');
+    expect(urls.every((url) => !url.includes('compare?'))).toBe(true);
   });
 
   it('never contains an uppercase slug segment (no duplicate-case indexable pages)', async () => {

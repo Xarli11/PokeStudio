@@ -114,6 +114,8 @@ const dataset: NormalizedDataset = {
     },
   ],
   machines: [],
+  natures: [],
+  items: [],
 };
 
 describe('buildAuditReport', () => {

@@ -181,6 +181,35 @@ export interface IngestSchema {
         Update: never;
         Relationships: [];
       };
+      nature: {
+        Row: { id: string; slug: string; source_id: string; external_id: string };
+        Insert: {
+          slug: string;
+          name_en: string;
+          name_es: string | null;
+          increased_stat: string | null;
+          decreased_stat: string | null;
+          source_id: string;
+          external_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      item: {
+        Row: { id: string; slug: string; source_id: string; external_id: string };
+        Insert: {
+          slug: string;
+          name_en: string;
+          name_es: string | null;
+          effect_en: string | null;
+          effect_es: string | null;
+          category: string;
+          source_id: string;
+          external_id: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       species_evolution: {
         Row: { id: string; from_species_id: string; to_species_id: string; source_id: string };
         Insert: {
@@ -234,6 +263,8 @@ export interface PersistResult {
   learnsetEntriesWritten: number;
   machinesUpserted: number;
   moveStatChangesWritten: number;
+  naturesUpserted: number;
+  itemsUpserted: number;
   batches: number;
 }
 
@@ -720,6 +751,60 @@ export async function persistDataset(
     batches++;
   }
 
+  // Natures: identity-based upsert, same slug-preserving pattern as
+  // ability/move above.
+  const existingNatureRows = await selectAllRows((from, to) =>
+    client.from('nature').select('slug, source_id, external_id').range(from, to),
+  );
+  const existingNatureSlugByKey = new Map(
+    existingNatureRows.map((row) => [`${row.source_id}:${row.external_id}`, row.slug]),
+  );
+
+  const naturesPayload = dataset.natures.map((nature) => ({
+    slug: existingNatureSlugByKey.get(sourceKey(nature.source)) ?? nature.slug,
+    name_en: nature.nameEn,
+    name_es: nature.nameEs ?? null,
+    increased_stat: nature.increasedStat ?? null,
+    decreased_stat: nature.decreasedStat ?? null,
+    source_id: nature.source.sourceId,
+    external_id: nature.source.externalId,
+  }));
+
+  for (const batch of chunk(naturesPayload, BATCH_SIZE)) {
+    const { error } = await client
+      .from('nature')
+      .upsert(batch, { onConflict: 'source_id,external_id' });
+    if (error) throw new Error(`Failed to upsert nature batch: ${error.message}`);
+    batches++;
+  }
+
+  // Items: identity-based upsert, same pattern.
+  const existingItemRows = await selectAllRows((from, to) =>
+    client.from('item').select('slug, source_id, external_id').range(from, to),
+  );
+  const existingItemSlugByKey = new Map(
+    existingItemRows.map((row) => [`${row.source_id}:${row.external_id}`, row.slug]),
+  );
+
+  const itemsPayload = dataset.items.map((item) => ({
+    slug: existingItemSlugByKey.get(sourceKey(item.source)) ?? item.slug,
+    name_en: item.nameEn,
+    name_es: item.nameEs ?? null,
+    effect_en: item.effectEn ?? null,
+    effect_es: item.effectEs ?? null,
+    category: item.category,
+    source_id: item.source.sourceId,
+    external_id: item.source.externalId,
+  }));
+
+  for (const batch of chunk(itemsPayload, BATCH_SIZE)) {
+    const { error } = await client
+      .from('item')
+      .upsert(batch, { onConflict: 'source_id,external_id' });
+    if (error) throw new Error(`Failed to upsert item batch: ${error.message}`);
+    batches++;
+  }
+
   return {
     dataSourceUpserted: true,
     speciesUpserted: speciesPayload.length,
@@ -733,6 +818,8 @@ export async function persistDataset(
     learnsetEntriesWritten: learnsetPayload.length,
     machinesUpserted: machinesPayload.length,
     moveStatChangesWritten: moveStatChangesPayload.length,
+    naturesUpserted: naturesPayload.length,
+    itemsUpserted: itemsPayload.length,
     batches,
   };
 }

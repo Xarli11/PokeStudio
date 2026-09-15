@@ -102,6 +102,53 @@ export type Database = {
         }
         Relationships: []
       }
+      item: {
+        Row: {
+          category: string
+          created_at: string
+          effect_en: string | null
+          effect_es: string | null
+          external_id: string
+          id: string
+          name_en: string
+          name_es: string | null
+          slug: string
+          source_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          effect_en?: string | null
+          effect_es?: string | null
+          external_id: string
+          id?: string
+          name_en: string
+          name_es?: string | null
+          slug: string
+          source_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          effect_en?: string | null
+          effect_es?: string | null
+          external_id?: string
+          id?: string
+          name_en?: string
+          name_es?: string | null
+          slug?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
       machine: {
         Row: {
           created_at: string
@@ -328,6 +375,50 @@ export type Database = {
           },
           {
             foreignKeyName: "move_stat_change_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      nature: {
+        Row: {
+          created_at: string
+          decreased_stat: string | null
+          external_id: string
+          id: string
+          increased_stat: string | null
+          name_en: string
+          name_es: string | null
+          slug: string
+          source_id: string
+        }
+        Insert: {
+          created_at?: string
+          decreased_stat?: string | null
+          external_id: string
+          id?: string
+          increased_stat?: string | null
+          name_en: string
+          name_es?: string | null
+          slug: string
+          source_id: string
+        }
+        Update: {
+          created_at?: string
+          decreased_stat?: string | null
+          external_id?: string
+          id?: string
+          increased_stat?: string | null
+          name_en?: string
+          name_es?: string | null
+          slug?: string
+          source_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nature_source_id_fkey"
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "data_sources"

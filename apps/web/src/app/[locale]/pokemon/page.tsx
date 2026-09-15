@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
@@ -75,7 +76,15 @@ export default async function PokemonIndexPage({
   return (
     <div className="mx-auto flex max-w-wide flex-col gap-10">
       <header className="flex flex-col gap-3">
-        <span className={eyebrowClass()}>{dictionary.pokedex.eyebrow}</span>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <span className={eyebrowClass()}>{dictionary.pokedex.eyebrow}</span>
+          <Link
+            href={`/${locale}/compare`}
+            className="text-sm font-semibold text-brand no-underline hover:underline"
+          >
+            {dictionary.compare.entryLink} →
+          </Link>
+        </div>
         <h1 className="m-0 text-3xl tracking-tight">{dictionary.pokedex.title}</h1>
         <p className="m-0 max-w-xl text-muted">{dictionary.pokedex.tagline}</p>
       </header>
@@ -89,6 +98,8 @@ export default async function PokemonIndexPage({
             nationalDexNumber: item.nationalDexNumber,
             name: item.name,
             types: item.defaultForm.types,
+            baseStats: item.defaultForm.baseStats,
+            formSlug: item.defaultForm.slug,
           })),
           page: result.page,
           totalPages: result.totalPages,
@@ -105,6 +116,21 @@ export default async function PokemonIndexPage({
         pageLabelTemplate={dictionary.pokedex.pageLabel}
         previousPageLabel={dictionary.pokedex.previousPage}
         nextPageLabel={dictionary.pokedex.nextPage}
+        filterLabels={{
+          typeLabel: dictionary.moves.typeFilter,
+          allTypesLabel: dictionary.moves.allTypes,
+          generationLabel: dictionary.moves.generationFilter,
+          allGenerationsLabel: dictionary.moves.allGenerations,
+          generationOptionTemplate: dictionary.moves.generation,
+          sortByLabel: dictionary.pokedex.sortBy,
+          sortDexNumberLabel: dictionary.pokedex.sortByDexNumber,
+          sortNameLabel: dictionary.moves.column.name,
+          sortBstLabel: dictionary.pokedex.baseStatTotal,
+          statLabels: dictionary.pokedex.stat,
+          sortAscendingLabel: dictionary.pokedex.sortAscending,
+          sortDescendingLabel: dictionary.pokedex.sortDescending,
+          clearFiltersLabel: dictionary.pokedex.clearFilters,
+        }}
       />
     </div>
   );

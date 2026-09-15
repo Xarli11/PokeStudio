@@ -33,6 +33,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'weekly' as const,
   }));
 
+  // Only the query-less shell (task: "query-state URLs shouldn't explode
+  // sitemap cardinality") — a specific `?pokemon=...` comparison is
+  // shareable but not a distinct indexable entity, same reasoning as why
+  // paginated `/pokemon?page=N` isn't listed either.
+  const compareIndexEntries = locales.map((locale) => ({
+    url: `${SITE_URL}/${locale}/compare`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+  }));
+
   const moveIndexEntries = locales.map((locale) => ({
     url: `${SITE_URL}/${locale}/moves`,
     lastModified: new Date(),
@@ -91,6 +101,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...localeEntries,
       ...pokemonIndexEntries,
       ...pokemonDetailEntries,
+      ...compareIndexEntries,
       ...moveIndexEntries,
       ...moveDetailEntries,
       ...abilityIndexEntries,
@@ -100,6 +111,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     captureException(error, {
       context: 'sitemap: listSpecies/listMovesPage/listAbilities failed',
     });
-    return [...localeEntries, ...pokemonIndexEntries, ...moveIndexEntries, ...abilityIndexEntries];
+    return [
+      ...localeEntries,
+      ...pokemonIndexEntries,
+      ...compareIndexEntries,
+      ...moveIndexEntries,
+      ...abilityIndexEntries,
+    ];
   }
 }

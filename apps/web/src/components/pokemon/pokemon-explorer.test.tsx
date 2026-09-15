@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as NextNavigation from 'next/navigation';
 
@@ -18,41 +18,59 @@ vi.mock('next/navigation', async (importOriginal) => {
 afterEach(cleanup);
 beforeEach(() => push.mockClear());
 
+// Irrelevant to this file's tests (all about search/combobox behavior, not
+// stats/sorting) — one flat spread keeps every fixture's intent readable.
+const STATS = { hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 };
+
 const ITEMS: SpeciesSearchItem[] = [
   {
     slug: 'bulbasaur',
     nationalDexNumber: 1,
     name: { en: 'Bulbasaur', es: 'Bulbasaur' },
     types: ['grass', 'poison'],
+    baseStats: STATS,
+    formSlug: 'bulbasaur',
   },
   {
     slug: 'pikachu',
     nationalDexNumber: 25,
     name: { en: 'Pikachu', es: 'Pikachu' },
     types: ['electric'],
+    baseStats: STATS,
+    formSlug: 'pikachu',
   },
   {
     slug: 'mewtwo',
     nationalDexNumber: 150,
     name: { en: 'Mewtwo', es: 'Mewtwo' },
     types: ['psychic'],
+    baseStats: STATS,
+    formSlug: 'mewtwo',
   },
   {
     slug: 'meowth',
     nationalDexNumber: 52,
     name: { en: 'Meowth', es: 'Meowth' },
     types: ['normal'],
+    baseStats: STATS,
+    formSlug: 'meowth',
   },
 ];
 
 // Real Pokédex forms: Alolan Meowth is Dark-type, Galarian Meowth is
 // Steel-type (species' own default is Normal).
 const ALIASES: SpeciesSearchAlias[] = [
-  { name: { en: 'Alolan Meowth', es: 'Meowth de Alola' }, speciesSlug: 'meowth', types: ['dark'] },
+  {
+    name: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
+    speciesSlug: 'meowth',
+    types: ['dark'],
+    formSlug: 'meowth-alola',
+  },
   {
     name: { en: 'Galarian Meowth', es: 'Meowth de Galar' },
     speciesSlug: 'meowth',
     types: ['steel'],
+    formSlug: 'meowth-galar',
   },
 ];
 
@@ -87,12 +105,42 @@ function renderExplorer(
       pageLabelTemplate="Page {page} of {totalPages}"
       previousPageLabel="Previous"
       nextPageLabel="Next"
+      filterLabels={{
+        typeLabel: 'Type',
+        allTypesLabel: 'All types',
+        generationLabel: 'Generation',
+        allGenerationsLabel: 'All generations',
+        generationOptionTemplate: 'Generation {number}',
+        sortByLabel: 'Sort',
+        sortDexNumberLabel: 'Pokédex #',
+        sortNameLabel: 'Name',
+        sortBstLabel: 'Base stat total',
+        statLabels: {
+          hp: 'HP',
+          attack: 'Attack',
+          defense: 'Defense',
+          specialAttack: 'Sp. Atk',
+          specialDefense: 'Sp. Def',
+          speed: 'Speed',
+        },
+        sortAscendingLabel: 'Ascending',
+        sortDescendingLabel: 'Descending',
+        clearFiltersLabel: 'Clear filters',
+      }}
     />,
   );
 }
 
 function getInput() {
   return screen.getByRole('combobox', { name: 'Search' });
+}
+
+// The page now also renders native `<select>` filter/sort controls, whose
+// `<option>` elements also carry an implicit ARIA "option" role — scope to
+// the suggestion listbox so these queries stay unambiguous.
+function getSuggestionOptions() {
+  const listbox = screen.queryByRole('listbox');
+  return listbox ? within(listbox).queryAllByRole('option') : [];
 }
 
 describe('PokemonExplorer search combobox', () => {
@@ -105,13 +153,13 @@ describe('PokemonExplorer search combobox', () => {
     renderExplorer();
     fireEvent.focus(getInput());
     expect(screen.getByText('Search by name or Pokédex number')).not.toBeNull();
-    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(getSuggestionOptions()).toHaveLength(0);
   });
 
   it('shows ranked suggestions as the user types', () => {
     renderExplorer();
     fireEvent.change(getInput(), { target: { value: 'mew' } });
-    const options = screen.getAllByRole('option');
+    const options = getSuggestionOptions();
     expect(options.map((o) => o.textContent)).toEqual([expect.stringContaining('Mewtwo')]);
   });
 
@@ -121,17 +169,19 @@ describe('PokemonExplorer search combobox', () => {
       nationalDexNumber: 900 + i,
       name: { en: `Testmon${i}`, es: `Testmon${i}` },
       types: ['normal'],
+      baseStats: STATS,
+      formSlug: `test-${i}`,
     }));
     renderExplorer(manyItems, []);
     fireEvent.change(getInput(), { target: { value: 'testmon' } });
-    expect(screen.getAllByRole('option')).toHaveLength(MAX_POKEMON_SUGGESTIONS);
+    expect(getSuggestionOptions()).toHaveLength(MAX_POKEMON_SUGGESTIONS);
   });
 
   it('moves the active option with ArrowDown/ArrowUp and reflects it via aria-activedescendant', () => {
     renderExplorer();
     const input = getInput();
     fireEvent.change(input, { target: { value: 'e' } });
-    const options = screen.getAllByRole('option');
+    const options = getSuggestionOptions();
     expect(options.length).toBeGreaterThan(1);
 
     fireEvent.keyDown(input, { key: 'ArrowDown' });
@@ -179,7 +229,7 @@ describe('PokemonExplorer search combobox', () => {
     renderExplorer();
     const input = getInput();
     fireEvent.change(input, { target: { value: 'pikachu' } });
-    const option = screen.getByRole('option');
+    const option = getSuggestionOptions()[0]!;
     fireEvent.click(option);
     expect(screen.queryByRole('listbox')).toBeNull();
   });

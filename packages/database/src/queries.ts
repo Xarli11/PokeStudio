@@ -1,4 +1,5 @@
 import type {
+  BaseStatKey,
   BaseStats,
   DamageClass,
   FormCategory,
@@ -675,9 +676,21 @@ export async function getMoveBySlug(
  * first version group with at least one row — typically the very first
  * candidate, so this is a handful of small indexed lookups, not a scan.
  */
-export async function getDefaultVersionGroup(
+/**
+ * Every version group with real, useful learnset data, newest-first —
+ * powers Build v1's team-wide version-group selector (task: "using
+ * existing query logic, not hardcoded"). "Real" means at least one
+ * level-up row: a real full-dataset case (version group "champions",
+ * generation 9) has thousands of rows but *only* via the niche "train"
+ * learn method — no genuine per-species moveset coverage. Every real,
+ * playable mainline game has level-up rows (every Pokémon learns something
+ * at level 1), so requiring at least one is a much stronger signal than
+ * mere row presence. One small count query per version group (a few dozen
+ * total), run in parallel.
+ */
+export async function listVersionGroups(
   client: PokeStudioDatabaseClient,
-): Promise<VersionGroupSummary | null> {
+): Promise<VersionGroupSummary[]> {
   const versionGroupsResult = await client
     .from('version_group')
     .select('id, slug, generation, display_order')
@@ -685,35 +698,39 @@ export async function getDefaultVersionGroup(
     .order('display_order', { ascending: false });
   if (versionGroupsResult.error) {
     throw new Error(
-      `getDefaultVersionGroup (version groups) failed: ${versionGroupsResult.error.message}`,
+      `listVersionGroups (version groups) failed: ${versionGroupsResult.error.message}`,
     );
   }
 
-  for (const versionGroup of versionGroupsResult.data) {
-    // "Has any row at all" is too weak a signal: a real full-dataset case
-    // (version group "champions", generation 9) has thousands of rows but
-    // *only* via the niche "train" learn method — no genuine per-species
-    // moveset coverage. Every real, playable mainline game has level-up
-    // rows (every Pokémon learns something at level 1), so requiring at
-    // least one level-up row is a much stronger signal of "this version
-    // group has real, useful moveset data" than mere row presence.
-    const countResult = await client
-      .from('pokemon_form_move')
-      .select('id', { count: 'exact', head: true })
-      .eq('version_group_id', versionGroup.id)
-      .eq('learn_method', 'level-up');
-    if (countResult.error) {
-      throw new Error(`getDefaultVersionGroup (count) failed: ${countResult.error.message}`);
-    }
-    if ((countResult.count ?? 0) > 0) {
-      return {
-        slug: versionGroup.slug,
-        generation: versionGroup.generation,
-        displayOrder: versionGroup.display_order,
-      };
-    }
-  }
-  return null;
+  const withCounts = await Promise.all(
+    versionGroupsResult.data.map(async (versionGroup) => {
+      const countResult = await client
+        .from('pokemon_form_move')
+        .select('id', { count: 'exact', head: true })
+        .eq('version_group_id', versionGroup.id)
+        .eq('learn_method', 'level-up');
+      if (countResult.error) {
+        throw new Error(`listVersionGroups (count) failed: ${countResult.error.message}`);
+      }
+      return { versionGroup, hasData: (countResult.count ?? 0) > 0 };
+    }),
+  );
+
+  return withCounts
+    .filter((entry) => entry.hasData)
+    .map(({ versionGroup }) => ({
+      slug: versionGroup.slug,
+      generation: versionGroup.generation,
+      displayOrder: versionGroup.display_order,
+    }));
+}
+
+/** The version group to default the UI to when none is explicitly selected — the newest one with real data. */
+export async function getDefaultVersionGroup(
+  client: PokeStudioDatabaseClient,
+): Promise<VersionGroupSummary | null> {
+  const versionGroups = await listVersionGroups(client);
+  return versionGroups[0] ?? null; // already newest-first
 }
 
 /** One raw (move, version group, method, level) fact — the client-side moves explorer's unit of data. */
@@ -945,6 +962,10 @@ export interface SpeciesSearchItem {
   nationalDexNumber: number;
   name: LocalizedName;
   types: PokemonType[];
+  /** The default form's base stats (Milestone 2, Stage 2A — Explore Pro stat sorting). */
+  baseStats: BaseStats;
+  /** The default form's own slug (Milestone 2, Stage 2A — Compare) — usually equal to `slug`, but not guaranteed for every species, so kept explicit rather than assumed. */
+  formSlug: string;
 }
 
 /**
@@ -968,6 +989,8 @@ export interface SpeciesSearchAlias {
   name: LocalizedName;
   speciesSlug: string;
   types: PokemonType[];
+  /** This form's own stable slug (Milestone 2, Stage 2A — Compare needs to address a specific non-default form, e.g. "meowth-alola", not just its species). */
+  formSlug: string;
 }
 
 export interface SpeciesSearchIndex {
@@ -977,12 +1000,13 @@ export interface SpeciesSearchIndex {
 }
 
 /**
- * The whole-Pokédex search dataset (Phase 1C.3 §3/§4) — deliberately not
- * `listSpecies` reused as-is: this trims `category`/`baseStats` (unused by
- * search/the card it renders), and additionally joins every non-default
- * form's name as a searchable alias back to its species. Measured small
- * enough (~1025 species + ~554 form aliases) that a single whole-dataset
- * fetch beats a server-side search endpoint (task §4 "measure first").
+ * The whole-Pokédex search dataset (Phase 1C.3 §3/§4; base stats added
+ * Milestone 2 Stage 2A for Explore Pro's stat sorting) — deliberately not
+ * `listSpecies` reused as-is: this trims `category` (unused by search/the
+ * card it renders), and additionally joins every non-default form's name as
+ * a searchable alias back to its species. Measured small enough (~1025
+ * species + ~554 form aliases) that a single whole-dataset fetch beats a
+ * server-side search endpoint (task §4 "measure first").
  */
 export async function getSpeciesSearchIndex(
   client: PokeStudioDatabaseClient,
@@ -1003,14 +1027,16 @@ export async function getSpeciesSearchIndex(
     ),
     selectAllRows<{
       species_id: string;
+      slug: string;
       name_en: string;
       name_es: string;
       is_default: boolean;
       types: string[];
+      base_stats: unknown;
     }>((from, to) =>
       client
         .from('pokemon_form')
-        .select('species_id, name_en, name_es, is_default, types')
+        .select('species_id, slug, name_en, name_es, is_default, types, base_stats')
         .range(from, to),
     ),
   ]);
@@ -1026,6 +1052,7 @@ export async function getSpeciesSearchIndex(
       name: { en: form.name_en, es: form.name_es },
       speciesSlug: speciesSlugById.get(form.species_id) ?? '',
       types: form.types as PokemonType[],
+      formSlug: form.slug,
     }))
     .filter((alias) => alias.speciesSlug !== '');
 
@@ -1039,10 +1066,87 @@ export async function getSpeciesSearchIndex(
       nationalDexNumber: species.national_dex_number,
       name: { en: species.name_en, es: species.name_es },
       types: defaultForm.types as PokemonType[],
+      baseStats: defaultForm.base_stats as unknown as BaseStats,
+      formSlug: defaultForm.slug,
     };
   });
 
   return { items, aliases };
+}
+
+/** One form, as needed by the Compare page (Milestone 2, Stage 2A) — the unit of comparison is a form, not a species, so Meowth and Alolan Meowth compare as distinct entries. */
+export interface ComparablePokemonForm {
+  formSlug: string;
+  speciesSlug: string;
+  nationalDexNumber: number;
+  speciesName: LocalizedName;
+  formName: LocalizedName;
+  isDefaultForm: boolean;
+  types: PokemonType[];
+  baseStats: BaseStats;
+  abilities: AbilitySummary[];
+}
+
+/**
+ * Resolves a list of form slugs (Compare's URL query state, e.g.
+ * `?pokemon=garchomp,dragonite`) to full comparison data in one round trip.
+ * Unknown/invalid slugs are silently dropped rather than erroring — an
+ * invalid or missing entry in the URL is a page-level "not found" concern
+ * for the caller to render, not a hard failure of the whole comparison.
+ * Result order follows `formSlugs`, not database order.
+ */
+export async function getFormsBySlugs(
+  client: PokeStudioDatabaseClient,
+  formSlugs: string[],
+): Promise<ComparablePokemonForm[]> {
+  if (formSlugs.length === 0) return [];
+
+  const formsResult = await client
+    .from('pokemon_form')
+    .select('id, species_id, slug, name_en, name_es, is_default, types, base_stats')
+    .in('slug', formSlugs);
+  if (formsResult.error) {
+    throw new Error(`getFormsBySlugs (forms) failed: ${formsResult.error.message}`);
+  }
+
+  const speciesIds = [...new Set(formsResult.data.map((row) => row.species_id))];
+  const speciesResult =
+    speciesIds.length > 0
+      ? await client
+          .from('species')
+          .select('id, slug, national_dex_number, name_en, name_es')
+          .in('id', speciesIds)
+      : { data: [], error: null };
+  if (speciesResult.error) {
+    throw new Error(`getFormsBySlugs (species) failed: ${speciesResult.error.message}`);
+  }
+
+  const speciesById = new Map(speciesResult.data.map((row) => [row.id, row]));
+  const formIds = formsResult.data.map((row) => row.id);
+  const abilitiesByFormId = await loadAbilitiesByFormId(client, formIds);
+
+  const formBySlug = new Map<string, ComparablePokemonForm>();
+  for (const row of formsResult.data) {
+    const species = speciesById.get(row.species_id);
+    if (!species) {
+      throw new Error(`Form "${row.slug}" has no owning species — data integrity issue.`);
+    }
+    formBySlug.set(row.slug, {
+      formSlug: row.slug,
+      speciesSlug: species.slug,
+      nationalDexNumber: species.national_dex_number,
+      speciesName: { en: species.name_en, es: species.name_es },
+      formName: { en: row.name_en, es: row.name_es },
+      isDefaultForm: row.is_default,
+      types: row.types as PokemonType[],
+      baseStats: row.base_stats as unknown as BaseStats,
+      abilities: abilitiesByFormId.get(row.id) ?? [],
+    });
+  }
+
+  return formSlugs
+    .map((slug) => formBySlug.get(slug))
+    .filter((form): form is ComparablePokemonForm => form !== undefined);
 }
 
 /** One ability, as needed by the ability index (Phase 1C.3) — small enough (313 rows) to ship whole for instant client-side search, same reasoning as `getSpeciesSearchIndex`. */
@@ -1305,4 +1409,89 @@ export async function getMoveLearners(
     totalCount: formIds.length,
     totalPages: Math.max(1, Math.ceil(formIds.length / options.pageSize)),
   };
+}
+
+/**
+ * One canonical nature (Milestone 2, Stage 2.0). `increasedStat`/
+ * `decreasedStat` undefined together means a neutral nature (Hardy, Docile,
+ * Bashful, Quirky, Serious) — never invented as a fake no-op pair.
+ */
+export interface Nature {
+  slug: string;
+  nameEn: string;
+  nameEs?: string | undefined;
+  increasedStat?: BaseStatKey | undefined;
+  decreasedStat?: BaseStatKey | undefined;
+}
+
+interface NatureRow {
+  slug: string;
+  name_en: string;
+  name_es: string | null;
+  increased_stat: string | null;
+  decreased_stat: string | null;
+}
+
+function toNature(row: NatureRow): Nature {
+  return {
+    slug: row.slug,
+    nameEn: row.name_en,
+    nameEs: row.name_es ?? undefined,
+    increasedStat: (row.increased_stat as BaseStatKey | null) ?? undefined,
+    decreasedStat: (row.decreased_stat as BaseStatKey | null) ?? undefined,
+  };
+}
+
+/** Every nature (Team Builder v1's nature selector) — exactly 25 rows, one request. */
+export async function listNatures(client: PokeStudioDatabaseClient): Promise<Nature[]> {
+  const result = await client
+    .from('nature')
+    .select('slug, name_en, name_es, increased_stat, decreased_stat')
+    .order('name_en', { ascending: true });
+  if (result.error) throw new Error(`listNatures failed: ${result.error.message}`);
+  return (result.data as NatureRow[]).map(toNature);
+}
+
+/**
+ * One held item (Milestone 2, Stage 2.0) — only PokéAPI's "holdable" subset
+ * is ever ingested (see `packages/database/supabase/migrations/20260914201000_items.sql`),
+ * never the full item catalog.
+ */
+export interface Item {
+  slug: string;
+  nameEn: string;
+  nameEs?: string | undefined;
+  effectEn?: string | undefined;
+  effectEs?: string | undefined;
+  category: string;
+}
+
+interface ItemRow {
+  slug: string;
+  name_en: string;
+  name_es: string | null;
+  effect_en: string | null;
+  effect_es: string | null;
+  category: string;
+}
+
+function toItem(row: ItemRow): Item {
+  return {
+    slug: row.slug,
+    nameEn: row.name_en,
+    nameEs: row.name_es ?? undefined,
+    effectEn: row.effect_en ?? undefined,
+    effectEs: row.effect_es ?? undefined,
+    category: row.category,
+  };
+}
+
+/** Every held item (Team Builder v1's item selector) — ~175 rows, well under PostgREST's page cap, one request. */
+export async function listItems(client: PokeStudioDatabaseClient): Promise<Item[]> {
+  const result = await client
+    .from('item')
+    .select('slug, name_en, name_es, effect_en, effect_es, category')
+    .order('name_en', { ascending: true });
+  if (result.error) throw new Error(`listItems failed: ${result.error.message}`);
+  return (result.data as ItemRow[]).map(toItem);
 }

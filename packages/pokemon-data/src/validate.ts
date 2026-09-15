@@ -1,4 +1,11 @@
-import type { DamageClass, FormCategory, MoveStat, NormalizedDataset, PokemonType } from './types';
+import type {
+  BaseStatKey,
+  DamageClass,
+  FormCategory,
+  MoveStat,
+  NormalizedDataset,
+  PokemonType,
+} from './types';
 
 export interface ValidationIssue {
   recordId: string;
@@ -41,6 +48,14 @@ const KNOWN_MOVE_STATS: ReadonlySet<MoveStat> = new Set<MoveStat>([
   'speed',
   'accuracy',
   'evasion',
+]);
+/** Natures only ever touch the 5 non-HP base stats (real game rule — HP is never nature-modified). */
+const KNOWN_BASE_STAT_KEYS: ReadonlySet<BaseStatKey> = new Set<BaseStatKey>([
+  'attack',
+  'defense',
+  'special-attack',
+  'special-defense',
+  'speed',
 ]);
 
 /**
@@ -426,6 +441,92 @@ export function validateExploreDataset(dataset: NormalizedDataset): ValidationIs
     }
     if (!machine.itemSlug.trim()) {
       issues.push({ recordId, message: 'Missing machine item slug.' });
+    }
+  }
+
+  const seenNatureSlugs = new Set<string>();
+  const seenNatureExternalIds = new Set<string>();
+  for (const nature of dataset.natures) {
+    if (seenNatureSlugs.has(nature.slug)) {
+      issues.push({ recordId: nature.slug, message: 'Duplicate nature slug.' });
+    }
+    seenNatureSlugs.add(nature.slug);
+
+    if (!nature.nameEn.trim()) {
+      issues.push({ recordId: nature.slug, message: 'Missing English nature name.' });
+    }
+
+    // Neutral natures have both undefined together — never just one (the DB
+    // schema enforces the same pair-or-neither rule as a CHECK constraint).
+    if ((nature.increasedStat === undefined) !== (nature.decreasedStat === undefined)) {
+      issues.push({
+        recordId: nature.slug,
+        message: 'Nature must have both increasedStat and decreasedStat, or neither (neutral).',
+      });
+    }
+    if (nature.increasedStat !== undefined && !KNOWN_BASE_STAT_KEYS.has(nature.increasedStat)) {
+      issues.push({
+        recordId: nature.slug,
+        message: `Unknown increasedStat "${nature.increasedStat}".`,
+      });
+    }
+    if (nature.decreasedStat !== undefined && !KNOWN_BASE_STAT_KEYS.has(nature.decreasedStat)) {
+      issues.push({
+        recordId: nature.slug,
+        message: `Unknown decreasedStat "${nature.decreasedStat}".`,
+      });
+    }
+    if (
+      nature.increasedStat !== undefined &&
+      nature.decreasedStat !== undefined &&
+      nature.increasedStat === nature.decreasedStat
+    ) {
+      issues.push({
+        recordId: nature.slug,
+        message: `increasedStat and decreasedStat must differ, both were "${nature.increasedStat}".`,
+      });
+    }
+
+    if (!nature.source.sourceId || !nature.source.externalId) {
+      issues.push({ recordId: nature.slug, message: 'Missing provenance (source/external id).' });
+    } else {
+      const externalKey = `${nature.source.sourceId}:${nature.source.externalId}`;
+      if (seenNatureExternalIds.has(externalKey)) {
+        issues.push({
+          recordId: nature.slug,
+          message: `External identity collision: another nature already uses ${externalKey}.`,
+        });
+      }
+      seenNatureExternalIds.add(externalKey);
+    }
+  }
+
+  const seenItemSlugs = new Set<string>();
+  const seenItemExternalIds = new Set<string>();
+  for (const item of dataset.items) {
+    if (seenItemSlugs.has(item.slug)) {
+      issues.push({ recordId: item.slug, message: 'Duplicate item slug.' });
+    }
+    seenItemSlugs.add(item.slug);
+
+    if (!item.nameEn.trim()) {
+      issues.push({ recordId: item.slug, message: 'Missing English item name.' });
+    }
+    if (!item.category.trim()) {
+      issues.push({ recordId: item.slug, message: 'Missing item category.' });
+    }
+
+    if (!item.source.sourceId || !item.source.externalId) {
+      issues.push({ recordId: item.slug, message: 'Missing provenance (source/external id).' });
+    } else {
+      const externalKey = `${item.source.sourceId}:${item.source.externalId}`;
+      if (seenItemExternalIds.has(externalKey)) {
+        issues.push({
+          recordId: item.slug,
+          message: `External identity collision: another item already uses ${externalKey}.`,
+        });
+      }
+      seenItemExternalIds.add(externalKey);
     }
   }
 

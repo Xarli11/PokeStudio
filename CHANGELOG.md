@@ -6,6 +6,119 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Milestone 2 — Explore Pro & Build v1 (2026-09-14)
+
+Two product pillars advanced together on one shared data foundation: Explore gains filters/sort
+and a Compare page; Build ships a first, honest team editor with local persistence. Battle Lab, AI
+and auth remain explicitly out of scope.
+
+- **Shared data foundation** (Stage 2.0): new `nature` (25 rows) and `item` (175 holdable items —
+  filtered via PokéAPI's own `/item-attribute/holdable` index, not string heuristics) tables,
+  ingested from the same pipeline as everything else (`packages/pokemon-data`). A canonical 18-type
+  effectiveness chart (`packages/pokemon-data/src/type-chart.ts`) and exact Gen III+ stat formulas
+  (`packages/damage/src/stats.ts`, HP/non-HP/Shedinja, hand-verified against known values) live as
+  plain domain code, not ingested data — they never change. Species generation is derived from
+  National Dex ranges (`species-generation.ts`), not a re-added schema column.
+- **Explore Pro** (`/[locale]/pokemon`): Type + Generation filters and 8-way sort (Dex/name/BST/each
+  base stat, asc/desc), composing correctly with search and each other. New **Compare**
+  (`/[locale]/compare`, 2-4 Pokémon _or forms_ — Meowth vs. Alolan Meowth compare as genuinely
+  distinct entries via each form's own stable slug, not just the species) with base stats, types,
+  abilities, and each form's real defensive type matchups (4×/2×/0.5×/0.25×/immune) side by side —
+  no fake "winner" labels. URL query state (`?pokemon=slug1,slug2`) is the only persisted state; the
+  sitemap lists only the query-less shell, never one entry per comparison.
+- **Build v1** (`/[locale]/build`): a `TeamDraft` domain model (`apps/web/src/lib/team-draft.ts`) —
+  up to 6 members, each with nickname/level/ability/item/Tera type/nature/EVs/IVs/up to 4 moves,
+  every identity field a stable slug. Persisted entirely to `localStorage`
+  (`team-storage.ts`, schema-versioned, corrupt/old state discarded rather than crashing) — no
+  Supabase team tables yet. The set editor constrains ability choices to the selected form's real
+  abilities and moves to what that form can actually learn in the selected game
+  (`pokemon_form_move`, reusing the same learnset query the Pokémon detail page already uses) —
+  labeled honestly as "can learn in this game," never "fully legal team." Team analysis shows a
+  defensive type-based profile (weak/resist/immune counts, ability immunities excluded and labeled
+  as such), offensive type-only coverage from damaging moves, and Incomplete/Warning/Invalid team
+  warnings (`team-analysis.ts`) — distinct severities, not one meaningless score. Reference data
+  reaches the client editor via a Server Action (`build/actions.ts`), since the roster lives in
+  `localStorage`, not the URL, unlike Compare.
+- **Persistent shell nav**: Build is now a real, linked destination (was reserved/unlinked);
+  current-section detection switched from a hardcoded constant to real `usePathname()`-based
+  detection now that there's more than one real section to distinguish.
+- Fixed a real bundling bug found while wiring Explore's filter UI: `@pokestudio/pokemon-data`'s
+  barrel re-exported Node-only ingestion internals (`node:fs/promises` via its file cache), which
+  broke the client bundle the moment a client component needed a real (non-type) value from the
+  package. The barrel now only exports pure domain code; ingestion scripts already imported their
+  pieces directly and were unaffected.
+
+### Milestone 2 — Build final product shape pass (2026-09-15)
+
+Final human-review pass on Build before the Milestone 2 commit — reverses the temporary
+Scarlet/Violet-only restriction and closes the gap between "no known errors" and "proven valid."
+
+- **All-generation Build**: every historical game/version-group PokeStudio has data for is now
+  selectable (grouped by generation), not just Scarlet/Violet. A new central capability model
+  (`apps/web/src/lib/build-game-capabilities.ts`, `BuildGameCapabilities`) resolves what actually
+  applies per game — abilities/natures/held items/modern EV-IV stats/Tera/Dynamax/Mega
+  Evolution/Z-Moves/special rulesets (Let's Go, Legends: Arceus) — instead of scattered
+  `if (versionGroupSlug === 'x')` checks. The Set Editor now hides mechanics that don't exist for
+  the selected game rather than showing them universally, and never computes Gen III+ stat formulas
+  for a game they don't apply to (Gen I/II, special-ruleset games) — an honest omission, not a wrong
+  number. A team's status can no longer read VALID for a game whose ruleset PokeStudio hasn't fully
+  validated yet (new `unsupportedRuleset` team warning); "My Teams" status badges reflect the same
+  honesty.
+- **Problems vs. Team Analysis**: split into two distinct surfaces (`problems-panel.tsx`) —
+  "what do I need to fix" vs. "how does this team behave strategically." "View all N issues" now
+  scrolls to Problems, never to Team Analysis.
+- **Add Pokémon no longer auto-opens the Set Editor**: adding a member from the roster picker just
+  adds it to the roster: Configure (or Review, for a specific issue) is the explicit way to open its
+  set editor, so adding several Pokémon in a row is faster.
+- **Roster card redesign**: Configure is a real styled button (not a text link); change-form/remove
+  are square, comfortable-hit-area icon buttons with clear icons, tooltips and restrained
+  danger-hover styling on remove.
+- **Pokémon sprites in the Build roster** (`apps/web/src/lib/pokemon-sprite.ts`): a centralized
+  resolver replaces the letter-monogram placeholder for every default-form species, with a subtle
+  type-accented background and a graceful fallback for forms it can't map yet. Sprite source is
+  PokéAPI's `sprites` GitHub repo, by explicit owner decision — **PROVISIONAL / dev-only, not
+  cleared for production/commercial use** (see `docs/engineering/DATA_SOURCES.md`).
+- **Human-review correction pass**: "View all N issues" now reserves scroll offset
+  (`scroll-mt-28`) so the Problems heading and first rows clear the sticky app header. Roster
+  sprites now fill their whole fixed viewport (`object-contain`, no inner sub-box), for more
+  consistent visual presence across species without any per-species scaling. Species availability
+  is now generation-aware: a member whose species debuted after the selected game's own generation
+  (reusing the existing National Dex → generation ranges, not a new table) is flagged INVALID —
+  `{name} is not available in {game}` — never silently removed, and clears automatically switching
+  back to a compatible game. `BuildGameCapabilities` gained `teamAnalysisSupported` (true from
+  Generation VI onward, when the modern 18-type/Fairy chart is historically accurate): Team
+  Analysis renders a restrained honest message instead of the modern Defensive/Offensive breakdown
+  for earlier generations, without affecting team validity — a separate axis from legality.
+- **Dev-only Sprite Lab** (`/[locale]/dev/sprites` — 404s in production, no nav/sitemap entry):
+  compares three candidate roster-sprite strategies (`pokemon-sprite.ts`'s `SpriteStrategy` —
+  `'box'`/PokéSprite, `'game-era'`/PokéAPI per-game sprite sets, `'modern'`/PokéAPI's current-Dex
+  set) inside the real approved roster card, across 12 representative Pokémon chosen to include
+  known rough edges (a Gen IX species, a non-default form, two documented PokéSprite naming gaps),
+  plus a live + audited coverage report (`sprite-coverage-audit.ts`). PokéSprite is a second
+  candidate visual source, evaluated the owner's preferred box-icon direction — audited to cover
+  National Dex 1-905 only (**zero Generation IX coverage**); PokéAPI's per-game sprite sets only
+  exist for the specific games verified against `github.com/PokeAPI/sprites` (several requested
+  games, e.g. Sword/Shield and Sun/Moon, have no separate folder and are left unmapped rather than
+  silently substituted). Production Build roster behavior is unchanged — the Lab is purely
+  additive, pending an owner decision from its comparison.
+- **Sprite Lab Option D: Pokémon Showdown / Smogon** (`pokemon-sprite.ts`'s `'showdown'`
+  strategy) — static "gen5"-style sprites, audited at 927/1025 default forms including 85/120
+  Generation IX species (better Gen IX coverage than PokéSprite's zero). Rights status is
+  **stricter** than the other three sources: the sprite files aren't even part of the public,
+  licensed `pokemon-showdown-client` repository (explicitly `.gitignore`d), and the community
+  animation project's own stated terms explicitly rule out commercial/for-profit use — see
+  `docs/engineering/DATA_SOURCES.md`.
+- **Mega-form audit, corrected same day**: an initial audit incorrectly classified 49 of 99
+  "mega"-slugged `pokemon_form` rows as non-canonical fan content. A deeper re-audit (prompted by
+  owner pushback) confirmed all 99 are official, current Pokémon content — 50 classic Mega
+  Evolutions (X/Y, ORAS) plus 49 introduced by Pokémon Legends: Z-A (2025) and its Mega Dimension
+  DLC, including a new official "Z Mega Evolution" mechanic. No data change needed. A real,
+  separate issue found in the same audit: PokéAPI's non-default-form numeric ids have drifted
+  since our last ingestion (~554/1579 forms affected) — a real idempotency risk for the next
+  ingestion, not a Pokédex-correctness problem today. See `docs/engineering/DATA_SOURCES.md`'s
+  "Classification findings" section (marked RESOLVED, with the correction left visible) for the
+  full record.
+
 ### Phase 1C.3 — Explore Discovery & Abilities (2026-09-14)
 
 Makes the Pokédex searchable across the whole dataset and promotes abilities to a first-class,

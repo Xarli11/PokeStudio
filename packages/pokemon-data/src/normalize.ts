@@ -4,9 +4,11 @@ import type {
   PokeApiEffectEntry,
   PokeApiEvolutionChain,
   PokeApiEvolutionChainLink,
+  PokeApiItem,
   PokeApiMachine,
   PokeApiMove,
   PokeApiMoveLearnMethod,
+  PokeApiNature,
   PokeApiPokemon,
   PokeApiPokemonAbility,
   PokeApiPokemonForm,
@@ -15,6 +17,7 @@ import type {
   PokeApiVersionGroup,
 } from './pokeapi-client';
 import type {
+  BaseStatKey,
   BaseStats,
   DamageClass,
   FormCategory,
@@ -24,10 +27,12 @@ import type {
   NormalizedEvolution,
   NormalizedForm,
   NormalizedFormAbility,
+  NormalizedItem,
   NormalizedLearnMethod,
   NormalizedLearnsetEntry,
   NormalizedMachine,
   NormalizedMove,
+  NormalizedNature,
   NormalizedSpecies,
   NormalizedVersionGroup,
   PokemonType,
@@ -352,6 +357,56 @@ export function normalizeAbility(params: {
     effectEn: findEffectText(params.ability.effect_entries, 'en'),
     effectEs: findEffectText(params.ability.effect_entries, 'es'),
     source: { sourceId: params.sourceId, externalId: String(params.ability.id) },
+  };
+}
+
+/**
+ * Normalizes one canonical nature (Milestone 2, Stage 2.0). Neutral natures
+ * (Hardy, Docile, Bashful, Quirky, Serious) have both `increased_stat` and
+ * `decreased_stat` null upstream — left `undefined` together here, never
+ * invented as a fake "no-op" stat pair.
+ */
+export function normalizeNature(params: {
+  nature: PokeApiNature;
+  sourceId: string;
+}): NormalizedNature {
+  const slug = params.nature.name;
+  assertValidSlug(slug, `nature #${params.nature.id}`);
+  const nameEn = findLocalized(params.nature.names, 'en');
+  if (!nameEn) throw new Error(`Missing en name for nature "${slug}"`);
+
+  return {
+    slug,
+    nameEn,
+    nameEs: findLocalized(params.nature.names, 'es'),
+    increasedStat: (params.nature.increased_stat?.name as BaseStatKey | undefined) ?? undefined,
+    decreasedStat: (params.nature.decreased_stat?.name as BaseStatKey | undefined) ?? undefined,
+    source: { sourceId: params.sourceId, externalId: String(params.nature.id) },
+  };
+}
+
+/**
+ * Normalizes one held item (Milestone 2, Stage 2.0) — callers only pass
+ * items already filtered to the "holdable" subset (see
+ * `PokeApiClient.fetchHoldableItemRefs`); this function does not re-check
+ * that itself, since the raw `PokeApiItem` shape here deliberately doesn't
+ * carry the upstream `attributes` array (the filtering already happened at
+ * the ref-list level, one HTTP request, not per-item).
+ */
+export function normalizeItem(params: { item: PokeApiItem; sourceId: string }): NormalizedItem {
+  const slug = params.item.name;
+  assertValidSlug(slug, `item #${params.item.id}`);
+  const nameEn = findLocalized(params.item.names, 'en');
+  if (!nameEn) throw new Error(`Missing en name for item "${slug}"`);
+
+  return {
+    slug,
+    nameEn,
+    nameEs: findLocalized(params.item.names, 'es'),
+    effectEn: findEffectText(params.item.effect_entries, 'en'),
+    effectEs: findEffectText(params.item.effect_entries, 'es'),
+    category: params.item.category.name,
+    source: { sourceId: params.sourceId, externalId: String(params.item.id) },
   };
 }
 
