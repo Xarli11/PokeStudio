@@ -67,3 +67,6 @@ pnpm-debug.log*
 
 # Sentry
 .sentryclirc
+
+# Generated release configuration (public values only)
+apps/web/wrangler.release.json

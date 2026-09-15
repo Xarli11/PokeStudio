@@ -314,3 +314,9 @@ Avoid making PostgreSQL migration impossible by:
 - documenting Supabase-specific extensions/functions,
 - isolating storage/auth/realtime-specific integrations,
 - maintaining export/backup procedures before public beta.
+
+## Guarded delivery
+
+See [CI/CD](CI_CD.md) for the reviewed GitHub Actions pipeline, Environment configuration,
+conditional ingestion, migration-history guards and the Cloudflare ownership handover.
+Production remains unconfigured until explicitly approved.

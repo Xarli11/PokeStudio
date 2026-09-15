@@ -89,3 +89,8 @@ The deployed Worker needs these environment variables set in Cloudflare (dashboa
 public-read, so the publishable key is sufficient for everything `apps/web` does server-side
 (docs/engineering/DATABASE.md "Supabase API keys"). For local Worker preview, put the same two variables in
 `apps/web/.dev.vars` (gitignored, never committed).
+
+## Delivery
+
+[CI/CD audit and activation runbook](docs/engineering/CI_CD.md) documents the guarded delivery
+workflows and the remaining remote setup. Production activation requires explicit approval.

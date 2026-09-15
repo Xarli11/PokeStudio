@@ -1,0 +1,33 @@
+name: Production
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: Full SHA of current main, already delivered successfully to Cloud DEV
+        type: string
+        required: true
+      confirmation:
+        description: 'Type production:<full SHA> to request approval'
+        type: string
+        required: true
+      force_ingest:
+        description: Refresh all upstream data (requires approval with this release)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: delivery-production
+  cancel-in-progress: false
+jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
+  deliver:
+    needs: validate
+    uses: ./.github/workflows/release.yml
+    with:
+      target: production
+      candidate: ${{ inputs.candidate }}
+      confirmation: ${{ inputs.confirmation }}
+      force_ingest: ${{ inputs.force_ingest }}

@@ -6,6 +6,12 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Guarded CI/CD (prepared for review)
+
+- Reuse full validation for PRs and deliveries, with isolated database integration tests.
+- Add serialized Cloud DEV delivery and explicitly approved production promotion with target guards, conditional ingestion, integrity checks and deployed-SHA smoke.
+- Document the Cloudflare ownership handover and GitHub Environment/branch configuration; delivery remains disabled pending activation.
+
 ### Milestone 2 — Explore Pro & Build v1 (2026-09-14)
 
 Two product pillars advanced together on one shared data foundation: Explore gains filters/sort

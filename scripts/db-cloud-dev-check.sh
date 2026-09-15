@@ -19,15 +19,15 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 
 echo "Connecting to Supabase Cloud PokeStudio Dev ($CLOUD_DEV_PROJECT_REF)..."
-psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -c "select current_database(), current_user, version();"
+psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -v ON_ERROR_STOP=1 -c "select current_database(), current_user, version();"
 echo "OK — this is Supabase Cloud PokeStudio Dev."
 
 echo ""
 echo "Migration history (supabase_migrations.schema_migrations):"
-psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -c \
+psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -v ON_ERROR_STOP=1 -c \
   "select version, name from supabase_migrations.schema_migrations order by version;"
 
 cd packages/database
 echo ""
 echo "Repository migrations vs. remote history (dry run, no changes applied):"
-pnpm exec supabase db push --db-url "$SUPABASE_CLOUD_DEV_DB_URL" --dry-run
+pnpm exec supabase db push --db-url "$SUPABASE_CLOUD_DEV_DB_URL" --dry-run --skip-vault
