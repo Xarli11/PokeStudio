@@ -28,6 +28,7 @@ import { createClient } from '@supabase/supabase-js';
 
 import { buildAuditReport, formatAuditReport } from '../src/audit';
 import { createFileCache } from '../src/cache';
+import { withIngestLock } from '../src/ingest-lock';
 import { createPokeApiClient } from '../src/pokeapi-client';
 import { persistDataset, type IngestClient, type IngestSchema } from '../src/persist';
 import { fetchAndNormalize } from '../src/pipeline';
@@ -74,6 +75,17 @@ async function main() {
   }
   console.warn(`[ingest] Using ${describeKeySecretShape(secretKey)} for ${supabaseUrl}`);
 
+  await withIngestLock(process.env.INGEST_LOCK_DB_URL, () =>
+    runIngest(supabaseUrl, secretKey, args, startedAt),
+  );
+}
+
+async function runIngest(
+  supabaseUrl: string,
+  secretKey: string,
+  args: ReturnType<typeof parseArgs>,
+  startedAt: number,
+): Promise<void> {
   const cacheDir = path.join(
     fileURLToPath(new URL('.', import.meta.url)),
     '..',

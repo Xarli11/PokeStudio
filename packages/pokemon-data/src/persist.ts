@@ -276,6 +276,14 @@ const BATCH_SIZE = 500;
  * (~a few hundred KB) while cutting that to ~375.
  */
 const LEARNSET_BATCH_SIZE = 2000;
+/**
+ * Small batch size for deleting `pokemon_form_move` rows by id — unlike an
+ * insert, PostgREST encodes an `.in('id', [...])` filter as a literal
+ * comma-separated list *in the URL query string*, so anything close to
+ * LEARNSET_BATCH_SIZE (2000 UUIDs, ~74KB) is rejected outright as a Bad
+ * Request before it ever reaches Postgres. 100 UUIDs keeps the URL a few KB.
+ */
+const DELETE_ID_BATCH_SIZE = 100;
 
 function sourceKey(ref: SourceRef): string {
   return `${ref.sourceId}:${ref.externalId}`;
@@ -711,12 +719,49 @@ export async function persistDataset(
     };
   });
 
-  const { error: deleteLearnsetError } = await client
-    .from('pokemon_form_move')
-    .delete()
-    .eq('source_id', dataset.provenance.sourceId);
-  if (deleteLearnsetError) {
-    throw new Error(`Failed to clear pokemon_form_move: ${deleteLearnsetError.message}`);
+  // A single unbounded DELETE over this table's ~700k rows exceeds Supabase
+  // Cloud's 2min statement_timeout (service_role has no override, and hits
+  // the database default) even though it completes fine against the Pi's
+  // self-hosted Postgres — so this clears the table in id-bounded batches
+  // instead of one statement, same batch size as the re-insert below.
+  //
+  // This makes the overall replace *rerunnable* after a crash (each batch
+  // commits independently, so a killed process just leaves fewer rows to
+  // delete/insert next run — verified 2026-09-15) but it is NOT atomic
+  // across the whole operation: a reader querying mid-run can observe a
+  // partially-cleared table, and this alone does not stop two ingestion
+  // *processes* from racing each other (that's what withIngestLock /
+  // src/ingest-lock.ts's advisory lock is for — one writer at a time;
+  // this loop's batching only makes a single writer's replace resumable).
+  let deletedCount = 0;
+  const DELETE_PROGRESS_EVERY = 20; // every ~2000 rows — coarse, not per-row
+  for (let deleteBatchNumber = 1; ; deleteBatchNumber++) {
+    const { data: idsToDelete, error: selectIdsError } = await client
+      .from('pokemon_form_move')
+      .select('id')
+      .eq('source_id', dataset.provenance.sourceId)
+      .limit(DELETE_ID_BATCH_SIZE);
+    if (selectIdsError) {
+      throw new Error(`Failed to read pokemon_form_move rows to clear: ${selectIdsError.message}`);
+    }
+    if (!idsToDelete || idsToDelete.length === 0) break;
+    const { error: deleteLearnsetError } = await client
+      .from('pokemon_form_move')
+      .delete()
+      .in(
+        'id',
+        idsToDelete.map((row) => row.id),
+      );
+    if (deleteLearnsetError) {
+      throw new Error(`Failed to clear pokemon_form_move: ${deleteLearnsetError.message}`);
+    }
+    deletedCount += idsToDelete.length;
+    if (deleteBatchNumber % DELETE_PROGRESS_EVERY === 0) {
+      console.warn(`[persist] pokemon_form_move: cleared ${deletedCount} rows so far...`);
+    }
+  }
+  if (deletedCount > 0) {
+    console.warn(`[persist] pokemon_form_move: cleared ${deletedCount} rows total.`);
   }
   for (const batch of chunk(learnsetPayload, LEARNSET_BATCH_SIZE)) {
     const { error } = await client.from('pokemon_form_move').insert(batch);

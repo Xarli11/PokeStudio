@@ -179,6 +179,15 @@ function makeDataset(
           },
         ]
       : [],
+    // Pre-existing gap found 2026-09-16: `NormalizedDataset.natures`/`.items`
+    // were added (Milestone 2) without updating this fixture, so every test
+    // using it threw at runtime (`dataset.natures.map` on undefined) despite
+    // `tsc --noEmit` passing — this file is outside tsconfig.json's
+    // `include` (src/scripts only), so the missing required properties were
+    // never type-checked. This fixture doesn't exercise natures/items, so
+    // empty arrays are correct here, not a placeholder.
+    natures: [],
+    items: [],
   };
 }
 
@@ -399,6 +408,94 @@ describe.skipIf(!hasLocalSupabase)('persistDataset idempotency', () => {
       .select('id')
       .eq('source_id', TEST_SOURCE_ID);
     expect(learnset).toHaveLength(1); // delete+reinsert per run, never accumulates
+  });
+
+  it('clears and re-inserts pokemon_form_move across multiple batches, including a short final one', async () => {
+    // DELETE_ID_BATCH_SIZE is 100 (src/persist.ts) — 250 distinct-level rows
+    // forces the clear loop through two full batches plus a short final one
+    // (100, 100, 50), on both the initial clear and the idempotent re-run's.
+    const bulkRowCount = 250;
+    const dataset = makeDataset({ includeMoves: true });
+    dataset.learnsetEntries = Array.from({ length: bulkRowCount }, (_, i) => ({
+      formSlug: 'testmon',
+      moveSlug: 'testmove',
+      versionGroupSlug: 'testversion',
+      learnMethodSlug: 'level-up',
+      level: i + 1,
+    }));
+
+    const first = await persistDataset(client, dataset);
+    expect(first.learnsetEntriesWritten).toBe(bulkRowCount);
+    const { data: afterFirst } = await client
+      .from('pokemon_form_move')
+      .select('id')
+      .eq('source_id', TEST_SOURCE_ID);
+    expect(afterFirst).toHaveLength(bulkRowCount);
+
+    const second = await persistDataset(client, dataset);
+    expect(second.learnsetEntriesWritten).toBe(bulkRowCount);
+    const { data: afterSecond } = await client
+      .from('pokemon_form_move')
+      .select('id')
+      .eq('source_id', TEST_SOURCE_ID);
+    expect(afterSecond).toHaveLength(bulkRowCount); // cleared and reinserted, never accumulated
+  });
+
+  it("a source_id-scoped clear never touches another source_id's rows", async () => {
+    const OTHER_SOURCE_ID = 'pokestudio-test-other-source';
+
+    await client.from('data_sources').upsert(
+      {
+        source_id: OTHER_SOURCE_ID,
+        source_url: 'https://example.invalid',
+        license: 'test-fixture',
+        fetched_at: new Date(0).toISOString(),
+        importer_version: 'test',
+      },
+      { onConflict: 'source_id' },
+    );
+    const { data: formRow } = await client
+      .from('pokemon_form')
+      .select('id')
+      .eq('source_id', TEST_SOURCE_ID)
+      .eq('slug', 'testmon')
+      .single();
+    const { data: moveRow } = await client
+      .from('move')
+      .select('id')
+      .eq('source_id', TEST_SOURCE_ID)
+      .eq('slug', 'testmove')
+      .single();
+    const { data: versionGroupRow } = await client
+      .from('version_group')
+      .select('id')
+      .eq('source_id', TEST_SOURCE_ID)
+      .eq('slug', 'testversion')
+      .single();
+
+    // A decoy row under a different source_id, referencing the same
+    // already-ingested form/move/version-group internal ids — source_id is
+    // pure provenance here, independent of which rows it points at.
+    const { error: decoyInsertError } = await client.from('pokemon_form_move').insert({
+      pokemon_form_id: formRow!.id,
+      move_id: moveRow!.id,
+      version_group_id: versionGroupRow!.id,
+      learn_method: 'level-up',
+      level: 999,
+      source_id: OTHER_SOURCE_ID,
+    });
+    expect(decoyInsertError).toBeNull();
+
+    await persistDataset(client, makeDataset({ includeMoves: true }));
+
+    const { data: otherSourceRows } = await client
+      .from('pokemon_form_move')
+      .select('id')
+      .eq('source_id', OTHER_SOURCE_ID);
+    expect(otherSourceRows).toHaveLength(1); // untouched by TEST_SOURCE_ID's clear+reinsert
+
+    await client.from('pokemon_form_move').delete().eq('source_id', OTHER_SOURCE_ID);
+    await client.from('data_sources').delete().eq('source_id', OTHER_SOURCE_ID);
   });
 });
 

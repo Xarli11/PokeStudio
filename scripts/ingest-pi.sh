@@ -3,11 +3,20 @@
 # the Raspberry Pi's Supabase API gateway. Reuses
 # packages/pokemon-data/scripts/ingest.ts as-is (SUPABASE_URL/SUPABASE_SECRET_KEY
 # driven) — this only guards which target it's allowed to point at.
+#
+# Also exports INGEST_LOCK_DB_URL (from POKESTUDIO_PI_DB_URL) so ingest.ts
+# can hold a Postgres advisory lock for the run's duration — see
+# src/ingest-lock.ts and scripts/ingest-cloud-dev.sh's matching comment.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 # shellcheck source=./load-env.sh
 source scripts/load-env.sh
+# shellcheck source=./db-pi-guard.sh
+source scripts/db-pi-guard.sh
+
+require_pi_db_url
+export INGEST_LOCK_DB_URL="$POKESTUDIO_PI_DB_URL"
 
 PI_API_URL="http://192.168.1.236:8002"
 

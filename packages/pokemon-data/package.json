@@ -17,10 +17,12 @@
     "clean": "rm -rf dist .cache"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.47.10"
+    "@supabase/supabase-js": "^2.47.10",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@pokestudio/config": "workspace:*",
+    "@types/pg": "^8.11.10",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"

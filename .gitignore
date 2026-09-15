@@ -19,6 +19,13 @@ apps/web/.dev.vars.*
 .env
 .env.local
 .env.*.local
+# Backup/copy files an editor or manual `cp`/`>>` edit of a real .env file
+# can leave behind (2026-09-15: an untracked .env.local.bak briefly held a
+# secrets backup) — deliberately doesn't match .env.example, which is a
+# tracked, secret-free template.
+.env*.bak
+.env*.orig
+.env*.old
 
 # Supabase
 supabase/.branches

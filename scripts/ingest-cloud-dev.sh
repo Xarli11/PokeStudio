@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pnpm ingest:cloud-dev — runs the existing pokemon-data ingestion pipeline
-# (packages/pokemon-data/scripts/ingest.ts, unmodified) against Supabase Cloud
+# (packages/pokemon-data/scripts/ingest.ts) against Supabase Cloud
 # "PokeStudio Dev" (project ref tofhupgwxsexrburoqys) instead of the Pi.
 #
 # Deliberately separate from scripts/ingest-pi.sh rather than a shared flag:
@@ -13,6 +13,12 @@
 # SUPABASE_SECRET_KEY in .env.local so neither can silently overwrite the
 # other) only for this process's environment — never written to .env.local by
 # this script, never configured on the deployed web Worker.
+#
+# Also exports INGEST_LOCK_DB_URL (the direct Postgres connection string,
+# reused from SUPABASE_CLOUD_DEV_DB_URL) so ingest.ts can hold a Postgres
+# advisory lock for the run's duration — see src/ingest-lock.ts. This exists
+# because two concurrent `ingest:cloud-dev` runs raced on 2026-09-15, each
+# independently clearing and re-inserting pokemon_form_move.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -23,6 +29,8 @@ source scripts/db-cloud-dev-guard.sh
 
 export SUPABASE_URL="$CLOUD_DEV_API_URL"
 require_cloud_dev_api_url
+require_cloud_dev_db_url
+export INGEST_LOCK_DB_URL="$SUPABASE_CLOUD_DEV_DB_URL"
 
 if [ -z "${SUPABASE_CLOUD_DEV_SECRET_KEY:-}" ]; then
   echo "error: SUPABASE_CLOUD_DEV_SECRET_KEY is not set." >&2
