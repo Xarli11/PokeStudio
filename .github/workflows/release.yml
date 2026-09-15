@@ -1,0 +1,81 @@
+name: Guarded delivery
+on:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      candidate:
+        type: string
+        default: ''
+      confirmation:
+        type: string
+        default: ''
+      force_ingest:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: Check activation (repository variables)
+        env:
+          TARGET: ${{ inputs.target }}
+          DEV_ENABLED: ${{ vars.CLOUD_DEV_CD_ENABLED }}
+          PROD_ENABLED: ${{ vars.PRODUCTION_CD_ENABLED }}
+        run: |
+          case "$TARGET" in
+            cloud-dev) enabled="$DEV_ENABLED" ;;
+            production) enabled="$PROD_ENABLED" ;;
+            *) exit 1 ;;
+          esac
+          if [ "$enabled" != true ]; then
+            echo 'Delivery disabled. Complete the reviewed activation runbook first.' >&2
+            exit 1
+          fi
+      - name: Audit existing Environment rules and candidate before requesting approval
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TARGET: ${{ inputs.target }}
+          RELEASE_CANDIDATE: ${{ inputs.candidate }}
+          RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: node scripts/ci/github.mjs
+  release:
+    needs: preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    environment:
+      name: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Guard, plan, prepare DB, build, deploy, smoke
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TARGET: ${{ inputs.target }}
+          RELEASE_CANDIDATE: ${{ inputs.candidate }}
+          RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
+          FORCE_INGEST: ${{ inputs.force_ingest }}
+          DELIVERY_ENABLED: ${{ inputs.target == 'cloud-dev' && vars.CLOUD_DEV_CD_ENABLED || vars.PRODUCTION_CD_ENABLED }}
+          CLOUDFLARE_DEPLOY_OWNER: ${{ vars.CLOUDFLARE_DEPLOY_OWNER }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_INGEST_KEY: ${{ secrets.SUPABASE_INGEST_KEY }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: node scripts/ci/release.mjs

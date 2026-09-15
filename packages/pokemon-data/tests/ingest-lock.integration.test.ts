@@ -12,7 +12,7 @@ import { IngestLockedError, withIngestLock } from '../src/ingest-lock';
  * (CLAUDE.md §21). Skipped automatically when POKESTUDIO_PI_DB_URL is not
  * set, same pattern as tests/persist.integration.test.ts.
  */
-const dbUrl = process.env.POKESTUDIO_PI_DB_URL;
+const dbUrl = process.env.INGEST_LOCK_TEST_DB_URL ?? process.env.POKESTUDIO_PI_DB_URL;
 const hasDirectPgUrl = Boolean(dbUrl);
 
 describe.skipIf(!hasDirectPgUrl)('withIngestLock', () => {

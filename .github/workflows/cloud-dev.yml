@@ -1,0 +1,27 @@
+name: Cloud DEV
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_ingest:
+        description: Refresh all upstream data (about 35 minutes)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+# Own the environment through preparation, deployment and smoke. Pending runs may
+# be replaced; the data diff always starts at the last successful delivery.
+concurrency:
+  group: delivery-cloud-dev
+  cancel-in-progress: false
+jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
+  deliver:
+    needs: validate
+    uses: ./.github/workflows/release.yml
+    with:
+      target: cloud-dev
+      force_ingest: ${{ inputs.force_ingest || false }}

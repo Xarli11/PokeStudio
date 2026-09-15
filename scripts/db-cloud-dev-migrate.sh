@@ -52,7 +52,7 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 
 echo "Read-only identity check before migrating..."
-psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -c "select current_database(), current_user, version();" >/dev/null
+psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -v ON_ERROR_STOP=1 -c "select current_database(), current_user, version();" >/dev/null
 echo "OK — confirmed target is Supabase Cloud PokeStudio Dev ($CLOUD_DEV_PROJECT_REF)."
 
 cd packages/database
@@ -73,15 +73,15 @@ applied_versions=()
 for entry in "${KNOWN_ALIASES[@]}"; do
   IFS=':' read -r alias_version name canonical_version evidence_table <<< "$entry"
 
-  canonical_recorded="$(psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -t -A -c \
+  canonical_recorded="$(psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -v ON_ERROR_STOP=1 -t -A -c \
     "select 1 from supabase_migrations.schema_migrations where version = '${canonical_version}';")"
   if [ -n "$canonical_recorded" ]; then
     continue # already reconciled in a prior run — nothing to do for this pair
   fi
 
-  alias_recorded="$(psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -t -A -c \
+  alias_recorded="$(psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -v ON_ERROR_STOP=1 -t -A -c \
     "select 1 from supabase_migrations.schema_migrations where version = '${alias_version}' and name = '${name}';")"
-  table_exists="$(psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -t -A -c \
+  table_exists="$(psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -v ON_ERROR_STOP=1 -t -A -c \
     "select 1 from information_schema.tables where table_schema = 'public' and table_name = '${evidence_table}';")"
 
   if [ -n "$alias_recorded" ] && [ -n "$table_exists" ]; then
@@ -110,8 +110,8 @@ fi
 
 echo ""
 echo "Migrations that would be applied (dry run):"
-pnpm exec supabase db push --db-url "$SUPABASE_CLOUD_DEV_DB_URL" --dry-run
+pnpm exec supabase db push --db-url "$SUPABASE_CLOUD_DEV_DB_URL" --dry-run --skip-vault
 
 echo ""
 echo "Applying..."
-pnpm exec supabase db push --db-url "$SUPABASE_CLOUD_DEV_DB_URL"
+pnpm exec supabase db push --db-url "$SUPABASE_CLOUD_DEV_DB_URL" --yes --skip-vault

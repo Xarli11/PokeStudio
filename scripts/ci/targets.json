@@ -1,0 +1,9 @@
+{
+  "cloud-dev": {
+    "projectRef": "tofhupgwxsexrburoqys",
+    "worker": "pokestudio",
+    "url": "https://pokestudio.carlosgt2001.workers.dev",
+    "bootstrapSha": "1a09413776611d602a72b5e3d5895cd1db1ccf38"
+  },
+  "production": null
+}
