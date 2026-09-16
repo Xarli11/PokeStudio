@@ -9,6 +9,7 @@ import {
 } from './target.mjs';
 import { assertAppendOnly, migrationDirectory, needsIngestion, planMigrations } from './plan.mjs';
 import { assertMain, preflight, successfulRun, summary } from './github.mjs';
+import { queryReadOnly } from './postgres.mjs';
 
 const name = process.env.RELEASE_TARGET;
 const sha = process.env.GITHUB_SHA;
@@ -59,18 +60,7 @@ function databaseFailureKind(error) {
 
 function query(sql, stage) {
   try {
-    return execFileSync('psql', ['-X', '-q', '-t', '-A', '-v', 'ON_ERROR_STOP=1', '-c', sql], {
-      encoding: 'utf8',
-      timeout: 70000,
-      env: {
-        ...baseEnv(),
-        LC_ALL: 'C',
-        PGDATABASE: process.env.SUPABASE_DB_URL,
-        PGCONNECT_TIMEOUT: '15',
-        PGOPTIONS: '-c default_transaction_read_only=on -c statement_timeout=60000',
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }).trim();
+    return queryReadOnly(sql, process.env.SUPABASE_DB_URL, baseEnv());
   } catch (error) {
     const mode = new URL(process.env.SUPABASE_DB_URL).hostname.endsWith('.pooler.supabase.com')
       ? 'session-pooler'

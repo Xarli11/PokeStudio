@@ -48,6 +48,10 @@ jobs:
       - name: Check migration replay
         run: pnpm --filter @pokestudio/database exec supabase db reset --local --no-seed
       - run: node scripts/ci/integration-env.mjs
+      - name: PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Read-only release queries through real psql
+        run: node scripts/ci/postgres.integration.mjs
       - name: Persistence and session lock integration tests
         run: pnpm --filter @pokestudio/pokemon-data exec vitest run tests/persist.integration.test.ts tests/ingest-lock.integration.test.ts
       - name: Stop disposable database
