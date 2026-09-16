@@ -1,6 +1,17 @@
 name: Guarded delivery
 on:
   workflow_call:
+    # Callers explicitly map these names; the release job resolves their values
+    # from its protected Environment, after any required approval.
+    secrets:
+      SUPABASE_DB_URL:
+        required: true
+      SUPABASE_INGEST_KEY:
+        required: true
+      SUPABASE_PUBLISHABLE_KEY:
+        required: true
+      CLOUDFLARE_API_TOKEN:
+        required: true
     inputs:
       target:
         required: true
