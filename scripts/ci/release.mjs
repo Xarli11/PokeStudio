@@ -28,29 +28,70 @@ function baseEnv() {
   );
 }
 
-function query(sql) {
+function databaseFailureKind(error) {
+  if (error.code === 'ENOENT') return 'psql-not-found';
+  if (error.code === 'ETIMEDOUT') return 'timeout';
+  // Classify libpq's English diagnostics, but never return any part of stderr.
+  const detail = String(error.stderr ?? '');
+  const categories = [
+    [
+      /password authentication failed|no password supplied|authentication failed/i,
+      'authentication',
+    ],
+    [/tenant or user not found/i, 'pooler-identity'],
+    [/could not translate host name|name or service not known/i, 'dns-resolution'],
+    [/network is unreachable|no route to host/i, 'network-unreachable'],
+    [/connection refused/i, 'connection-refused'],
+    [/timeout expired|connection timed out|statement timeout/i, 'timeout'],
+    [
+      /certificate verify failed|root certificate file|SSL error|SSL connection|does not support SSL/i,
+      'tls',
+    ],
+    [/permission denied|no pg_hba.conf entry/i, 'access-denied'],
+    [/too many clients|remaining connection slots|MaxClientsInSessionMode/i, 'connection-limit'],
+    [
+      /unsupported startup parameter|unrecognized configuration parameter|invalid URI query parameter/i,
+      'connection-options',
+    ],
+  ];
+  return categories.find(([pattern]) => pattern.test(detail))?.[1] ?? 'unclassified';
+}
+
+function query(sql, stage) {
   try {
     return execFileSync('psql', ['-X', '-q', '-t', '-A', '-v', 'ON_ERROR_STOP=1', '-c', sql], {
       encoding: 'utf8',
       timeout: 70000,
       env: {
         ...baseEnv(),
+        LC_ALL: 'C',
         PGDATABASE: process.env.SUPABASE_DB_URL,
         PGCONNECT_TIMEOUT: '15',
         PGOPTIONS: '-c default_transaction_read_only=on -c statement_timeout=60000',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     }).trim();
-  } catch {
-    throw new Error('Read-only database query failed; details suppressed to protect credentials.');
+  } catch (error) {
+    const mode = new URL(process.env.SUPABASE_DB_URL).hostname.endsWith('.pooler.supabase.com')
+      ? 'session-pooler'
+      : 'direct';
+    throw new Error(
+      `Read-only database query failed (stage: ${stage}; connection: ${mode}; category: ${databaseFailureKind(error)}). Raw details suppressed to protect credentials.`,
+    );
   }
 }
 
 function pendingMigrations() {
-  const exists = query("select to_regclass('supabase_migrations.schema_migrations') is not null");
+  const exists = query(
+    "select to_regclass('supabase_migrations.schema_migrations') is not null",
+    'migration-table',
+  );
   const applied =
     exists === 't'
-      ? query('select version from supabase_migrations.schema_migrations order by version')
+      ? query(
+          'select version from supabase_migrations.schema_migrations order by version',
+          'migration-history',
+        )
           .split('\n')
           .filter(Boolean)
       : [];
@@ -130,7 +171,9 @@ async function assertWorker(target) {
 }
 
 async function integrity(target) {
-  const counts = JSON.parse(query(readFileSync('scripts/ci/integrity.sql', 'utf8')));
+  const counts = JSON.parse(
+    query(readFileSync('scripts/ci/integrity.sql', 'utf8'), 'reference-integrity'),
+  );
   if (
     counts.natures !== 25 ||
     counts.items < 175 ||
