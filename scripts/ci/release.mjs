@@ -28,29 +28,70 @@ function baseEnv() {
   );
 }
 
-function query(sql) {
+function databaseFailureKind(error) {
+  if (error.code === 'ENOENT') return 'psql-not-found';
+  if (error.code === 'ETIMEDOUT') return 'timeout';
+  // Classify libpq's English diagnostics, but never return any part of stderr.
+  const detail = String(error.stderr ?? '');
+  const categories = [
+    [
+      /password authentication failed|no password supplied|authentication failed/i,
+      'authentication',
+    ],
+    [/tenant or user not found/i, 'pooler-identity'],
+    [/could not translate host name|name or service not known/i, 'dns-resolution'],
+    [/network is unreachable|no route to host/i, 'network-unreachable'],
+    [/connection refused/i, 'connection-refused'],
+    [/timeout expired|connection timed out|statement timeout/i, 'timeout'],
+    [
+      /certificate verify failed|root certificate file|SSL error|SSL connection|does not support SSL/i,
+      'tls',
+    ],
+    [/permission denied|no pg_hba.conf entry/i, 'access-denied'],
+    [/too many clients|remaining connection slots|MaxClientsInSessionMode/i, 'connection-limit'],
+    [
+      /unsupported startup parameter|unrecognized configuration parameter|invalid URI query parameter/i,
+      'connection-options',
+    ],
+  ];
+  return categories.find(([pattern]) => pattern.test(detail))?.[1] ?? 'unclassified';
+}
+
+function query(sql, stage) {
   try {
     return execFileSync('psql', ['-X', '-q', '-t', '-A', '-v', 'ON_ERROR_STOP=1', '-c', sql], {
       encoding: 'utf8',
       timeout: 70000,
       env: {
         ...baseEnv(),
+        LC_ALL: 'C',
         PGDATABASE: process.env.SUPABASE_DB_URL,
         PGCONNECT_TIMEOUT: '15',
         PGOPTIONS: '-c default_transaction_read_only=on -c statement_timeout=60000',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     }).trim();
-  } catch {
-    throw new Error('Read-only database query failed; details suppressed to protect credentials.');
+  } catch (error) {
+    const mode = new URL(process.env.SUPABASE_DB_URL).hostname.endsWith('.pooler.supabase.com')
+      ? 'session-pooler'
+      : 'direct';
+    throw new Error(
+      `Read-only database query failed (stage: ${stage}; connection: ${mode}; category: ${databaseFailureKind(error)}). Raw details suppressed to protect credentials.`,
+    );
   }
 }
 
 function pendingMigrations() {
-  const exists = query("select to_regclass('supabase_migrations.schema_migrations') is not null");
+  const exists = query(
+    "select to_regclass('supabase_migrations.schema_migrations') is not null",
+    'migration-table',
+  );
   const applied =
     exists === 't'
-      ? query('select version from supabase_migrations.schema_migrations order by version')
+      ? query(
+          'select version from supabase_migrations.schema_migrations order by version',
+          'migration-history',
+        )
           .split('\n')
           .filter(Boolean)
       : [];
@@ -60,19 +101,35 @@ function pendingMigrations() {
   );
 }
 
-async function cloudflare(path) {
-  const response = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/${path}`,
-    {
-      headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
-      signal: AbortSignal.timeout(20000),
-    },
-  );
-  if (!response.ok) throw new Error(`Cloudflare target audit failed (${response.status}).`);
-  const payload = await response.json();
-  if (!payload.success) throw new Error('Cloudflare target audit rejected.');
+async function cloudflare(path, endpoint) {
+  let response;
+  try {
+    response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/${path}`,
+      {
+        headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
+        signal: AbortSignal.timeout(20000),
+      },
+    );
+  } catch {
+    // Fetch/header errors can contain request data. Only log the static route label.
+    throw new Error(`Cloudflare target audit failed (GET ${endpoint}; network/header error).`);
+  }
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.success !== true) {
+    // Never print provider messages, response bodies, headers or dynamic URL values.
+    const codes = Array.isArray(payload?.errors)
+      ? payload.errors
+          .map((error) => error?.code)
+          .filter((code) => Number.isSafeInteger(code) && code >= 0)
+          .slice(0, 10)
+      : [];
+    throw new Error(
+      `Cloudflare target audit failed (GET ${endpoint}; HTTP ${response.status}; Cloudflare codes: ${codes.join(', ') || 'unavailable'}).`,
+    );
+  }
   if (payload.result_info?.total_pages > 1)
-    throw new Error('Cloudflare audit response is incomplete.');
+    throw new Error(`Cloudflare audit response is incomplete (GET ${endpoint}).`);
   return payload.result;
 }
 
@@ -83,16 +140,27 @@ async function assertWorker(target) {
   ) {
     throw new Error('Cloudflare account and scoped token are required.');
   }
-  const { subdomain } = await cloudflare('workers/subdomain');
+  const { subdomain } = await cloudflare(
+    'workers/subdomain',
+    '/accounts/{account_id}/workers/subdomain',
+  );
   if (target.url !== `https://${target.worker}.${subdomain}.workers.dev`) {
     throw new Error('Cloudflare account does not own the approved workers.dev target.');
   }
-  const workers = await cloudflare('workers/scripts');
+  const workers = await cloudflare('workers/scripts', '/accounts/{account_id}/workers/scripts');
   const worker = workers.find((entry) => entry.id === target.worker);
   if (!/^[a-f0-9]{32}$/.test(worker?.tag ?? ''))
     throw new Error('Approved Worker identity is missing.');
-  assertNoBuildTriggers(await cloudflare(`builds/workers/${worker.tag}/triggers`));
-  const settings = await cloudflare(`workers/scripts/${target.worker}/settings`);
+  assertNoBuildTriggers(
+    await cloudflare(
+      `builds/workers/${worker.tag}/triggers`,
+      '/accounts/{account_id}/builds/workers/{worker_tag}/triggers',
+    ),
+  );
+  const settings = await cloudflare(
+    `workers/scripts/${target.worker}/settings`,
+    '/accounts/{account_id}/workers/scripts/{worker_name}/settings',
+  );
   if (
     settings.bindings?.some((binding) =>
       /SUPABASE.*(SECRET|SERVICE_ROLE|DB_URL|INGEST)/.test(binding.name),
@@ -103,7 +171,9 @@ async function assertWorker(target) {
 }
 
 async function integrity(target) {
-  const counts = JSON.parse(query(readFileSync('scripts/ci/integrity.sql', 'utf8')));
+  const counts = JSON.parse(
+    query(readFileSync('scripts/ci/integrity.sql', 'utf8'), 'reference-integrity'),
+  );
   if (
     counts.natures !== 25 ||
     counts.items < 175 ||
@@ -243,7 +313,10 @@ async function main() {
     });
     await assertMain(); // Do not publish an obsolete build after a long ingestion.
     await assertWorker(target);
-    const before = await cloudflare(`workers/scripts/${target.worker}/deployments`);
+    const before = await cloudflare(
+      `workers/scripts/${target.worker}/deployments`,
+      '/accounts/{account_id}/workers/scripts/{worker_name}/deployments',
+    );
     summary(`Previous Worker deployment: ${before.deployments?.[0]?.id ?? 'none'}`);
     run(
       'pnpm',
@@ -255,7 +328,10 @@ async function main() {
         CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
       },
     );
-    const after = await cloudflare(`workers/scripts/${target.worker}/deployments`);
+    const after = await cloudflare(
+      `workers/scripts/${target.worker}/deployments`,
+      '/accounts/{account_id}/workers/scripts/{worker_name}/deployments',
+    );
     summary(`Worker deployment: ${after.deployments?.[0]?.id ?? 'unavailable'}`);
     summary(`Worker versions: ${JSON.stringify(after.deployments?.[0]?.versions ?? [])}`);
     run('pnpm', [`smoke:${name}`], {

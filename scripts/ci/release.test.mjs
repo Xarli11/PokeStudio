@@ -19,7 +19,7 @@ const before = 'a'.repeat(40);
 const after = 'b'.repeat(40);
 const versions = ['20260908000001', '20260909150000'];
 process.on('exit', () => writeFileSync(process.env.TRACE_PATH, JSON.stringify(calls)));
-childProcess.execFileSync = (command, args) => {
+childProcess.execFileSync = (command, args, options) => {
   if (process.env.SCENARIO === 'missing-secrets') calls.push({ command, args });
   if (command === 'git') {
     if (args[0] === 'rev-parse') return after;
@@ -27,7 +27,18 @@ childProcess.execFileSync = (command, args) => {
     if (args[0] === 'diff') return pending ? 'A\0packages/database/supabase/migrations/20260909150000_second.sql\0' : 'M\0apps/web/src/app/page.tsx\0';
   }
   if (command === 'psql') {
+    if (process.env.SCENARIO.startsWith('cf-')) calls.push({ command });
     const sql = args.at(-1);
+    if (process.env.SCENARIO === 'db-error') {
+      calls.push({ command, readonly: options.env.PGOPTIONS, locale: options.env.LC_ALL });
+      const stage = sql.includes('to_regclass') ? 'migration-table' : sql.includes('select version') ? 'migration-history' : 'reference-integrity';
+      if (stage === (process.env.DB_FAIL_STAGE || 'migration-table')) {
+        throw Object.assign(new Error('private raw error: test-cf-token'), {
+          stderr: Buffer.from(process.env.DB_ERROR_DETAIL || ''),
+          code: process.env.DB_ERROR_CODE,
+        });
+      }
+    }
     if (sql.includes('to_regclass')) return 't';
     if (sql.includes('select version')) return (pending && !migrated ? versions.slice(0, 1) : versions).join('\n');
     return JSON.stringify({ natures: 25, items: 175, learnsets: 693197, species: 1025, bad_defaults: 0, missing_sentinels: 0 });
@@ -52,6 +63,16 @@ globalThis.fetch = async (input, options) => {
     if (url.pathname.includes('/actions/workflows/')) return Response.json({ workflow_runs: [{ id: 2, event: 'push', conclusion: 'success', head_sha: before, head_repository: { full_name: 'Xarli11/PokeStudio' } }] });
   }
   if (url.hostname === 'api.cloudflare.com') {
+    const endpoint = url.pathname.split('/').at(-1);
+    if (process.env.SCENARIO === 'cf-denied-' + endpoint || process.env.SCENARIO === 'cf-rejected') {
+      return Response.json({ success: false, errors: [
+        { code: 10000, message: 'test-cf-token' },
+        { code: 'sb_publishable_test', message: 'test-ingest' },
+        null,
+      ] }, { status: process.env.SCENARIO === 'cf-rejected' ? 200 : 401 });
+    }
+    if (process.env.SCENARIO === 'cf-html') return new Response('test-cf-token', { status: 502 });
+    if (process.env.SCENARIO === 'cf-network') throw new Error('test-cf-token');
     let result;
     if (url.pathname.endsWith('/workers/subdomain')) result = { subdomain: 'carlosgt2001' };
     else if (url.pathname.endsWith('/workers/scripts')) result = [{ id: 'pokestudio', tag: 'a'.repeat(32) }];
@@ -142,6 +163,114 @@ for (const key of [
       }
     });
   }
+}
+
+for (const [name, endpoint, detail] of [
+  ['cf-denied-subdomain', 'workers/subdomain', 'HTTP 401; Cloudflare codes: 10000'],
+  ['cf-denied-scripts', 'workers/scripts', 'HTTP 401; Cloudflare codes: 10000'],
+  [
+    'cf-denied-triggers',
+    'builds/workers/{worker_tag}/triggers',
+    'HTTP 401; Cloudflare codes: 10000',
+  ],
+  [
+    'cf-denied-settings',
+    'workers/scripts/{worker_name}/settings',
+    'HTTP 401; Cloudflare codes: 10000',
+  ],
+  ['cf-rejected', 'workers/subdomain', 'HTTP 200; Cloudflare codes: 10000'],
+  ['cf-html', 'workers/subdomain', 'HTTP 502; Cloudflare codes: unavailable'],
+  ['cf-network', 'workers/subdomain', 'network/header error'],
+]) {
+  test(`${name} reports a safe endpoint diagnostic and stops before DB preparation`, () => {
+    const result = scenario(name);
+    assert.equal(result.status, 1);
+    assert.ok(
+      result.stderr.includes(`GET /accounts/{account_id}/${endpoint}; ${detail}`),
+      result.stderr,
+    );
+    assert.deepEqual(result.calls, []);
+    for (const credential of [
+      'test-cf-token',
+      'test-ingest',
+      'sb_publishable_test',
+      'postgres://',
+    ]) {
+      assert.equal((result.stdout + result.stderr).includes(credential), false);
+    }
+  });
+}
+
+for (const [detail, code, category] of [
+  ['FATAL: password authentication failed for user "private-user"', '', 'authentication'],
+  ['FATAL: Tenant or user not found', '', 'pooler-identity'],
+  ['could not translate host name "private-host" to address', '', 'dns-resolution'],
+  ['Network is unreachable', '', 'network-unreachable'],
+  ['Connection refused', '', 'connection-refused'],
+  ['timeout expired', '', 'timeout'],
+  ['certificate verify failed', '', 'tls'],
+  ['permission denied for schema supabase_migrations', '', 'access-denied'],
+  ['MaxClientsInSessionMode: max clients reached', '', 'connection-limit'],
+  ['unsupported startup parameter: options', '', 'connection-options'],
+  ['', 'ENOENT', 'psql-not-found'],
+  ['', 'ETIMEDOUT', 'timeout'],
+  ['unrecognized provider failure', 'private-error-code', 'unclassified'],
+]) {
+  test(`database failure ${category}/${code} stops preparation and hides raw credentials`, () => {
+    const result = scenario('db-error', {
+      SUPABASE_DB_URL:
+        'postgres://postgres.tofhupgwxsexrburoqys:fake@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require',
+      DB_ERROR_DETAIL: `${detail}\npostgres://private-user:private-password@private-host/postgres test-ingest sb_publishable_test`,
+      DB_ERROR_CODE: code,
+    });
+    assert.equal(result.status, 1);
+    assert.ok(
+      result.stderr.includes(
+        `stage: migration-table; connection: session-pooler; category: ${category}`,
+      ),
+      result.stderr,
+    );
+    assert.deepEqual(result.calls, [
+      {
+        command: 'psql',
+        readonly: '-c default_transaction_read_only=on -c statement_timeout=60000',
+        locale: 'C',
+      },
+    ]);
+    for (const sensitive of [
+      'private-user',
+      'private-host',
+      'private-password',
+      'private-error-code',
+      'test-cf-token',
+      'test-ingest',
+      'sb_publishable_test',
+      'postgres://',
+    ]) {
+      assert.equal((result.stdout + result.stderr).includes(sensitive), false);
+    }
+  });
+}
+
+for (const stage of ['migration-history', 'reference-integrity']) {
+  test(`database failure at ${stage} identifies the stage and prevents deployment`, () => {
+    const result = scenario('db-error', {
+      DB_FAIL_STAGE: stage,
+      DB_ERROR_DETAIL: 'permission denied for private-relation test-cf-token',
+    });
+    assert.equal(result.status, 1);
+    assert.ok(
+      result.stderr.includes(`stage: ${stage}; connection: direct; category: access-denied`),
+      result.stderr,
+    );
+    assert.ok(
+      result.calls.every(
+        (call) => call.command === 'psql' || call.args?.[0] === 'db:cloud-dev:check',
+      ),
+    );
+    assert.equal((result.stdout + result.stderr).includes('private-relation'), false);
+    assert.equal((result.stdout + result.stderr).includes('test-cf-token'), false);
+  });
 }
 
 test('frontend delivery skips DB mutations, builds without privileged credentials and deploys once', () => {
