@@ -77,6 +77,8 @@ Use the same secret names in each Environment with **different values**:
 
 Do not duplicate privileged secrets at repository or organization scope. Release secrets are injected only into the delivery step, after checkout/install. Child builds receive an allowlist of ordinary environment variables plus the public database values. The generated Wrangler file contains public bindings and release identity only and is deleted afterward. A Worker audit rejects known privileged Supabase bindings. No `.env.local` is sourced when `CI=true`.
 
+Create the Cloudflare token under [My Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens), scoped to the approved account. It must be a **user API token**, not an account-owned token: the [Workers Builds API explicitly rejects account-scoped tokens](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/#1-create-an-api-token-with-the-correct-permissions), even though ordinary Workers endpoints support them. This delivery audits Builds triggers as well as deploying a Worker. Correct permissions alone do not make an account-owned token compatible. Do not use the Global API key or grant write access to Builds just to query triggers.
+
 Protect main with a PR requirement, review requirements, the stable `CI required` status check, up-to-date checks, no force pushes/deletions, and no bypass for routine changes. Set workflow permissions to read-only. Require owner review of `.github/`, `scripts/ci/`, target configuration and migrations using CODEOWNERS/branch rules appropriate to the actual reviewer team. This patch does not invent reviewer identities. GitHub admin/rules changes are outside what repository YAML can enforce.
 
 ## Activation and Cloudflare handover
