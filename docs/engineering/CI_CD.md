@@ -64,16 +64,16 @@ Create the environments **before** enabling delivery. Both must use “Selected 
 
 Use the same secret names in each Environment with **different values**:
 
-| Scope                | Name                       | Purpose                                                                                                                 |
-| -------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Environment secret   | `SUPABASE_DB_URL`          | Target-matched PostgreSQL URL; direct/session 5432 and `sslmode=require` or `verify-full`                               |
-| Environment secret   | `SUPABASE_INGEST_KEY`      | Target's privileged ingestion credential; never configured on web Worker                                                |
-| Environment secret   | `SUPABASE_PUBLISHABLE_KEY` | Target's public publishable key, or matching legacy anon JWT                                                            |
-| Environment secret   | `CLOUDFLARE_API_TOKEN`     | Token scoped to the appropriate account with Workers Scripts edit, Workers CI read and required account/subdomain reads |
-| Environment variable | `CLOUDFLARE_ACCOUNT_ID`    | Account ID; API audit verifies its subdomain matches the approved Worker origin                                         |
-| Environment variable | `CLOUDFLARE_DEPLOY_OWNER`  | `github-actions`, set only after the ownership cutover below                                                            |
-| Repository variable  | `CLOUD_DEV_CD_ENABLED`     | Keep absent/false until DEV activation is approved; then `true`                                                         |
-| Repository variable  | `PRODUCTION_CD_ENABLED`    | Keep absent/false until separate production setup and approval; then `true`                                             |
+| Scope                | Name                       | Purpose                                                                                     |
+| -------------------- | -------------------------- | ------------------------------------------------------------------------------------------- |
+| Environment secret   | `SUPABASE_DB_URL`          | Target-matched PostgreSQL URL; direct/session 5432 and `sslmode=require` or `verify-full`   |
+| Environment secret   | `SUPABASE_INGEST_KEY`      | Target's privileged ingestion credential; never configured on web Worker                    |
+| Environment secret   | `SUPABASE_PUBLISHABLE_KEY` | Target's public publishable key, or matching legacy anon JWT                                |
+| Environment secret   | `CLOUDFLARE_API_TOKEN`     | Token scoped to the appropriate account with Workers Scripts edit/write and Workers CI read |
+| Environment variable | `CLOUDFLARE_ACCOUNT_ID`    | Account ID; API audit verifies its subdomain matches the approved Worker origin             |
+| Environment variable | `CLOUDFLARE_DEPLOY_OWNER`  | `github-actions`, set only after the ownership cutover below                                |
+| Repository variable  | `CLOUD_DEV_CD_ENABLED`     | Keep absent/false until DEV activation is approved; then `true`                             |
+| Repository variable  | `PRODUCTION_CD_ENABLED`    | Keep absent/false until separate production setup and approval; then `true`                 |
 
 Do not duplicate privileged secrets at repository or organization scope. Release secrets are injected only into the delivery step, after checkout/install. Child builds receive an allowlist of ordinary environment variables plus the public database values. The generated Wrangler file contains public bindings and release identity only and is deleted afterward. A Worker audit rejects known privileged Supabase bindings. No `.env.local` is sourced when `CI=true`.
 
@@ -91,6 +91,7 @@ Protect main with a PR requirement, review requirements, the stable `CI required
 
 ## Failure handling and rollback
 
+- Cloudflare audit failures report a static endpoint template, HTTP status and numeric provider error codes only. A bare 401 does not identify which audit request failed or prove a particular permission is missing. Do not print response bodies/messages, headers or token values when investigating. The [Workers subdomain endpoint](https://developers.cloudflare.com/api/resources/workers/subresources/subdomains/methods/get/) accepts Workers Scripts Read or Write; Account Settings Read is not an additional documented requirement for that endpoint. The [Builds trigger endpoint](https://developers.cloudflare.com/api/resources/workers_builds/subresources/triggers/methods/list/) accepts Workers CI Read or Write. Check the failing route, token status, account scope, restrictions and the saved credential before broadening permissions.
 - The reusable delivery workflow declares all four secret names under `on.workflow_call.secrets`; both delivery callers explicitly map those names. The protected `release` job still selects the target Environment, whose secrets take precedence. Keep the values at Environment scope; do not copy them into repository secrets or use unrestricted `secrets: inherit` to fix missing mappings. PR validation receives none of these secrets.
 - An empty secret expression in a job log proves only that the job received no value; it does not prove the stored secret was empty. Check the exact caller/callee YAML, Environment name, secret metadata and event restrictions before replacing credentials. The release script checks all four names before external calls and reports missing names without values. Only a real Environment delivery can validate GitHub's secret resolution; local tests and actionlint cannot prove it.
 - When observing a run, use `gh run watch RUN_ID --exit-status` directly, or preserve its exit code with shell `pipefail`. A successful `tail` process does not prove the workflow succeeded. Confirm the run's final `conclusion` explicitly.
