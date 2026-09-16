@@ -26,6 +26,11 @@ jobs:
   deliver:
     needs: validate
     uses: ./.github/workflows/release.yml
+    secrets:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_INGEST_KEY: ${{ secrets.SUPABASE_INGEST_KEY }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     with:
       target: production
       candidate: ${{ inputs.candidate }}

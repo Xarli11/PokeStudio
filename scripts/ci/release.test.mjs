@@ -20,6 +20,7 @@ const after = 'b'.repeat(40);
 const versions = ['20260908000001', '20260909150000'];
 process.on('exit', () => writeFileSync(process.env.TRACE_PATH, JSON.stringify(calls)));
 childProcess.execFileSync = (command, args) => {
+  if (process.env.SCENARIO === 'missing-secrets') calls.push({ command, args });
   if (command === 'git') {
     if (args[0] === 'rev-parse') return after;
     if (args[0] === 'merge-base') return '';
@@ -42,6 +43,7 @@ childProcess.spawnSync = (command, args, options) => {
 };
 syncBuiltinESMExports();
 globalThis.fetch = async (input, options) => {
+  if (process.env.SCENARIO === 'missing-secrets') calls.push({ command: 'fetch' });
   const url = new URL(input);
   if (url.hostname === 'api.github.com') {
     if (url.pathname.endsWith('/commits/main')) return Response.json({ sha: after });
@@ -67,7 +69,7 @@ globalThis.fetch = async (input, options) => {
 };
 `;
 
-function scenario(name) {
+function scenario(name, environment = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'pokestudio-release-test-'));
   try {
     for (const path of ['apps/web', 'scripts/ci', 'packages/database/supabase/migrations']) {
@@ -108,12 +110,37 @@ function scenario(name) {
           SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_test',
           SCENARIO: name,
           TRACE_PATH: join(directory, 'trace.json'),
+          ...environment,
         },
       },
     );
     return { ...result, calls: JSON.parse(readFileSync(join(directory, 'trace.json'), 'utf8')) };
   } finally {
     rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+for (const key of [
+  'SUPABASE_DB_URL',
+  'SUPABASE_INGEST_KEY',
+  'SUPABASE_PUBLISHABLE_KEY',
+  'CLOUDFLARE_API_TOKEN',
+]) {
+  for (const value of [undefined, '   ']) {
+    test(`${key} ${value === undefined ? 'unavailable' : 'blank'} stops before any external call`, () => {
+      const result = scenario('missing-secrets', { [key]: value });
+      assert.equal(result.status, 1);
+      assert.ok(result.stderr.includes(`Missing delivery secrets: ${key}.`), result.stderr);
+      assert.deepEqual(result.calls, []);
+      for (const credential of [
+        'test-cf-token',
+        'test-ingest',
+        'sb_publishable_test',
+        'postgres://',
+      ]) {
+        assert.equal((result.stdout + result.stderr).includes(credential), false);
+      }
+    });
   }
 }
 

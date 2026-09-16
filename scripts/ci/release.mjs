@@ -140,6 +140,17 @@ async function main() {
   ) {
     throw new Error('Delivery disabled: complete the reviewed Cloudflare ownership cutover first.');
   }
+  const missingSecrets = [
+    'SUPABASE_DB_URL',
+    'SUPABASE_INGEST_KEY',
+    'SUPABASE_PUBLISHABLE_KEY',
+    'CLOUDFLARE_API_TOKEN',
+  ].filter((key) => !process.env[key]?.trim());
+  if (missingSecrets.length) {
+    throw new Error(
+      `Missing delivery secrets: ${missingSecrets.join(', ')}. Check the ${name} Environment and reusable-workflow secret mappings.`,
+    );
+  }
   await preflight(name, true); // Recheck after waiting for Environment approval.
   assertDatabaseUrl(process.env.SUPABASE_DB_URL, target.projectRef);
   assertPublishableKey(process.env.SUPABASE_PUBLISHABLE_KEY, target.projectRef);
