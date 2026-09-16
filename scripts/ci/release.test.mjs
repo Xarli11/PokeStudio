@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process';
 // Run the actual orchestrator with all process and HTTP boundaries replaced.
 // It cannot reach a database, provider API, ingester or deploy command.
 const fixture = String.raw`
+import assert from 'node:assert/strict';
 import childProcess from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
 import { writeFileSync } from 'node:fs';
@@ -24,9 +25,20 @@ childProcess.execFileSync = (command, args, options) => {
   if (command === 'git') {
     if (args[0] === 'rev-parse') return after;
     if (args[0] === 'merge-base') return '';
-    if (args[0] === 'diff') return pending ? 'A\0packages/database/supabase/migrations/20260909150000_second.sql\0' : 'M\0apps/web/src/app/page.tsx\0';
+    if (args[0] === 'diff') {
+      if (process.env.SCENARIO === 'production-wrapper-only') return 'A\0scripts/ingest-production.sh\0';
+      return pending ? 'A\0packages/database/supabase/migrations/20260909150000_second.sql\0' : 'M\0apps/web/src/app/page.tsx\0';
+    }
   }
   if (command === 'psql') {
+    assert.equal(options.env.PGDATABASE, 'postgres');
+    assert.ok(options.env.PGHOST.endsWith('.supabase.co') || options.env.PGHOST.endsWith('.pooler.supabase.com'));
+    assert.equal(options.env.PGPORT, '5432');
+    assert.ok(['postgres', 'postgres.tofhupgwxsexrburoqys'].includes(options.env.PGUSER));
+    assert.equal(options.env.PGPASSWORD, process.env.SCENARIO === 'encoded-password' ? 'p@ss:/% \\' : 'fake');
+    assert.equal(options.env.PGSSLMODE, process.env.SCENARIO === 'encoded-password' ? 'verify-full' : 'require');
+    assert.equal(args.includes('-w'), true);
+    assert.equal(args.some((arg) => arg.includes('postgres://') || arg.includes('postgresql://')), false);
     if (process.env.SCENARIO.startsWith('cf-')) calls.push({ command });
     const sql = args.at(-1);
     if (process.env.SCENARIO === 'db-error') {
@@ -272,6 +284,28 @@ for (const stage of ['migration-history', 'reference-integrity']) {
     assert.equal((result.stdout + result.stderr).includes('test-cf-token'), false);
   });
 }
+
+test('a new production ingestion wrapper does not reingest Cloud DEV', () => {
+  const result = scenario('production-wrapper-only');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(
+    result.calls.some((call) => call.args?.[0] === 'ingest:cloud-dev'),
+    false,
+  );
+  assert.equal(
+    result.calls.some((call) => call.args?.includes('deploy:cf:built')),
+    true,
+  );
+});
+
+test('encoded database passwords are decoded once and TLS verification is preserved', () => {
+  const result = scenario('encoded-password', {
+    SUPABASE_DB_URL:
+      'postgres://postgres.tofhupgwxsexrburoqys:p%40ss%3A%2F%25%20%5C@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=verify-full',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal((result.stdout + result.stderr).includes('p@ss:'), false);
+});
 
 test('frontend delivery skips DB mutations, builds without privileged credentials and deploys once', () => {
   const result = scenario('frontend');
