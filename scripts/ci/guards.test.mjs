@@ -80,6 +80,22 @@ test('frontend-only and test-only releases avoid ingestion', () => {
   assert.equal(needsIngestion(['apps/web/src/app/page.tsx', 'docs/engineering/CI_CD.md']), false);
   assert.equal(needsIngestion(['packages/pokemon-data/src/cache.test.ts']), false);
 });
+test('ingestion wrappers affect only their own cloud target, never the Pi', () => {
+  for (const target of ['cloud-dev', 'production']) {
+    const other = target === 'cloud-dev' ? 'production' : 'cloud-dev';
+    assert.equal(needsIngestion([`scripts/ingest-${target}.sh`], { target }), true);
+    assert.equal(
+      needsIngestion([`scripts/ingest-${other}.sh`, 'scripts/ingest-pi.sh'], { target }),
+      false,
+    );
+    assert.equal(needsIngestion(['packages/pokemon-data/src/persist.ts'], { target }), true);
+    for (const option of [{ force: true }, { bootstrap: true }, { pending: ['20260908000001'] }]) {
+      assert.equal(needsIngestion([], { target, ...option }), true);
+    }
+  }
+  assert.throws(() => needsIngestion([], { target: 'pi' }));
+});
+
 test('catch-up diff, deleted importer, lockfile, pending migration, bootstrap and force require ingestion', () => {
   for (const path of [
     'packages/pokemon-data/src/persist.ts',

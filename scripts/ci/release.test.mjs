@@ -25,7 +25,10 @@ childProcess.execFileSync = (command, args, options) => {
   if (command === 'git') {
     if (args[0] === 'rev-parse') return after;
     if (args[0] === 'merge-base') return '';
-    if (args[0] === 'diff') return pending ? 'A\0packages/database/supabase/migrations/20260909150000_second.sql\0' : 'M\0apps/web/src/app/page.tsx\0';
+    if (args[0] === 'diff') {
+      if (process.env.SCENARIO === 'production-wrapper-only') return 'A\0scripts/ingest-production.sh\0';
+      return pending ? 'A\0packages/database/supabase/migrations/20260909150000_second.sql\0' : 'M\0apps/web/src/app/page.tsx\0';
+    }
   }
   if (command === 'psql') {
     assert.equal(options.env.PGDATABASE, 'postgres');
@@ -281,6 +284,19 @@ for (const stage of ['migration-history', 'reference-integrity']) {
     assert.equal((result.stdout + result.stderr).includes('test-cf-token'), false);
   });
 }
+
+test('a new production ingestion wrapper does not reingest Cloud DEV', () => {
+  const result = scenario('production-wrapper-only');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(
+    result.calls.some((call) => call.args?.[0] === 'ingest:cloud-dev'),
+    false,
+  );
+  assert.equal(
+    result.calls.some((call) => call.args?.includes('deploy:cf:built')),
+    true,
+  );
+});
 
 test('encoded database passwords are decoded once and TLS verification is preserved', () => {
   const result = scenario('encoded-password', {

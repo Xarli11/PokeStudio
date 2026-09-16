@@ -19,7 +19,11 @@ export function planMigrations(files, applied) {
   return versions.slice(remote.length);
 }
 
-export function needsIngestion(paths, { force = false, bootstrap = false, pending = [] } = {}) {
+export function needsIngestion(
+  paths,
+  { target = 'cloud-dev', force = false, bootstrap = false, pending = [] } = {},
+) {
+  if (!['cloud-dev', 'production'].includes(target)) throw new Error('Unknown ingestion target.');
   return (
     force ||
     bootstrap ||
@@ -30,7 +34,7 @@ export function needsIngestion(paths, { force = false, bootstrap = false, pendin
         path === 'packages/pokemon-data/package.json' ||
         path.startsWith(migrationDirectory) ||
         (/^packages\/pokemon-data\/(src|scripts)\//.test(path) && !/\.(test|spec)\./.test(path)) ||
-        /^scripts\/ingest-(cloud-dev|production)\.sh$/.test(path),
+        path === `scripts/ingest-${target}.sh`,
     )
   );
 }

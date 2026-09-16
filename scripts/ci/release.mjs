@@ -235,6 +235,7 @@ async function main() {
   // Remote history is authoritative. Reject unknown/aliased histories before any repair-capable script.
   const pending = pendingMigrations();
   const ingest = needsIngestion(paths, {
+    target: name,
     force: process.env.FORCE_INGEST === 'true',
     bootstrap: !baseline,
     pending,
