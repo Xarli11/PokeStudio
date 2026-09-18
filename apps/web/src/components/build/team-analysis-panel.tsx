@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
 
-import { formatMessage } from '@pokestudio/i18n';
-import { ALL_POKEMON_TYPES } from '@pokestudio/pokemon-data';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import { formatMessage } from '@pokelab/i18n';
+import { ALL_POKEMON_TYPES } from '@pokelab/pokemon-data';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 import { cardClass } from '@/lib/ui-classes';
 import type { TeamDefensiveProfile, TeamWarning, TeamWarningSeverity } from '@/lib/team-analysis';

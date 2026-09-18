@@ -1,4 +1,4 @@
-import type { BaseStats } from '@pokestudio/pokemon-data';
+import type { BaseStats } from '@pokelab/pokemon-data';
 
 import { STAT_TIER_BAR_CLASS, statTier } from '@/lib/stat-quality';
 

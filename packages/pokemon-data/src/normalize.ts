@@ -476,7 +476,7 @@ export function normalizeEvolutionChain(params: {
  * into two records sharing one display name, disambiguated only by a
  * `--physical`/`--special` suffix depending on the base move's category —
  * not two separately-named in-game moves, just PokéAPI's own record-per-
- * variant modeling. That suffix's double dash fails PokeStudio's general
+ * variant modeling. That suffix's double dash fails PokeLab's general
  * kebab-case slug rule (species/forms/abilities never legitimately have
  * one); collapsing it to a single dash keeps the two variants distinct
  * (e.g. "breakneck-blitz-physical" / "breakneck-blitz-special") without

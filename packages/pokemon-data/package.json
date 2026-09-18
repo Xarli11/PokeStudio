@@ -1,8 +1,8 @@
 {
-  "name": "@pokestudio/pokemon-data",
+  "name": "@pokelab/pokemon-data",
   "private": true,
   "version": "0.0.0",
-  "description": "PokeStudio Pokémon reference data: full ingestion pipeline (fetch/cache -> normalize -> validate -> persist) and normalized types. Not a runtime PokéAPI client.",
+  "description": "PokeLab Pokémon reference data: full ingestion pipeline (fetch/cache -> normalize -> validate -> persist) and normalized types. Not a runtime PokéAPI client.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "main": "./src/index.ts",
@@ -21,7 +21,7 @@
     "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@pokestudio/config": "workspace:*",
+    "@pokelab/config": "workspace:*",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",

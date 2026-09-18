@@ -7,7 +7,7 @@
 
 Through UX/UI 0.1–0.2c and Brand 1.0, `apps/web` styled itself with CSS Modules (4 files:
 `app-shell`, `pokemon-grid`, `form-section`, `evolution-section`) plus, more often, inline
-`style={{ ... }}` objects referencing PokeStudio's own CSS custom properties
+`style={{ ... }}` objects referencing PokeLab's own CSS custom properties
 (`packages/ui/src/tokens.css`, `--ps-color-*` / `--ps-space-*` / `--ps-radius-*` etc.). That
 token layer was already the actual design-system source of truth — the inline-style approach
 was simply the delivery mechanism, and it scaled poorly: every layout tweak meant hand-writing
@@ -16,7 +16,7 @@ from a shared scale, and there was no single place to see "every color/radius/sh
 product uses."
 
 Styling Foundation 1.0 asks for a deliberate, production-quality migration to Tailwind CSS 4 as
-the long-term styling foundation, explicit that **Tailwind is not to replace PokeStudio's design
+the long-term styling foundation, explicit that **Tailwind is not to replace PokeLab's design
 system** — the existing `--ps-*` tokens must remain the one source of truth, with Tailwind
 consuming them rather than duplicating them.
 
@@ -39,7 +39,7 @@ React components (apps/web)
 
 The `@theme` block lives inside `tokens.css` itself (not `globals.css`) — it is conceptually
 part of the token package, and colocating it there means `packages/ui` stays the single file
-that defines PokeStudio's design system, Tailwind-facing names included. Because every aliased
+that defines PokeLab's design system, Tailwind-facing names included. Because every aliased
 property (`--color-brand: var(--ps-color-primary)`, etc.) references a custom property that
 already lives at `:root` / `[data-theme='light']`, theme switching keeps working exactly as
 before — a `bg-brand` utility re-resolves live through the CSS cascade when `data-theme`
@@ -77,7 +77,7 @@ this is not a regression, just the correct tool for a genuinely dynamic case. It
   for a project whose design tokens already live in plain CSS custom properties; a JS config
   would mean maintaining the same values in two languages/formats.
 - **A component library (shadcn, Radix Themes, etc.) on top of Tailwind**: rejected for this
-  phase (CLAUDE.md §16) — PokeStudio's differentiators are Battle Lab/AI Coach/Replay
+  phase (CLAUDE.md §16) — PokeLab's differentiators are Battle Lab/AI Coach/Replay
   Analyzer, not its button component; adding one now would import an aesthetic and a maintenance
   surface this phase doesn't need. Small local primitives (`apps/web/src/lib/ui-classes.ts`,
   `apps/web/src/components/ui/skeleton.tsx`) cover the handful of genuinely reused patterns

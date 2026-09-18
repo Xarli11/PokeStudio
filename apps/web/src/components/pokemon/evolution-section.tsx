@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
-import type { EvolutionFamily } from '@pokestudio/database';
-import { formatMessage, type Dictionary, type Locale } from '@pokestudio/i18n';
+import type { EvolutionFamily } from '@pokelab/database';
+import { formatMessage, type Dictionary, type Locale } from '@pokelab/i18n';
 
 import { groupEvolutionsByParent } from '@/lib/evolution-condition';
 import { tagClass } from '@/lib/ui-classes';

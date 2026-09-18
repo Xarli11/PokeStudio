@@ -2,8 +2,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getSpeciesSearchIndex, listSpeciesPage } from '@pokestudio/database';
-import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
+import { getSpeciesSearchIndex, listSpeciesPage } from '@pokelab/database';
+import { formatMessage, getDictionary, isLocale, locales } from '@pokelab/i18n';
 
 import { PokemonExplorer } from '@/components/pokemon/pokemon-explorer';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
@@ -37,7 +37,7 @@ export async function generateMetadata({
   const firstPage = await listSpeciesPage(getPokemonDatabaseClient(), { page: 1, pageSize: 1 });
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL('https://pokelab.com'),
     title: dictionary.pokedex.title,
     description: formatMessage(dictionary.pokedex.indexDescription, {
       count: firstPage.totalCount,

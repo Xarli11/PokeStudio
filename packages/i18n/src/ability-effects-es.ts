@@ -1,11 +1,11 @@
 /**
- * PokeStudio-owned Spanish technical ability effect text (Phase 1C.2b).
+ * PokeLab-owned Spanish technical ability effect text (Phase 1C.2b).
  *
  * Provenance: the mechanics themselves are derived from upstream PokéAPI's
  * English `effect_en` text (docs/engineering/DATA_SOURCES.md) — PokéAPI has
  * never published a Spanish ability effect for any ability (a genuine,
  * total upstream gap, confirmed at 0/313 during ingestion). Every string
- * below is authored/maintained by PokeStudio: a precise technical
+ * below is authored/maintained by PokeLab: a precise technical
  * translation of that same English mechanic (exact percentages, stat
  * stages, HP thresholds, conditions — never invented, never machine-
  * translated, never softened into vague marketing-style prose).
@@ -18,7 +18,7 @@
  * this stays a static, hand-reviewed layer entirely outside the ingestion
  * pipeline, the same "own what differentiates us" boundary CLAUDE.md §5
  * describes. See `apps/web/src/app/[locale]/pokemon/[slug]/page.tsx`
- * for the fallback chain this feeds into (PokeStudio ES → upstream EN →
+ * for the fallback chain this feeds into (PokeLab ES → upstream EN →
  * "unavailable" message) and this package's `ability-effects-es.test.ts`
  * for the coverage invariants (no empty/duplicate/orphan entries).
  *

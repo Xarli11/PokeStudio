@@ -127,7 +127,7 @@ export async function fetchAndNormalize(
   // PokéAPI's non-standard "shadow" type exists only for a handful of moves
   // exclusive to Pokémon Colosseum/XD's Shadow Pokémon mechanic — a
   // battle-only overlay, never a real Pokémon type (no species/form ever has
-  // it). PokeStudio's PokemonType domain deliberately doesn't model it
+  // it). PokeLab's PokemonType domain deliberately doesn't model it
   // (mainline mechanics only, this phase) — excluded here explicitly, not
   // silently miscast into a real type, so the excluded set stays visible in
   // one place. Their learnset entries are dropped alongside below, rather

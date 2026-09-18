@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import type { Dictionary, Locale } from '@pokestudio/i18n';
+import type { Dictionary, Locale } from '@pokelab/i18n';
 
 import { brandAssets } from '@/lib/brand-assets';
 import { soonBadgeClass } from '@/lib/ui-classes';
@@ -47,7 +47,7 @@ export interface PersistentShellProps {
 const WORDMARK_SIZE = 'col-start-1 row-start-1 block h-7 w-auto md:h-8 xl:h-11';
 
 /**
- * PokeStudio's one persistent application chrome — identity, primary
+ * PokeLab's one persistent application chrome — identity, primary
  * navigation (Explore active; Build/Battle Lab visibly reserved but not
  * linked), locale/theme controls, skip link, and a slim footer disclaimer.
  *
@@ -97,11 +97,7 @@ export function PersistentShell({ locale, dictionary, children }: PersistentShel
       <header className="sticky top-0 z-40 min-w-0 border-b border-border-subtle bg-background/92 backdrop-blur after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-brand/25 after:to-transparent [[data-theme=light]_&]:after:opacity-0">
         <div className="mx-auto flex w-full max-w-wide flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 xl:flex-nowrap xl:py-4">
           {/* Brand 1.0 — official Figma wordmark (apps/web/src/lib/brand-assets.ts). */}
-          <Link
-            href={`/${locale}`}
-            aria-label="PokeStudio"
-            className="order-1 inline-grid rounded-sm"
-          >
+          <Link href={`/${locale}`} aria-label="PokeLab" className="order-1 inline-grid rounded-sm">
             <Image
               src={brandAssets.wordmarkOnDark}
               alt=""

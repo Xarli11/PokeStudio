@@ -2,14 +2,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getPokemonForAbility } from '@pokestudio/database';
-import {
-  abilityEffectsEs,
-  formatMessage,
-  getDictionary,
-  isLocale,
-  locales,
-} from '@pokestudio/i18n';
+import { getPokemonForAbility } from '@pokelab/database';
+import { abilityEffectsEs, formatMessage, getDictionary, isLocale, locales } from '@pokelab/i18n';
 
 import { getCachedAbilityBySlug, getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { buttonClass, cardClass, eyebrowClass, tagClass } from '@/lib/ui-classes';
@@ -27,15 +21,15 @@ function parsePage(raw: string | undefined): number {
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
-/** Same fallback chain as the Pokémon detail page's ability list (Phase 1C.2b): upstream Spanish → PokeStudio-owned Spanish → English, honestly marked, never invented. */
+/** Same fallback chain as the Pokémon detail page's ability list (Phase 1C.2b): upstream Spanish → PokeLab-owned Spanish → English, honestly marked, never invented. */
 function abilityEffect(
   ability: { effectEn?: string | undefined; effectEs?: string | undefined; slug: string },
   locale: 'en' | 'es',
 ): { text: string | undefined; isFallback: boolean } {
   if (locale !== 'es') return { text: ability.effectEn, isFallback: false };
-  const pokeStudioEs = abilityEffectsEs[ability.slug];
-  const text = ability.effectEs ?? pokeStudioEs ?? ability.effectEn;
-  return { text, isFallback: !ability.effectEs && !pokeStudioEs && text !== undefined };
+  const pokeLabEs = abilityEffectsEs[ability.slug];
+  const text = ability.effectEs ?? pokeLabEs ?? ability.effectEn;
+  return { text, isFallback: !ability.effectEs && !pokeLabEs && text !== undefined };
 }
 
 // National Dex number is a product identifier, not translatable prose
@@ -58,7 +52,7 @@ export async function generateMetadata({
 
   const name = locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn;
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL('https://pokelab.com'),
     title: `${name} — ${dictionary.abilities.title}`,
     description: formatMessage(dictionary.abilities.detailDescription, { name }),
     alternates: {

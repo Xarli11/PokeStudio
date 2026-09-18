@@ -1,6 +1,6 @@
 'use client';
 
-import { formatMessage } from '@pokestudio/i18n';
+import { formatMessage } from '@pokelab/i18n';
 
 import type { TeamStatus } from '@/lib/team-analysis';
 

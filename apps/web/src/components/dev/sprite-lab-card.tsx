@@ -1,7 +1,7 @@
 'use client';
 
-import type { PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 import { buttonClass } from '@/lib/ui-classes';
 
@@ -16,7 +16,7 @@ import { buttonClass } from '@/lib/ui-classes';
  * - a slightly stronger (still subtle) type-derived aura behind the sprite,
  * - name/types set clearly to the right of it.
  *
- * PokeStudio's own emerald/charcoal identity stays dominant — the aura is a
+ * PokeLab's own emerald/charcoal identity stays dominant — the aura is a
  * soft gradient wash behind the sprite only, never a full-card type tint.
  */
 export function SpriteLabCard({

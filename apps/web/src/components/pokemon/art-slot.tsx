@@ -1,5 +1,5 @@
-import type { PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 export interface PokemonArtSlotProps {
   initial: string;
@@ -16,7 +16,7 @@ export interface PokemonArtSlotProps {
 
 /**
  * The deliberate artwork placeholder (UX/UI 0.2 Part C, enlarged in 0.2b,
- * polished in 0.2c). PokeStudio still has no license-cleared Pokémon
+ * polished in 0.2c). PokeLab still has no license-cleared Pokémon
  * sprite/artwork source (docs/engineering/DATA_SOURCES.md "Phase 1A decision"), so this is
  * not "no image yet" — it's a designed composition: a soft per-type
  * gradient wash, a faint vignette for depth (no glossy highlight streak),

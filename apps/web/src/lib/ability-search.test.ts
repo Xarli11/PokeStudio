@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AbilityListItem } from '@pokestudio/database';
+import type { AbilityListItem } from '@pokelab/database';
 
 import { filterAbilities } from './ability-search';
 

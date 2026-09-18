@@ -1,5 +1,5 @@
-import type { StatSpread } from '@pokestudio/damage';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import type { StatSpread } from '@pokelab/damage';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 import {
   DEFAULT_IVS,

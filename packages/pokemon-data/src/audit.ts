@@ -207,7 +207,7 @@ export function buildAuditReport(params: {
 
 export function formatAuditReport(report: AuditReport): string {
   const lines: string[] = [];
-  lines.push('=== PokeStudio ingestion audit ===');
+  lines.push('=== PokeLab ingestion audit ===');
   lines.push(`Species: ${report.totalSpecies}`);
   lines.push(`Forms: ${report.totalForms}`);
   lines.push(`Species with >1 form: ${report.speciesWithMultipleForms}`);

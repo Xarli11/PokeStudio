@@ -1,10 +1,10 @@
 @import 'tailwindcss';
-@import '@pokestudio/ui/tokens.css';
+@import '@pokelab/ui/tokens.css';
 
 /*
  * Tailwind's own reset/defaults live in `@layer base` (see the
  * `@layer theme, base, components, utilities;` Tailwind emits) — putting
- * PokeStudio's own base-level rules in the same named layer, instead of
+ * PokeLab's own base-level rules in the same named layer, instead of
  * leaving them unlayered, matters: an unlayered rule beats *any* layered
  * rule regardless of specificity, which silently made `a { color: inherit }`
  * below win over every `.text-*` utility on an `<a>` (e.g. the primary

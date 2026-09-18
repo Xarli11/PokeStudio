@@ -1,5 +1,5 @@
-import type { BaseStats, PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { BaseStats, PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 import { STAT_TIER_TEXT_CLASS, totalStatTier, type StatTier } from '@/lib/stat-quality';
 import { cardClass, tagClass } from '@/lib/ui-classes';

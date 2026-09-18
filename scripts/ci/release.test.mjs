@@ -90,7 +90,7 @@ globalThis.fetch = async (input, options) => {
     else if (url.pathname.endsWith('/workers/scripts')) result = [{ id: 'pokestudio', tag: 'a'.repeat(32) }];
     else if (url.pathname.endsWith('/triggers')) result = process.env.SCENARIO === 'active-build' ? [{}] : [];
     else if (url.pathname.endsWith('/settings')) result = { bindings: [] };
-    else if (url.pathname.endsWith('/deployments')) result = { deployments: [{ id: 'deployment', versions: [{ percentage: 100, version_id: 'version' }] }] };
+    else if (url.pathname.endsWith('/deployments')) result = process.env.SCENARIO === 'no-deployments' ? { deployments: [] } : { deployments: [{ id: 'deployment', versions: [{ percentage: 100, version_id: 'version' }] }] };
     else throw new Error('Unexpected Cloudflare call');
     const paginated = process.env.SCENARIO === 'deployment-history-pages' && endpoint === 'deployments' ||
       process.env.SCENARIO === 'trigger-pages' && endpoint === 'triggers' ||
@@ -106,7 +106,7 @@ globalThis.fetch = async (input, options) => {
 `;
 
 function scenario(name, environment = {}) {
-  const directory = mkdtempSync(join(tmpdir(), 'pokestudio-release-test-'));
+  const directory = mkdtempSync(join(tmpdir(), 'pokelab-release-test-'));
   try {
     for (const path of ['apps/web', 'scripts/ci', 'packages/database/supabase/migrations']) {
       mkdirSync(join(directory, path), { recursive: true });
@@ -295,6 +295,12 @@ test('paginated deployment history records latest entry and deploys exactly once
   assert.ok(result.calls.some((call) => call.args?.[0] === 'smoke:cloud-dev'));
 });
 
+test('a Worker with no prior deployment history still passes every guard and deploys once', () => {
+  const result = scenario('no-deployments');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.calls.filter((call) => call.args?.includes('deploy:cf:built')).length, 1);
+});
+
 for (const name of ['trigger-pages', 'worker-pages']) {
   test(`${name} still fails closed before deployment`, () => {
     const result = scenario(name);
@@ -332,8 +338,8 @@ test('frontend delivery skips DB mutations, builds without privileged credential
   const commands = result.calls.map((call) => call.args.join(' '));
   assert.deepEqual(commands, [
     'db:cloud-dev:check',
-    '--filter @pokestudio/web build:cf --config wrangler.release.json',
-    '--filter @pokestudio/web deploy:cf:built --config wrangler.release.json',
+    '--filter @pokelab/web build:cf --config wrangler.release.json',
+    '--filter @pokelab/web deploy:cf:built --config wrangler.release.json',
     'smoke:cloud-dev',
   ]);
   const build = result.calls.find((call) => call.args.includes('build:cf'));

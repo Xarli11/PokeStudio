@@ -300,7 +300,7 @@ async function main() {
     ),
   );
   try {
-    run('pnpm', ['--filter', '@pokestudio/web', 'build:cf', '--config', 'wrangler.release.json'], {
+    run('pnpm', ['--filter', '@pokelab/web', 'build:cf', '--config', 'wrangler.release.json'], {
       ...baseEnv(),
       ...publicEnv,
     });
@@ -314,7 +314,7 @@ async function main() {
     summary(`Previous Worker deployment: ${before.deployments?.[0]?.id ?? 'none'}`);
     run(
       'pnpm',
-      ['--filter', '@pokestudio/web', 'deploy:cf:built', '--config', 'wrangler.release.json'],
+      ['--filter', '@pokelab/web', 'deploy:cf:built', '--config', 'wrangler.release.json'],
       {
         ...baseEnv(),
         ...publicEnv,

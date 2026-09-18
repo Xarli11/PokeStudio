@@ -2,8 +2,8 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getDefaultVersionGroup, getMoveLearners } from '@pokestudio/database';
-import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
+import { getDefaultVersionGroup, getMoveLearners } from '@pokelab/database';
+import { formatMessage, getDictionary, isLocale, locales } from '@pokelab/i18n';
 
 import { PokemonTypeBadge } from '@/components/pokemon/type-badge';
 import { describeMoveMechanics, shouldShowMoveDescription } from '@/lib/move-mechanics';
@@ -48,7 +48,7 @@ export async function generateMetadata({
 
   const name = locale === 'es' ? (move.nameEs ?? move.nameEn) : move.nameEn;
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL('https://pokelab.com'),
     title: `${name} — ${dictionary.moves.title}`,
     description: formatMessage(dictionary.moves.detailDescription, { name }),
     alternates: {
@@ -176,7 +176,7 @@ export default async function MoveDetailPage({
         ) : null}
       </section>
 
-      {/* A missing prose description never implies PokeStudio knows nothing
+      {/* A missing prose description never implies PokeLab knows nothing
           about the move (Phase 1C.2 polish) — when structured technical
           effects exist, they carry the real information below, so an empty
           "Description" block here would just look broken for no reason.

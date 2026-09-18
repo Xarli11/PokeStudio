@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getFormsBySlugs, getSpeciesSearchIndex, listVersionGroups } from '@pokestudio/database';
-import { getDictionary, isLocale } from '@pokestudio/i18n';
+import { getFormsBySlugs, getSpeciesSearchIndex, listVersionGroups } from '@pokelab/database';
+import { getDictionary, isLocale } from '@pokelab/i18n';
 
 import { SpriteLab } from '@/components/dev/sprite-lab';
 import { GAME_ERA_SUPPORTED_VERSION_GROUPS } from '@/lib/pokemon-sprite';
@@ -19,7 +19,7 @@ import {
  * Dev-only Sprite Lab (final visual review, Sprite Lab task) — compares
  * candidate roster-sprite strategies ('box' / PokéSprite, 'game-era' /
  * PokéAPI per-game sets, 'modern' / PokéAPI's flat current-Dex set) inside
- * PokeStudio's actual approved card styling, before the owner picks a
+ * PokeLab's actual approved card styling, before the owner picks a
  * production winner. Reads live reference data per request; never
  * prerendered, same convention as every other database-backed page.
  *

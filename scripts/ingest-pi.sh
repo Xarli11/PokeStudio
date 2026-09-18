@@ -41,4 +41,4 @@ if [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
 fi
 
 echo "Ingesting into the Raspberry Pi ($SUPABASE_URL)..."
-pnpm --filter @pokestudio/pokemon-data ingest "$@"
+pnpm --filter @pokelab/pokemon-data ingest "$@"

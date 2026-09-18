@@ -1,10 +1,10 @@
-# CLAUDE.md — PokeStudio Engineering Constitution
+# CLAUDE.md — PokeLab Engineering Constitution
 
 This file is mandatory operating context for Claude Code.
 
 ## 1. Mission
 
-Build **PokeStudio.app**, a fast, elegant, trustworthy and community-driven Pokémon platform for casual and competitive players.
+Build **PokeLab**, a fast, elegant, trustworthy and community-driven Pokémon platform for casual and competitive players.
 
 The product pillars are:
 
@@ -12,11 +12,11 @@ The product pillars are:
 - **Build**
 - **Battle Lab**
 
-PokeStudio AI assists across all three.
+PokeLab AI assists across all three.
 
 ## 2. Owner-led product decisions
 
-PokeStudio is **community-informed, owner-led**.
+PokeLab is **community-informed, owner-led**.
 
 Community feedback has high weight, but popularity alone does not override correctness, product coherence, security, sustainability or owner decisions.
 
@@ -37,7 +37,7 @@ Preference order:
 
 Apply YAGNI aggressively.
 
-Do not add Redis, queues, microservices, event buses, repositories, factories, adapters, workers, caches or abstraction layers merely because PokeStudio might need them later.
+Do not add Redis, queues, microservices, event buses, repositories, factories, adapters, workers, caches or abstraction layers merely because PokeLab might need them later.
 
 Do not prebuild a future architecture. Build an architecture that can evolve.
 
@@ -66,7 +66,7 @@ Do **not** apply Caveman style to user-facing product copy, legal text, public d
 
 Do not rebuild PostgreSQL, authentication primitives, React, Pokémon mechanics or well-tested damage formulas for pride.
 
-PokeStudio should own and improve areas that create product advantage, including:
+PokeLab should own and improve areas that create product advantage, including:
 
 - Battle Lab UX,
 - battle intelligence,
@@ -77,7 +77,7 @@ PokeStudio should own and improve areas that create product advantage, including
 - Simulation Lab,
 - team intelligence,
 - natural-language search,
-- PokeStudio normalized data model,
+- PokeLab normalized data model,
 - integrated casual + competitive workflows.
 
 ## 6. External dependencies are not untouchable
@@ -87,7 +87,7 @@ Follow `docs/engineering/DEPENDENCY_POLICY.md`.
 For strategic dependencies:
 
 - verify license,
-- isolate behind a PokeStudio boundary,
+- isolate behind a PokeLab boundary,
 - pin/manage versions deliberately,
 - maintain compatibility tests,
 - document updates,
@@ -109,7 +109,7 @@ LLMs are not authoritative for:
 
 Sources of truth:
 
-- normalized PokeStudio data → facts,
+- normalized PokeLab data → facts,
 - battle engine → mechanics,
 - damage engine → calculations,
 - legality/format engine → validity,
@@ -144,7 +144,7 @@ If Python becomes production-critical, document the boundary in an ADR.
 
 ## 10. Data model discipline
 
-External APIs are inputs, not PokeStudio's runtime domain model.
+External APIs are inputs, not PokeLab's runtime domain model.
 
 Do not model Pokémon as if data is globally identical across all games/generations.
 
@@ -231,7 +231,7 @@ Use canonical URLs, structured metadata, sitemap infrastructure and localized me
 
 ## 18. Brand rule
 
-Current product name: **PokeStudio.app**.
+Current product name: **PokeLab**.
 
 Visual direction:
 
@@ -260,13 +260,13 @@ For normal implementation details, use your judgment and keep moving.
 
 ## 21. Local Development Database — Source of Truth
 
-Normal PokeStudio development runs the web app on the Mac but talks to a self-hosted Supabase
+Normal PokeLab development runs the web app on the Mac but talks to a self-hosted Supabase
 stack on a Raspberry Pi (`192.168.1.236`) over the LAN. That Pi is the canonical local-development
 database — **not** a Supabase stack started on the Mac. Full architecture (port map, command
 table, guard behavior) lives in `docs/engineering/DATABASE.md` "Raspberry Pi local development" —
 this is the rule to carry on every task, not the reference detail:
 
-- For normal PokeStudio development, **never** run `supabase start` on the Mac, and **never**
+- For normal PokeLab development, **never** run `supabase start` on the Mac, and **never**
   assume `localhost`/`127.0.0.1` Postgres or Supabase — normal dev has none.
 - **Never** create a temporary local Supabase stack unless the user explicitly asks for an
   isolated test environment (e.g. CI, a throwaway migration experiment). Label it clearly as

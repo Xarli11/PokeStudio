@@ -1,4 +1,4 @@
-# PokeStudio — Feature Matrix v1
+# PokeLab — Feature Matrix v1
 
 Legend:
 
@@ -54,7 +54,7 @@ Legend:
 | Platform     | PWA-capable                        | Foundation              |
 | Platform     | Native iOS/Android                 | Later                   |
 | Platform     | Public API/SDK                     | Later                   |
-| Monetization | PokeStudio+                        | Later                   |
+| Monetization | PokeLab+                           | Later                   |
 | Monetization | AI cost-backed premium features    | Later                   |
 | Monetization | Donations/supporter                | Later                   |
 | Monetization | Intrusive battle ads               | Never by design         |

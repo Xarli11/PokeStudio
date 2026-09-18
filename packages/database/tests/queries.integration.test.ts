@@ -22,7 +22,7 @@ import {
 
 /**
  * Proves the domain-shaped query layer against the real, fully-ingested
- * Pokédex (Phase 1B — `pnpm --filter @pokestudio/pokemon-data ingest`),
+ * Pokédex (Phase 1B — `pnpm --filter @pokelab/pokemon-data ingest`),
  * not just the Phase 1A 3-species sample. In particular that `listSpecies`
  * doesn't silently truncate past PostgREST's default 1000-row page (found
  * during full ingestion — see `packages/pokemon-data/src/persist.ts`), and
@@ -433,7 +433,7 @@ describe.skipIf(!hasLocalSupabase)(
       expect(await getFormsBySlugs(client(), [])).toEqual([]);
     });
 
-    it('listAbilities returns all 313+ abilities, alphabetically, with 313/313 PokeStudio-owned Spanish coverage available', async () => {
+    it('listAbilities returns all 313+ abilities, alphabetically, with 313/313 PokeLab-owned Spanish coverage available', async () => {
       const abilities = await listAbilities(client());
       expect(abilities.length).toBeGreaterThanOrEqual(313);
       const names = abilities.map((a) => a.nameEn);

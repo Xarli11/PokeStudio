@@ -1,4 +1,4 @@
-# PokeStudio — Roadmap v1
+# PokeLab — Roadmap v1
 
 This roadmap defines sequence, not immutable dates.
 
@@ -43,7 +43,7 @@ on real imported data.
 
 **Phase 1B (complete)** proved the same model and pipeline at full scale: the
 complete PokéAPI species/form dataset (~1025 species, ~1580 forms) via a
-reproducible, idempotent ingestion command (`pnpm --filter @pokestudio/pokemon-data
+reproducible, idempotent ingestion command (`pnpm --filter @pokelab/pokemon-data
 ingest`) — no more hand-mirrored `seed.sql` sample. Form classification and
 localization were hardened against real edge cases the small sample couldn't
 exercise (Alcremie's 64-form cosmetic family, Xerneas' two-state default
@@ -89,7 +89,7 @@ silently treated as complete.
 
 ## Phase 3 — Damage Lab
 
-- PokeStudio damage UI,
+- PokeLab damage UI,
 - reusable damage calculation domain,
 - “calculate against…” flows from Pokémon/team views,
 - explanation trace for modifiers,
@@ -138,7 +138,7 @@ Auth may move earlier only if a concrete preceding feature truly needs it.
 
 No ranked ladder required.
 
-## Phase 8 — PokeStudio AI
+## Phase 8 — PokeLab AI
 
 - contextual AI orchestration,
 - natural-language search,

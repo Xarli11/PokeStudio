@@ -1,8 +1,8 @@
 {
-  "name": "@pokestudio/config",
+  "name": "@pokelab/config",
   "private": true,
   "version": "0.0.0",
-  "description": "Shared TypeScript, ESLint and Prettier configuration for PokeStudio packages.",
+  "description": "Shared TypeScript, ESLint and Prettier configuration for PokeLab packages.",
   "license": "SEE LICENSE IN LICENSE",
   "exports": {
     "./tsconfig-base.json": "./tsconfig-base.json",

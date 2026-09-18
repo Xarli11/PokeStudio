@@ -7,7 +7,7 @@ import type { NormalizedDataset } from '../src/types';
 /**
  * Proves the identity-based upsert is idempotent and update-in-place
  * (Phase 1B §3/§18) against a real Supabase instance. Uses a
- * dedicated fake `source_id` ("pokestudio-test") so it never touches real
+ * dedicated fake `source_id` ("pokelab-test") so it never touches real
  * ingested PokéAPI rows, and cleans up after itself.
  *
  * Requires a reachable Supabase instance with migrations applied — normally the Raspberry Pi
@@ -18,7 +18,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const secretKey = process.env.SUPABASE_SECRET_KEY;
 const hasLocalSupabase = Boolean(supabaseUrl && secretKey);
 
-const TEST_SOURCE_ID = 'pokestudio-test';
+const TEST_SOURCE_ID = 'pokelab-test';
 
 function makeDataset(
   overrides: {
@@ -442,7 +442,7 @@ describe.skipIf(!hasLocalSupabase)('persistDataset idempotency', () => {
   });
 
   it("a source_id-scoped clear never touches another source_id's rows", async () => {
-    const OTHER_SOURCE_ID = 'pokestudio-test-other-source';
+    const OTHER_SOURCE_ID = 'pokelab-test-other-source';
 
     await client.from('data_sources').upsert(
       {

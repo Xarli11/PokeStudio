@@ -4,10 +4,10 @@ import { useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database';
-import { formatMessage, type Locale } from '@pokestudio/i18n';
-import { ALL_POKEMON_TYPES, LATEST_KNOWN_GENERATION } from '@pokestudio/pokemon-data';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokelab/database';
+import { formatMessage, type Locale } from '@pokelab/i18n';
+import { ALL_POKEMON_TYPES, LATEST_KNOWN_GENERATION } from '@pokelab/pokemon-data';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 import { ClearIcon, SearchIcon } from '@/components/search-field-icons';
 import { buttonClass, searchInputClass } from '@/lib/ui-classes';

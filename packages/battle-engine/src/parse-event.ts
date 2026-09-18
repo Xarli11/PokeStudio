@@ -1,7 +1,7 @@
 import type { StructuredBattleEvent } from './types';
 
 /**
- * Parses a single Showdown protocol line into a PokeStudio structured event.
+ * Parses a single Showdown protocol line into a PokeLab structured event.
  * Unrecognized lines are preserved as `raw` so no information is silently dropped.
  * Protocol reference: https://github.com/smogon/pokemon-showdown/blob/master/sim/SIM-PROTOCOL.md
  */

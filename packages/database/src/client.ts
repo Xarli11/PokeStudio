@@ -2,7 +2,7 @@ import { type SupabaseClient, createClient } from '@supabase/supabase-js';
 
 import type { Database } from './types';
 
-export type PokeStudioDatabaseClient = SupabaseClient<Database>;
+export type PokeLabDatabaseClient = SupabaseClient<Database>;
 
 export interface SupabasePublicConfig {
   url: string;
@@ -16,11 +16,11 @@ export interface SupabaseSecretConfig extends SupabasePublicConfig {
 }
 
 /**
- * PokeStudio's Supabase identity/storage boundary (docs/architecture/ARCHITECTURE.md, docs/engineering/DATABASE.md).
+ * PokeLab's Supabase identity/storage boundary (docs/architecture/ARCHITECTURE.md, docs/engineering/DATABASE.md).
  * Client code should call this instead of constructing `@supabase/supabase-js`
  * clients directly, so the provider can be swapped without touching call sites.
  */
-export function createPublicDatabaseClient(config: SupabasePublicConfig): PokeStudioDatabaseClient {
+export function createPublicDatabaseClient(config: SupabasePublicConfig): PokeLabDatabaseClient {
   return createClient<Database>(config.url, config.publishableKey);
 }
 
@@ -29,9 +29,7 @@ export function createPublicDatabaseClient(config: SupabasePublicConfig): PokeSt
  * the secret key bypasses Row Level Security (docs/engineering/SECURITY.md, docs/engineering/DATABASE.md
  * "Supabase API keys").
  */
-export function createServiceDatabaseClient(
-  config: SupabaseSecretConfig,
-): PokeStudioDatabaseClient {
+export function createServiceDatabaseClient(config: SupabaseSecretConfig): PokeLabDatabaseClient {
   return createClient<Database>(config.url, config.secretKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });

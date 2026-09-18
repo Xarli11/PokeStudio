@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
+import { formatMessage, getDictionary, isLocale, locales } from '@pokelab/i18n';
 
 import { AbilityIndexExplorer } from '@/components/abilities/ability-search';
 import { getCachedAbilitiesList, getPokemonDatabaseClient } from '@/lib/pokemon-database';
@@ -22,7 +22,7 @@ export async function generateMetadata({
   const abilities = await getCachedAbilitiesList(getPokemonDatabaseClient());
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL('https://pokelab.com'),
     title: dictionary.abilities.title,
     description: formatMessage(dictionary.abilities.indexDescription, {
       count: abilities.length,

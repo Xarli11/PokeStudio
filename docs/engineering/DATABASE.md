@@ -1,14 +1,14 @@
-# PokeStudio — Database Strategy
+# PokeLab — Database Strategy
 
 ## Decision
 
 Initial managed database/auth platform: **Supabase**, using PostgreSQL as the durable data model.
 
-PokeStudio must remain PostgreSQL-centric rather than spreading Supabase-specific assumptions throughout domain code.
+PokeLab must remain PostgreSQL-centric rather than spreading Supabase-specific assumptions throughout domain code.
 
 ## Raspberry Pi local development
 
-Normal PokeStudio development runs the web app on the Mac but talks to a self-hosted Supabase
+Normal PokeLab development runs the web app on the Mac but talks to a self-hosted Supabase
 instance on a Raspberry Pi over the LAN. That Pi is the canonical local-development database —
 **not** a Supabase stack started on the Mac (CLAUDE.md §21 "Local Development Database"). The
 deployed Cloudflare Worker DEV environment is a separate, unrelated target:
@@ -28,7 +28,7 @@ Mac
 DEPLOYED DEV
 
 Cloudflare Worker
-└── Supabase Cloud "PokeStudio Dev"
+└── Supabase Cloud "PokeLab Dev"
 ```
 
 - **App/runtime access** (`apps/web`, `NEXT_PUBLIC_SUPABASE_URL`) and the **ingestion pipeline**
@@ -36,8 +36,8 @@ Cloudflare Worker
 - **Migrations and direct DB administration** (`POKESTUDIO_PI_DB_URL`) use PostgreSQL on `:5434`
   directly — this is what `pnpm db:pi:check`/`db:pi:migrate`/`db:pi:types` target.
 - Supavisor (`:5433`/`:6543`, connection pooling) is reachable on the Pi but is not used by any
-  current PokeStudio tooling; direct Postgres is simpler for a single-developer local-dev target.
-- `supabase start` on the Mac is **not** part of normal PokeStudio development — the Pi's stack is
+  current PokeLab tooling; direct Postgres is simpler for a single-developer local-dev target.
+- `supabase start` on the Mac is **not** part of normal PokeLab development — the Pi's stack is
   Docker-Compose-managed directly (`setup.sh`/`run.sh` on the Pi), not `supabase`-CLI-managed. A
   Mac-local Supabase CLI stack remains available only as an isolated test environment
   (`packages/database/README.md` "Isolated local Supabase (exceptional)") — never the default.
@@ -62,14 +62,14 @@ doesn't match `192.168.1.236` on the expected port — see `scripts/db-pi-guard.
 On 2026-09-14 the deployed Worker started failing Pokémon/move detail pages with `Could not find
 the table 'public.pokemon_form_move' in the schema cache`: Phase 1C.2's move-mechanics code
 (`6de8f5f`) reached the deployed Worker via Cloudflare's git integration before Supabase Cloud
-PokeStudio Dev had the matching migrations/data — the Pi had already been migrated/ingested, Cloud
+PokeLab Dev had the matching migrations/data — the Pi had already been migrated/ingested, Cloud
 DEV had not. HTTP status stayed `200` throughout (Next.js renders the error boundary, not a 5xx),
 so the failure was only visible in the React Server Components payload (`"digest":"<id>"`) or
 `wrangler tail` — a plain status check would have missed it entirely.
 
 Deploying web code that depends on new Cloud DEV schema/data must follow this order, never skip a
 step, and use the equivalent parallel command set (`scripts/db-cloud-dev-*.sh`/`ingest-cloud-dev.sh`,
-mirroring the Pi's guard pattern but targeting Supabase Cloud PokeStudio Dev, project ref
+mirroring the Pi's guard pattern but targeting Supabase Cloud PokeLab Dev, project ref
 `tofhupgwxsexrburoqys`, via `SUPABASE_CLOUD_DEV_DB_URL`/`SUPABASE_CLOUD_DEV_SECRET_KEY` — see
 `.env.example`):
 
@@ -101,7 +101,7 @@ Never reorder step 4 ahead of 1–3 for a change that requires new Cloud DEV sch
 (default/regional/battle/cosmetic — types and base stats live here, since they can differ by form)
 are separate tables, per ADR-0010. Reference data is public-read (`anon`/`authenticated`) via RLS
 policy; writes are service-role only, same pattern as `data_sources`. Fully populated: the complete
-PokéAPI species/form dataset (~1025 species, ~1580 forms) via `pnpm --filter @pokestudio/pokemon-data
+PokéAPI species/form dataset (~1025 species, ~1580 forms) via `pnpm --filter @pokelab/pokemon-data
 ingest`, not a hand-picked sample.
 
 **Abilities and evolutions** (Phase 1C.1, ADR-0011) are implemented too:
@@ -137,7 +137,7 @@ needs them (YAGNI).
 `supabase/seed.sql` (run by `db:reset`) is schema-adjacent bootstrap data only — small, genuinely
 static, deterministic lookup tables, if any ever exist. It is _not_ how Pokémon reference data gets
 into the database. `species`/`pokemon_form`/`data_sources` are populated exclusively by
-`packages/pokemon-data`'s ingestion pipeline (`pnpm --filter @pokestudio/pokemon-data ingest`),
+`packages/pokemon-data`'s ingestion pipeline (`pnpm --filter @pokelab/pokemon-data ingest`),
 which upserts its own `data_sources` provenance row too. Phase 1A briefly hand-mirrored a 3-species
 sample into `seed.sql`; that stopped being viable once the dataset became the real ~1025-species
 Pokédex (see `packages/pokemon-data/README.md`) and was deliberately not continued at scale.
@@ -261,7 +261,7 @@ Normalize only where normalization improves correctness and querying.
 
 ## Supabase Auth boundary
 
-Application identity should expose a PokeStudio user identifier and capabilities rather than leaking auth-provider-specific assumptions everywhere.
+Application identity should expose a PokeLab user identifier and capabilities rather than leaking auth-provider-specific assumptions everywhere.
 
 Initial providers may include:
 
@@ -297,7 +297,7 @@ Migrations, full Pokémon ingestion, and large audits are not free — check sta
 - **Ingestion**: a UI-only or documentation-only change never needs a rerun. A normalization/schema
   change needs targeted unit tests first (`packages/pokemon-data`'s fixture-based tests, no network
   call) — only run `pnpm ingest:pi` once those pass and a real schema/data change needs verifying
-  end-to-end. `pnpm --filter @pokestudio/pokemon-data audit` (report-only, no writes) is often
+  end-to-end. `pnpm --filter @pokelab/pokemon-data audit` (report-only, no writes) is often
   enough to confirm a normalization change behaves correctly without writing anything.
 - **Row counts/evidence**: a prior session's ingestion report (species/form/move counts, "N
   validation issues") is valid evidence of current state unless the schema or source data changed

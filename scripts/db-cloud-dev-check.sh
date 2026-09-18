@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pnpm db:cloud-dev:check — read-only identity + migration-state check against
-# Supabase Cloud "PokeStudio Dev" (project ref tofhupgwxsexrburoqys). Confirms
+# Supabase Cloud "PokeLab Dev" (project ref tofhupgwxsexrburoqys). Confirms
 # SUPABASE_CLOUD_DEV_DB_URL actually reaches that project, then lists applied
 # vs. pending migrations without changing anything — same intent as
 # scripts/db-pi-check.sh for the Pi.
@@ -18,9 +18,9 @@ if ! command -v psql >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Connecting to Supabase Cloud PokeStudio Dev ($CLOUD_DEV_PROJECT_REF)..."
+echo "Connecting to Supabase Cloud PokeLab Dev ($CLOUD_DEV_PROJECT_REF)..."
 psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -v ON_ERROR_STOP=1 -c "select current_database(), current_user, version();"
-echo "OK — this is Supabase Cloud PokeStudio Dev."
+echo "OK — this is Supabase Cloud PokeLab Dev."
 
 echo ""
 echo "Migration history (supabase_migrations.schema_migrations):"

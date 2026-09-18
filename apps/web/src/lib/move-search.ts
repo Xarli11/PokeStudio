@@ -1,6 +1,6 @@
-import type { MoveSummary } from '@pokestudio/database';
-import type { Locale } from '@pokestudio/i18n';
-import type { DamageClass, PokemonType } from '@pokestudio/pokemon-data';
+import type { MoveSummary } from '@pokelab/database';
+import type { Locale } from '@pokelab/i18n';
+import type { DamageClass, PokemonType } from '@pokelab/pokemon-data';
 
 import { normalizeText } from './pokemon-search';
 

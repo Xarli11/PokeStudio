@@ -9,10 +9,10 @@ if [[ "${POKESTUDIO_PRODUCTION_APPROVED_SHA:-}" != "$(git rev-parse HEAD)" ]]; t
 fi
 case "${1:-}" in
   check)
-    pnpm --filter @pokestudio/database exec supabase db push --db-url "$SUPABASE_DB_URL" --dry-run --skip-vault
+    pnpm --filter @pokelab/database exec supabase db push --db-url "$SUPABASE_DB_URL" --dry-run --skip-vault
     ;;
   migrate)
-    pnpm --filter @pokestudio/database exec supabase db push --db-url "$SUPABASE_DB_URL" --yes --skip-vault
+    pnpm --filter @pokelab/database exec supabase db push --db-url "$SUPABASE_DB_URL" --yes --skip-vault
     ;;
   *) echo 'error: expected check or migrate.' >&2; exit 1 ;;
 esac

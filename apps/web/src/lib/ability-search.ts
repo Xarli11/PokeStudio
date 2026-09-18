@@ -1,4 +1,4 @@
-import type { AbilityListItem } from '@pokestudio/database';
+import type { AbilityListItem } from '@pokelab/database';
 
 /**
  * Whole-ability-index client-side search (Phase 1C.3 §9) — the 313-ability

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # pnpm ingest:cloud-dev — runs the existing pokemon-data ingestion pipeline
 # (packages/pokemon-data/scripts/ingest.ts) against Supabase Cloud
-# "PokeStudio Dev" (project ref tofhupgwxsexrburoqys) instead of the Pi.
+# "PokeLab Dev" (project ref tofhupgwxsexrburoqys) instead of the Pi.
 #
 # Deliberately separate from scripts/ingest-pi.sh rather than a shared flag:
 # ingest-pi.sh's guard actively refuses a Supabase Cloud SUPABASE_URL, so a
@@ -39,5 +39,5 @@ if [ -z "${SUPABASE_CLOUD_DEV_SECRET_KEY:-}" ]; then
 fi
 export SUPABASE_SECRET_KEY="$SUPABASE_CLOUD_DEV_SECRET_KEY"
 
-echo "Ingesting into Supabase Cloud PokeStudio Dev ($SUPABASE_URL)..."
-pnpm --filter @pokestudio/pokemon-data ingest "$@"
+echo "Ingesting into Supabase Cloud PokeLab Dev ($SUPABASE_URL)..."
+pnpm --filter @pokelab/pokemon-data ingest "$@"

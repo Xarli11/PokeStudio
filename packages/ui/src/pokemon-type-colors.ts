@@ -1,6 +1,6 @@
 /**
  * Semantic accent colors for Pokémon types (CSS custom property names).
- * Used to color a badge/cell inline — never as the PokeStudio brand palette.
+ * Used to color a badge/cell inline — never as the PokeLab brand palette.
  * Full 18-type set (extended here now that Explore data ships, Phase 1A).
  */
 export const pokemonTypeColorVar = {

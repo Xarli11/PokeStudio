@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { type Locale, getDictionary, isLocale, locales } from '@pokestudio/i18n';
+import { type Locale, getDictionary, isLocale, locales } from '@pokelab/i18n';
 import { notFound } from 'next/navigation';
 
 import { buttonClass, interactiveCardClass, cardClass, soonBadgeClass } from '@/lib/ui-classes';

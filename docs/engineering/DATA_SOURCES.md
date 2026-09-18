@@ -1,8 +1,8 @@
-# PokeStudio — Data Sources & Provenance
+# PokeLab — Data Sources & Provenance
 
 ## Goal
 
-PokeStudio owns a normalized runtime data model while respecting source licenses, attribution and update constraints.
+PokeLab owns a normalized runtime data model while respecting source licenses, attribution and update constraints.
 
 External sources are inputs, not runtime truth APIs.
 
@@ -15,8 +15,8 @@ unique ability referenced (313) and every unique evolution chain (339, 553 edges
 the species/form/ability/evolution model (ADR-0010, ADR-0011), validates dataset invariants, and
 upserts directly into Postgres by upstream identity (idempotent — species/forms/abilities by
 `(source_id, external_id)`; the two join tables, which have no independent upstream identity, by
-full replacement per source_id — ADR-0011 decision 3). Run via `pnpm --filter @pokestudio/pokemon-data
-ingest`; `pnpm --filter @pokestudio/pokemon-data audit` runs the same fetch/normalize/validate
+full replacement per source_id — ADR-0011 decision 3). Run via `pnpm --filter @pokelab/pokemon-data
+ingest`; `pnpm --filter @pokelab/pokemon-data audit` runs the same fetch/normalize/validate
 pipeline report-only, without touching the database. See `packages/pokemon-data/README.md` for the
 full pipeline shape, fetch/cache strategy and idempotency guarantee.
 
@@ -42,7 +42,7 @@ sample can't surface them) and are handled explicitly, not silently:
   reason; never backfilled with a guessed `"none"`/`"damage"` default (CLAUDE.md §14).
 - **5 moves have PokéAPI's non-standard `"shadow"` type** (`shadow-rush`, `shadow-blast`, ...) —
   exclusive to Pokémon Colosseum/XD's Shadow Pokémon mechanic, a battle-only overlay, never a real
-  Pokémon type. PokeStudio's `PokemonType` domain doesn't model it (mainline mechanics only, this
+  Pokémon type. PokeLab's `PokemonType` domain doesn't model it (mainline mechanics only, this
   phase), so these 5 are explicitly excluded from ingestion — along with their learnset entries,
   which would otherwise become orphans — rather than silently miscast into a real type.
 - **A handful of signature Z-Moves are split into two PokéAPI records** sharing one display name,
@@ -168,7 +168,7 @@ pokeapi`. Breakdown:
   A follow-up branch (`fix/pokemon-form-ingestion-identity`) additionally
   built a reusable, read-only diagnostic
   (`packages/pokemon-data/scripts/diagnose-form-identity.ts` —
-  `pnpm --filter @pokestudio/pokemon-data diagnose-form-identity`) that
+  `pnpm --filter @pokelab/pokemon-data diagnose-form-identity`) that
   fetches fresh upstream data through the real ingestion pipeline and
   compares it against the live Pi `pokemon_form` table by slug; run
   2026-09-16 against the actual Pi data, it confirmed **0 of 1579 rows
@@ -223,7 +223,7 @@ provided Spanish name, 54 use the regional composition above (correct by design,
 form's short English-only `form_name` field (e.g. "Charizard (gmax)") because _neither_ `names` nor
 `form_names` had a usable Spanish string. That fallback is deliberately never left bare (never just
 "gmax" with no species name attached) and is deterministic. No manual translation was done for
-these 227 — `pnpm --filter @pokestudio/pokemon-data audit` lists them for future review; a
+these 227 — `pnpm --filter @pokelab/pokemon-data audit` lists them for future review; a
 centralized override table would be the right mechanism if any of these need a hand-authored name,
 not scattered fixes.
 
@@ -259,7 +259,7 @@ At full-dataset scale this is common — e.g. Magneton -> Magnezone has 7 stored
 (6 "level up at a specific location" variants across different games, plus the modern "use Thunder
 Stone" alternative added later), and Eevee -> Leafeon has 6 (5 location variants + the Leaf Stone
 item alternative). Naively surfacing all 7/6 as "7 ways to evolve" / "6 ways to evolve" would
-overstate genuine mechanical diversity. PokeStudio does not lose this data (every row is kept, with
+overstate genuine mechanical diversity. PokeLab does not lose this data (every row is kept, with
 its `raw_condition` preserved verbatim) but the web UI's evolution-condition formatter deliberately
 never renders the location's actual value (only a fixed "at a special location" phrase — see
 `apps/web/src/lib/evolution-condition.ts`), which lets location-only variants collapse to one
@@ -416,7 +416,7 @@ supersede it:
 - Pokémon sprite images remain third-party IP (Nintendo / Game Freak / The
   Pokémon Company) regardless of the hosting repository's own (permissive,
   code-focused) license — hosting on GitHub or being freely downloadable
-  does not grant PokeStudio commercial rights to the underlying artwork.
+  does not grant PokeLab commercial rights to the underlying artwork.
 - These assets are **not to be deployed to production** as part of this
   pass. Shipping them to real users is a separate licensing decision the
   owner has not made yet.
@@ -441,7 +441,7 @@ reason the PokéAPI entry above is:
   Game Freak / The Pokémon Company) regardless of PokéSprite's own
   (permissive, code/data-focused) repository license. Hosting the files on
   GitHub, or that repository having an open-source license for its own code,
-  does **not** grant PokeStudio rights to the Pokémon artwork itself — same
+  does **not** grant PokeLab rights to the Pokémon artwork itself — same
   principle as the PokéAPI sprites entry above, not a weaker one.
 - **Audited coverage (2026-09-16)**, against this project's own
   `species`/`pokemon_form` tables and PokéSprite's public `data/pokemon.json`
@@ -496,7 +496,7 @@ outside that repository.
 - **C. Repository/code licensing**: irrelevant to the sprites themselves,
   since (per the `.gitignore` fact above) the sprite assets are not part of
   the licensed code repository in the first place.
-- **Classification for PokeStudio: reasonable provisional dev source,
+- **Classification for PokeLab: reasonable provisional dev source,
   UNSUITABLE for commercial production as currently sourced.** The
   community sprite project's own stated terms explicitly rule out
   for-profit use (_"any games that charge money will not be accepted"_) —

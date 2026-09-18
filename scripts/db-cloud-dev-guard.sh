@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared guard for scripts that touch Supabase Cloud "PokeStudio Dev"
+# Shared guard for scripts that touch Supabase Cloud "PokeLab Dev"
 # (db:cloud-dev:check, db:cloud-dev:migrate, ingest:cloud-dev). Not meant to be
 # run directly — `source` it and call the relevant require_* function before
 # doing anything. Exists so an accidental Pi/localhost/other-project target
@@ -17,7 +17,7 @@ CLOUD_DEV_API_URL="https://${CLOUD_DEV_PROJECT_REF}.supabase.co"
 require_cloud_dev_db_url() {
   if [ -z "${SUPABASE_CLOUD_DEV_DB_URL:-}" ]; then
     echo "error: SUPABASE_CLOUD_DEV_DB_URL is not set." >&2
-    echo "  Expected a direct Postgres connection string for Supabase Cloud PokeStudio Dev" >&2
+    echo "  Expected a direct Postgres connection string for Supabase Cloud PokeLab Dev" >&2
     echo "  (project ref: $CLOUD_DEV_PROJECT_REF). Add it to .env.local — never commit it." >&2
     exit 1
   fi
@@ -28,12 +28,12 @@ require_cloud_dev_db_url() {
 require_cloud_dev_api_url() {
   if [ -z "${SUPABASE_URL:-}" ]; then
     echo "error: SUPABASE_URL is not set." >&2
-    echo "  Expected the Supabase Cloud PokeStudio Dev API gateway ($CLOUD_DEV_API_URL)." >&2
+    echo "  Expected the Supabase Cloud PokeLab Dev API gateway ($CLOUD_DEV_API_URL)." >&2
     exit 1
   fi
 
   if [ "$SUPABASE_URL" != "$CLOUD_DEV_API_URL" ]; then
-    echo "error: SUPABASE_URL does not point at Supabase Cloud PokeStudio Dev." >&2
+    echo "error: SUPABASE_URL does not point at Supabase Cloud PokeLab Dev." >&2
     echo "  expected: $CLOUD_DEV_API_URL" >&2
     echo "  got:      $SUPABASE_URL" >&2
     echo "  Refusing to run — this guard exists to stop an accidental Pi/localhost/wrong-project" >&2

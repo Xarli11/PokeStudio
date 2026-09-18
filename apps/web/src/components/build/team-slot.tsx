@@ -1,9 +1,9 @@
 'use client';
 
-import type { ComparablePokemonForm } from '@pokestudio/database';
-import { formatMessage, type Locale } from '@pokestudio/i18n';
-import type { PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { ComparablePokemonForm } from '@pokelab/database';
+import { formatMessage, type Locale } from '@pokelab/i18n';
+import type { PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 import { PokemonArtSlot } from '@/components/pokemon/art-slot';
 import { buttonClass } from '@/lib/ui-classes';

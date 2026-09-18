@@ -1,6 +1,6 @@
 import pytest
 
-from pokestudio_research.damage_rolls import summarize_damage_rolls
+from pokelab_research.damage_rolls import summarize_damage_rolls
 
 
 def test_summarize_damage_rolls_basic() -> None:

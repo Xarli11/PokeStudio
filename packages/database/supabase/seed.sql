@@ -2,12 +2,12 @@
 --
 -- Phase 1B (docs/engineering/DATABASE.md "Seed vs. ingestion"): Pokémon reference data
 -- (species/pokemon_form/data_sources) is no longer seeded here — it comes
--- from the ingestion pipeline (`pnpm --filter @pokestudio/pokemon-data
+-- from the ingestion pipeline (`pnpm --filter @pokelab/pokemon-data
 -- ingest`), which upserts its own `data_sources` provenance row too. This
 -- file is reserved for small, genuinely static, deterministic lookup data
 -- that belongs in schema/bootstrap territory, not imported Pokémon data —
 -- none exists yet.
 --
 -- The full local workflow is now two steps:
---   1. pnpm --filter @pokestudio/database db:reset   (schema only)
---   2. pnpm --filter @pokestudio/pokemon-data ingest  (Pokémon data)
+--   1. pnpm --filter @pokelab/database db:reset   (schema only)
+--   2. pnpm --filter @pokelab/pokemon-data ingest  (Pokémon data)

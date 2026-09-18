@@ -1,4 +1,4 @@
-# PokeStudio — Strategic Dependency Policy
+# PokeLab — Strategic Dependency Policy
 
 ## Principle
 
@@ -13,7 +13,7 @@ For any dependency central to product behavior, document:
 1. why we use it,
 2. license,
 3. exact boundary/package used,
-4. PokeStudio adapter/boundary,
+4. PokeLab adapter/boundary,
 5. version/update strategy,
 6. compatibility tests,
 7. exit/fork strategy,
@@ -27,7 +27,7 @@ When it already solves the problem correctly.
 
 ### 2. Extend above upstream
 
-When the requirement is PokeStudio-specific.
+When the requirement is PokeLab-specific.
 
 Example: structured replay analysis around a battle engine.
 
@@ -49,15 +49,15 @@ Reason: mature battle mechanics and formats foundation.
 
 License: MIT for server/simulator repository; verify exact dependency boundary at integration time.
 
-PokeStudio must not couple UI directly to internals — enforced by `packages/battle-engine`
+PokeLab must not couple UI directly to internals — enforced by `packages/battle-engine`
 (ADR-0003); only that package imports `pokemon-showdown` (verified in Phase 0.5, no exceptions).
 
 `pokemon-showdown` depends on `better-sqlite3` (a native module) for its own server-side chat/
-modlog/friends/private-messages features, none of which PokeStudio uses (PokeStudio only drives
+modlog/friends/private-messages features, none of which PokeLab uses (PokeLab only drives
 `BattleStream`/`Teams` from `sim/`). `better-sqlite3` has no prebuilt binary for Node's current
 odd-numbered "latest" release, forcing a from-source `node-gyp` compile with a warning at install
 time; Node 24 LTS (the pinned runtime, see `.nvmrc`) has prebuilt binaries and avoids this. Do not
-add a workaround (patching it out, stubbing the native module, etc.) for functionality PokeStudio
+add a workaround (patching it out, stubbing the native module, etc.) for functionality PokeLab
 does not use — pinning the runtime is the correct fix.
 
 ### `@smogon/calc`
@@ -66,15 +66,15 @@ Reason: mature multi-generation damage formulas and programmatic API.
 
 License: MIT.
 
-Use through PokeStudio damage boundary.
+Use through PokeLab damage boundary.
 
 ### Supabase
 
 Reason: managed PostgreSQL + Auth + Storage/Realtimes capabilities available when needed.
 
-Boundary: PostgreSQL-first schema, PokeStudio identity/storage abstractions where useful.
+Boundary: PostgreSQL-first schema, PokeLab identity/storage abstractions where useful.
 `@supabase/supabase-js` is a direct dependency of both `packages/database` (the shared connection
-adapter, `PokeStudioDatabaseClient`) and `packages/pokemon-data` (Phase 1B's ingestion write path,
+adapter, `PokeLabDatabaseClient`) and `packages/pokemon-data` (Phase 1B's ingestion write path,
 `IngestClient`) — the two packages otherwise cannot depend on each other without a circular
 workspace dependency (`database` already depends on `pokemon-data` for shared domain types), so
 `pokemon-data` talks to Postgres via `@supabase/supabase-js` directly with its own minimal,

@@ -2,9 +2,9 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import type { DamageClass, PokemonType } from '@pokestudio/pokemon-data';
-import { listMovesPage, type MoveListFilters } from '@pokestudio/database';
-import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
+import type { DamageClass, PokemonType } from '@pokelab/pokemon-data';
+import { listMovesPage, type MoveListFilters } from '@pokelab/database';
+import { formatMessage, getDictionary, isLocale, locales } from '@pokelab/i18n';
 
 import { PokemonTypeBadge } from '@/components/pokemon/type-badge';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
@@ -115,7 +115,7 @@ export async function generateMetadata({
   const firstPage = await listMovesPage(getPokemonDatabaseClient(), { page: 1, pageSize: 1 });
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL('https://pokelab.com'),
     title: dictionary.moves.title,
     description: formatMessage(dictionary.moves.indexDescription, { count: firstPage.totalCount }),
     alternates: {

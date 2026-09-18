@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useState } from 'react';
 
-import { type Theme, defaultTheme, isTheme, themeStorageKey } from '@pokestudio/ui';
+import { type Theme, defaultTheme, isTheme, themeStorageKey } from '@pokelab/ui';
 
 // `useLayoutEffect` warns when it runs on the server; this component is
 // server-rendered (Next.js renders Client Components on the server too),
@@ -11,7 +11,7 @@ import { type Theme, defaultTheme, isTheme, themeStorageKey } from '@pokestudio/
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /**
- * Same resolution order as `@pokestudio/ui`'s `themeInitScript` (stored
+ * Same resolution order as `@pokelab/ui`'s `themeInitScript` (stored
  * preference, else system preference, else the default) — kept here
  * rather than in `packages/ui` because that package's `tsconfig` has no DOM
  * lib (it's meant to stay environment-agnostic); this needs `window`.

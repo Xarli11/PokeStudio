@@ -2,7 +2,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
-/** Shared ESLint flat config base for PokeStudio TypeScript packages. */
+/** Shared ESLint flat config base for PokeLab TypeScript packages. */
 export const baseConfig = tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,

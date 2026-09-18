@@ -1,4 +1,4 @@
-# PokeStudio — Security Baseline
+# PokeLab — Security Baseline
 
 ## Principles
 

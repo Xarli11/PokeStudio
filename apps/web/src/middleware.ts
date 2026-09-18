@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { defaultLocale, isLocale, locales } from '@pokestudio/i18n';
+import { defaultLocale, isLocale, locales } from '@pokelab/i18n';
 
 import { needsSlugCanonicalization } from '@/lib/entity-slug';
 

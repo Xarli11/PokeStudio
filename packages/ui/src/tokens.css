@@ -1,5 +1,5 @@
 /**
- * PokeStudio design tokens — Brand 1.0 (approved identity, replaces all
+ * PokeLab design tokens — Brand 1.0 (approved identity, replaces all
  * provisional branding). Dark is the default/primary theme; light is a
  * first-class alternative designed on its own terms, not an inversion.
  *
@@ -15,7 +15,7 @@
 :root {
   color-scheme: dark;
 
-  /* ---- Layer 1: brand primitives (PokeStudio Brand 1.0, fixed) ---- */
+  /* ---- Layer 1: brand primitives (PokeLab Brand 1.0, fixed) ---- */
   --ps-brand-emerald: #10b981;
   --ps-brand-mint: #34d399;
   --ps-brand-deep: #047857;
@@ -52,7 +52,7 @@
   );
 
   /*
-   * Brand accent — Emerald is PokeStudio's own interactive/identity color:
+   * Brand accent — Emerald is PokeLab's own interactive/identity color:
    * active nav, focus/emphasis, selected states, primary actions. Never
    * reused as, or confused with, a Pokémon type color; --ps-type-grass
    * remains the only correct color for the Grass type.
@@ -298,7 +298,7 @@
   --text-3xl: var(--ps-font-size-3xl);
 
   /* Radius — replaces Tailwind's defaults outright so `rounded-md` etc.
-     always mean PokeStudio's scale, never a divergent Tailwind default. */
+     always mean PokeLab's scale, never a divergent Tailwind default. */
   --radius-sm: var(--ps-radius-sm);
   --radius-md: var(--ps-radius-md);
   --radius-lg: var(--ps-radius-lg);
@@ -311,7 +311,7 @@
   --shadow-md: var(--ps-shadow-md);
 
   /* Motion — the bare `transition` utility (no explicit duration/easing
-     modifier) now defaults to PokeStudio's fast/easing pair, including the
+     modifier) now defaults to PokeLab's fast/easing pair, including the
      existing prefers-reduced-motion zeroing above. `ease-ps` is available
      for the few transitions that pair our easing with a non-default
      duration (e.g. `duration-200 ease-ps`). */

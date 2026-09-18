@@ -1,5 +1,5 @@
 /**
- * Shared Tailwind class-string helpers for PokeStudio's small recurring
+ * Shared Tailwind class-string helpers for PokeLab's small recurring
  * "product primitives" (button, card, tag, segmented control) — Styling
  * Foundation 1.0 / UI Polish 1.1. Every class here composes tokens already
  * aliased into Tailwind's theme (packages/ui/src/tokens.css `@theme`),

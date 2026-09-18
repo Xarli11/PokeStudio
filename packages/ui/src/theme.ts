@@ -5,7 +5,7 @@ export type Theme = (typeof themes)[number];
 export const defaultTheme: Theme = 'dark';
 
 /**
- * The one storage key for PokeStudio's theme preference. Deliberately not
+ * The one storage key for PokeLab's theme preference. Deliberately not
  * namespaced by locale (or anything else) — theme and locale are
  * independent preferences, and there must be exactly one place a user's
  * theme choice lives, read the same way regardless of which locale route

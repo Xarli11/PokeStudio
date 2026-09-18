@@ -6,7 +6,7 @@ import type {
   FormLearnsetAllVersionGroups,
   SpeciesSearchAlias,
   SpeciesSearchItem,
-} from '@pokestudio/database';
+} from '@pokelab/database';
 
 import { addTeamMember, createEmptyTeamDraft, updateTeamMember } from '@/lib/team-draft';
 import { loadTeamDraft, saveTeamDraft } from '@/lib/team-storage';
@@ -95,7 +95,7 @@ const LABELS: TeamEditorLabels = {
     ivsLabel: 'IVs',
     calculatedStatsLabel: 'Calculated stats',
     legacyStatsUnavailableTemplate: 'Stat calculation for {game} is not implemented yet.',
-    historicalMechanicsNoteTemplate: "PokeStudio hasn't fully validated {game} yet.",
+    historicalMechanicsNoteTemplate: "PokeLab hasn't fully validated {game} yet.",
     movesLabel: 'Moves',
     moveLegalityHint: 'Legal moves only.',
     notLearnableTemplate: 'Not learnable in {game}',
@@ -156,7 +156,7 @@ const LABELS: TeamEditorLabels = {
       evTotalExceeded: 'Total EVs exceed 510.',
       evStatExceeded: 'An EV is out of range.',
       invalidIv: 'An IV is out of range.',
-      unsupportedRuleset: "PokeStudio hasn't fully validated {game} yet.",
+      unsupportedRuleset: "PokeLab hasn't fully validated {game} yet.",
       speciesUnavailableInGeneration: '{member} is not available in {game}.',
     },
   },

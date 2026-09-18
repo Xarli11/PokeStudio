@@ -1,4 +1,4 @@
-import { generationForNationalDexNumber } from '@pokestudio/pokemon-data';
+import { generationForNationalDexNumber } from '@pokelab/pokemon-data';
 
 /**
  * Centralized Pokémon sprite/asset resolver (Milestone 2, final Build pass
@@ -42,7 +42,7 @@ import { generationForNationalDexNumber } from '@pokestudio/pokemon-data';
  *   default forms (~90%), including **85/120 Generation IX species** (~71%
  *   — notably better Gen IX coverage than `'box'`'s zero), and 170/200 in a
  *   sampled non-default-form check. Naming follows the same hyphenated
- *   convention as PokeStudio's own `formSlug` for most forms (`rotom-wash`,
+ *   convention as PokeLab's own `formSlug` for most forms (`rotom-wash`,
  *   `meowth-alola`, `unown-a`), but not universally (`charizard-megax`, no
  *   hyphen before the X/Y suffix, unlike this project's `charizard-mega-x`)
  *   — the same category of naming-convention gap `'box'` already has, not

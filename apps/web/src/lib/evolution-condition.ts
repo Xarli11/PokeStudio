@@ -1,10 +1,10 @@
-import type { EvolutionCondition, EvolutionEdge } from '@pokestudio/database';
-import { formatMessage, type Dictionary } from '@pokestudio/i18n';
+import type { EvolutionCondition, EvolutionEdge } from '@pokelab/database';
+import { formatMessage, type Dictionary } from '@pokelab/i18n';
 
 import { localizedItemName } from './evolution-item-label';
 
 /**
- * PokeStudio doesn't model items/moves/locations as their own localized
+ * PokeLab doesn't model items/moves/locations as their own localized
  * entities yet (CLAUDE.md non-goals, ADR-0010 §4 deferred) — evolution
  * conditions only store their PokéAPI slug. Humanizing the slug (kebab-case
  * -> Title Case) is an honest, English-only stand-in until those become real

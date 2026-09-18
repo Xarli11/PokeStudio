@@ -4,7 +4,7 @@ Status: implemented for review; remote activation and production release are not
 
 ## Audited starting point
 
-Audited on 2026-09-15/16 (Madrid) against `Xarli11/PokeStudio`:
+Audited on 2026-09-15/16 (Madrid) against `Xarli11/PokeLab`:
 
 | Area                     | Evidence                                                                                                   |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------- |

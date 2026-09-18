@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { ComparablePokemonForm } from '@pokestudio/database';
+import type { ComparablePokemonForm } from '@pokelab/database';
 
 import { resolveBuildGameCapabilities } from '@/lib/build-game-capabilities';
 import { createEmptyTeamMember } from '@/lib/team-draft';
@@ -53,7 +53,7 @@ const LABELS: SetEditorLabels = {
   ivsLabel: 'IVs',
   calculatedStatsLabel: 'Calculated stats',
   legacyStatsUnavailableTemplate: 'Stat calculation for {game} is not implemented yet.',
-  historicalMechanicsNoteTemplate: "PokeStudio hasn't fully validated {game} yet.",
+  historicalMechanicsNoteTemplate: "PokeLab hasn't fully validated {game} yet.",
   movesLabel: 'Moves',
   moveLegalityHint: 'Legal moves only.',
   notLearnableTemplate: 'Not learnable in {game}',
@@ -147,7 +147,7 @@ describe('SetEditor: mechanic-dependent fields (Milestone 2 final pass §20/§30
     expect(
       screen.getByText('Stat calculation for Red / Blue is not implemented yet.'),
     ).not.toBeNull();
-    expect(screen.getByText("PokeStudio hasn't fully validated Red / Blue yet.")).not.toBeNull();
+    expect(screen.getByText("PokeLab hasn't fully validated Red / Blue yet.")).not.toBeNull();
   });
 
   it('Gen II (Gold/Silver): held items exist, but abilities/natures/modern stats do not', () => {

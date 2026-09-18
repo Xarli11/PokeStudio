@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database';
+import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokelab/database';
 
 import {
   MAX_POKEMON_SUGGESTIONS,

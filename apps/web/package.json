@@ -1,8 +1,8 @@
 {
-  "name": "@pokestudio/web",
+  "name": "@pokelab/web",
   "private": true,
   "version": "0.0.0",
-  "description": "PokeStudio.app web application (Next.js).",
+  "description": "PokeLab web application (Next.js).",
   "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "dev": "next dev",
@@ -19,19 +19,19 @@
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.6",
-    "@pokestudio/battle-engine": "workspace:*",
-    "@pokestudio/damage": "workspace:*",
-    "@pokestudio/database": "workspace:*",
-    "@pokestudio/i18n": "workspace:*",
-    "@pokestudio/pokemon-data": "workspace:*",
-    "@pokestudio/ui": "workspace:*",
+    "@pokelab/battle-engine": "workspace:*",
+    "@pokelab/damage": "workspace:*",
+    "@pokelab/database": "workspace:*",
+    "@pokelab/i18n": "workspace:*",
+    "@pokelab/pokemon-data": "workspace:*",
+    "@pokelab/ui": "workspace:*",
     "next": "^15.1.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
-    "@pokestudio/config": "workspace:*",
+    "@pokelab/config": "workspace:*",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.4",

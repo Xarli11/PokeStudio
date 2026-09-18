@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { SpeciesFormDetail } from '@pokestudio/database';
+import type { SpeciesFormDetail } from '@pokelab/database';
 
 import { partitionOtherForms } from './form-grouping';
 

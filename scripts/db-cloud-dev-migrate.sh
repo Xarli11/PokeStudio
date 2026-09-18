@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # pnpm db:cloud-dev:migrate — applies packages/database/supabase/migrations/*.sql
-# to Supabase Cloud "PokeStudio Dev" (project ref tofhupgwxsexrburoqys) via
+# to Supabase Cloud "PokeLab Dev" (project ref tofhupgwxsexrburoqys) via
 # `supabase db push --db-url`, same approach as scripts/db-pi-migrate.sh.
 #
 # Known remote/local migration-history aliasing: on 2026-09-14, six
@@ -53,7 +53,7 @@ fi
 
 echo "Read-only identity check before migrating..."
 psql "$SUPABASE_CLOUD_DEV_DB_URL" -X -q -v ON_ERROR_STOP=1 -c "select current_database(), current_user, version();" >/dev/null
-echo "OK — confirmed target is Supabase Cloud PokeStudio Dev ($CLOUD_DEV_PROJECT_REF)."
+echo "OK — confirmed target is Supabase Cloud PokeLab Dev ($CLOUD_DEV_PROJECT_REF)."
 
 cd packages/database
 

@@ -1,4 +1,4 @@
-# PokeStudio — Design System (Brand 1.0)
+# PokeLab — Design System (Brand 1.0)
 
 **Figma is the visual source of truth.** The official identity was designed there; the
 exported SVGs under `apps/web/public/brand/` are canonical assets, not references to
@@ -40,7 +40,7 @@ glassmorphism everywhere, excessive gradients, random futuristic decoration.
 Components must never reference these six values directly (or any other raw hex) — always
 go through the Layer 2 semantic tokens below, defined in `packages/ui/src/tokens.css`.
 Verified against the Figma exports: the same six hex values appear literally inside the
-official SVGs (e.g. `#0A0D0C`/`#10B981` in `pokestudio-favicon-32.svg`), confirming the
+official SVGs (e.g. `#0A0D0C`/`#10B981` in `pokelab-favicon-32.svg`), confirming the
 token file and the Figma source agree.
 
 ### Layer 2 — semantic application tokens
@@ -85,7 +85,7 @@ yellow-green, ~30° away) and `--ps-type-bug` at hue 72° (yellow-olive, ~90° a
 clearly distinguishable from the brand accent by role and by eye. Never turn every
 Pokémon card the same brand color either — the type identity is part of what makes a card
 _that Pokémon's_ card, even though the card's structural styling (surface, spacing,
-radius) is unmistakably PokeStudio's own.
+radius) is unmistakably PokeLab's own.
 
 ## Typography
 
@@ -107,21 +107,21 @@ The official identity is a set of Figma-exported SVGs under `apps/web/public/bra
 geometry in code** — only reference their file paths, via the small registry at
 `apps/web/src/lib/brand-assets.ts`.
 
-| Figma variant          | File                                     | Used for                                      |
-| ---------------------- | ---------------------------------------- | --------------------------------------------- |
-| Logo – Master          | `pokestudio-symbol-primary.svg`          | Reserved (not yet wired into a component)     |
-| Logo – Dark            | `pokestudio-symbol-on-dark.svg`          | Reserved                                      |
-| Monochrome Light       | `pokestudio-symbol-mono-on-light.svg`    | Reserved                                      |
-| Monochrome Dark        | `pokestudio-symbol-mono-on-dark.svg`     | Reserved                                      |
-| Wordmark / Light       | `pokestudio-wordmark-on-light.svg`       | PersistentShell header, light theme           |
-| Wordmark / Dark        | `pokestudio-wordmark-on-dark.svg`        | PersistentShell header, dark theme            |
-| Lockup / Compact Light | `pokestudio-lockup-compact-on-light.svg` | Reserved for a narrower header if ever needed |
-| Lockup / Compact Dark  | `pokestudio-lockup-compact-on-dark.svg`  | Reserved for a narrower header if ever needed |
-| Favicon / 16           | `pokestudio-favicon-16.svg`              | Browser tab icon / metadata icon (16×16)      |
-| Favicon / 32           | `pokestudio-favicon-32.svg`              | Browser tab icon / metadata icon (32×32)      |
+| Figma variant          | File                                  | Used for                                      |
+| ---------------------- | ------------------------------------- | --------------------------------------------- |
+| Logo – Master          | `pokelab-symbol-primary.svg`          | Reserved (not yet wired into a component)     |
+| Logo – Dark            | `pokelab-symbol-on-dark.svg`          | Reserved                                      |
+| Monochrome Light       | `pokelab-symbol-mono-on-light.svg`    | Reserved                                      |
+| Monochrome Dark        | `pokelab-symbol-mono-on-dark.svg`     | Reserved                                      |
+| Wordmark / Light       | `pokelab-wordmark-on-light.svg`       | PersistentShell header, light theme           |
+| Wordmark / Dark        | `pokelab-wordmark-on-dark.svg`        | PersistentShell header, dark theme            |
+| Lockup / Compact Light | `pokelab-lockup-compact-on-light.svg` | Reserved for a narrower header if ever needed |
+| Lockup / Compact Dark  | `pokelab-lockup-compact-on-dark.svg`  | Reserved for a narrower header if ever needed |
+| Favicon / 16           | `pokelab-favicon-16.svg`              | Browser tab icon / metadata icon (16×16)      |
+| Favicon / 32           | `pokelab-favicon-32.svg`              | Browser tab icon / metadata icon (32×32)      |
 
 **One variant still isn't confidently registered**: a fully-emerald mark exists in the
-asset folder (`pokestudio-symbol-light.svg`, transparent background, geometry matches the
+asset folder (`pokelab-symbol-light.svg`, transparent background, geometry matches the
 rest of the symbol family) but its coloring doesn't disambiguate which of two Figma-named
 exports it is — "Logo – Emerald" or "Logo – Emerald White". Rather than guess, it's left
 unregistered in `brand-assets.ts` pending designer confirmation. Don't invent a mapping
@@ -136,7 +136,7 @@ paint, and the CSS rule takes over instantly.
 
 **Asset transparency, verified**: every export (symbol/wordmark/lockup/favicon) was
 audited for a baked-in full-canvas background rect (the earlier defect where
-`pokestudio-wordmark-on-dark.svg`'s canvas was filled solid `#0A0D0C` before the mark was
+`pokelab-wordmark-on-dark.svg`'s canvas was filled solid `#0A0D0C` before the mark was
 drawn) — none remain as of the current re-export. Every file's first drawn shape is the
 mark geometry itself; favicons' center "hole" is a real stroke-only transparent gap, not
 an opaque fill.
@@ -166,7 +166,7 @@ approved animated variant is designed later.
 
 ## Accessibility
 
-- The brand link's accessible name is the string "PokeStudio" (an `aria-label` on the
+- The brand link's accessible name is the string "PokeLab" (an `aria-label` on the
   `<Link>`); both logo images are decorative (`alt=""`) so the name isn't announced twice.
 - Semantic heading hierarchy preserved on every page.
 - Visible focus via `--ps-color-focus` on every interactive element.

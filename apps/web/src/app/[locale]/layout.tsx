@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { notFound } from 'next/navigation';
 
-import { getDictionary, isLocale, locales } from '@pokestudio/i18n';
-import { themeInitScript } from '@pokestudio/ui';
+import { getDictionary, isLocale, locales } from '@pokelab/i18n';
+import { themeInitScript } from '@pokelab/ui';
 
 import { brandAssets } from '@/lib/brand-assets';
 import { PersistentShell } from '@/components/persistent-shell';
@@ -35,7 +35,7 @@ export async function generateMetadata({
   const dictionary = getDictionary(locale);
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL('https://pokelab.com'),
     title: dictionary.home.title,
     description: dictionary.home.tagline,
     alternates: {

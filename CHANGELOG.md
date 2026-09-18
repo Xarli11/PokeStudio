@@ -1,10 +1,14 @@
 # Changelog
 
-All notable PokeStudio changes should be recorded here.
+All notable PokeLab changes should be recorded here.
 
 Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
+
+### Rename PokeStudio → PokeLab (repository side)
+
+- Rebrand product, metadata, canonical URLs (`pokelab.com`), packages (`@pokelab/*`) and brand asset paths. External renames (GitHub, Cloudflare Worker, Supabase display name, DNS) are pending; retained identifiers and the migration plan are in `docs/engineering/RENAME_POKELAB.md`. Entries below keep the old name as history.
 
 ### Guarded CI/CD (prepared for review)
 

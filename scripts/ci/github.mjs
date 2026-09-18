@@ -3,6 +3,10 @@ import { appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { targetFor } from './target.mjs';
 
+// Transitional: the GitHub repository is being renamed PokeStudio -> PokeLab. Both exact names are
+// trusted until the rename lands; then drop 'Xarli11/PokeStudio' (docs/engineering/RENAME_POKELAB.md).
+const TRUSTED_REPOSITORIES = new Set(['Xarli11/PokeStudio', 'Xarli11/PokeLab']);
+
 export async function github(path) {
   if (!process.env.GITHUB_TOKEN) throw new Error('Missing GitHub read token.');
   const response = await fetch(
@@ -93,7 +97,7 @@ export async function successfulRun(target, sha) {
 
 export async function assertMain() {
   if (
-    process.env.GITHUB_REPOSITORY !== 'Xarli11/PokeStudio' ||
+    !TRUSTED_REPOSITORIES.has(process.env.GITHUB_REPOSITORY ?? '') ||
     process.env.GITHUB_REF !== 'refs/heads/main' ||
     !/^[0-9a-f]{40}$/.test(process.env.GITHUB_SHA ?? '')
   )
