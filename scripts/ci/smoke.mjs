@@ -94,10 +94,10 @@ export async function smoke(
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  smoke(process.env.POKESTUDIO_SMOKE_URL, {
-    sha: process.env.POKESTUDIO_EXPECTED_SHA,
-    projectRef: process.env.POKESTUDIO_EXPECTED_PROJECT_REF,
-    target: process.env.POKESTUDIO_EXPECTED_TARGET,
+  smoke(process.env.POKELAB_SMOKE_URL, {
+    sha: process.env.POKELAB_EXPECTED_SHA,
+    projectRef: process.env.POKELAB_EXPECTED_PROJECT_REF,
+    target: process.env.POKELAB_EXPECTED_TARGET,
   }).catch((error) => {
     console.error(error.message);
     process.exitCode = 1;

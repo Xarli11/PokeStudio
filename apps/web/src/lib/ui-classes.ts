@@ -1,5 +1,5 @@
 /**
- * Shared Tailwind class-string helpers for PokeStudio's small recurring
+ * Shared Tailwind class-string helpers for PokeLab's small recurring
  * "product primitives" (button, card, tag, segmented control) — Styling
  * Foundation 1.0 / UI Polish 1.1. Every class here composes tokens already
  * aliased into Tailwind's theme (packages/ui/src/tokens.css `@theme`),
@@ -26,7 +26,7 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
     'border border-transparent bg-brand-action text-brand-contrast px-5 py-3 text-base cursor-pointer hover:bg-brand-action-hover active:brightness-95',
   // The one destructive action in the product so far (delete a team) — its
-  // own semantic token (`--ps-color-danger`, same absolute value in both
+  // own semantic token (`--pl-color-danger`, same absolute value in both
   // themes), never the brand color repurposed as a warning color.
   danger:
     'border border-transparent bg-danger text-white px-3 py-2 text-sm cursor-pointer hover:brightness-95 active:brightness-90',
@@ -52,7 +52,7 @@ export function cardClass(className = ''): string {
 export function interactiveCardClass(className = ''): string {
   return [
     CARD_BASE,
-    'text-inherit no-underline transition-[border-color,background-color,transform] duration-200 ease-ps',
+    'text-inherit no-underline transition-[border-color,background-color,transform] duration-200 ease-pl',
     'hover:border-brand/40 hover:bg-surface-hover hover:-translate-y-0.5',
     'focus-visible:border-brand/40 focus-visible:bg-surface-hover focus-visible:-translate-y-0.5',
     'motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0',

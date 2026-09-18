@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { FormLearnsetAllEntry, VersionGroupSummary } from '@pokestudio/database';
+import type { FormLearnsetAllEntry, VersionGroupSummary } from '@pokelab/database';
 
 import {
   aggregateAllMoves,

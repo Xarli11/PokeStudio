@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import type { Dictionary, Locale } from '@pokestudio/i18n';
+import type { Dictionary, Locale } from '@pokelab/i18n';
 
 import { brandAssets } from '@/lib/brand-assets';
 import { soonBadgeClass } from '@/lib/ui-classes';
@@ -44,10 +44,10 @@ export interface PersistentShellProps {
  * (`col-start-1 row-start-1`) so the link's box size never changes when the
  * visible one swaps — no layout shift across the theme toggle.
  */
-const WORDMARK_SIZE = 'col-start-1 row-start-1 block h-7 w-auto md:h-8 xl:h-11';
+const SYMBOL_SIZE = 'col-start-1 row-start-1 block h-7 w-auto md:h-8 xl:h-11';
 
 /**
- * PokeStudio's one persistent application chrome — identity, primary
+ * PokeLab's one persistent application chrome — identity, primary
  * navigation (Explore active; Build/Battle Lab visibly reserved but not
  * linked), locale/theme controls, skip link, and a slim footer disclaimer.
  *
@@ -92,34 +92,39 @@ export function PersistentShell({ locale, dictionary, children }: PersistentShel
         line riding the same edge, concentrated toward the center and fading
         at the screen edges (never a flat "neon" line edge-to-edge). The
         `[[data-theme=light]_&]` ancestor-attribute variant mirrors the
-        pattern the wordmark swap below already uses.
+        pattern the symbol swap below already uses.
       */}
       <header className="sticky top-0 z-40 min-w-0 border-b border-border-subtle bg-background/92 backdrop-blur after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-brand/25 after:to-transparent [[data-theme=light]_&]:after:opacity-0">
         <div className="mx-auto flex w-full max-w-wide flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 xl:flex-nowrap xl:py-4">
-          {/* Brand 1.0 — official Figma wordmark (apps/web/src/lib/brand-assets.ts). */}
+          {/* PokeLab — preserved Figma symbol and live Inter lettering (apps/web/src/lib/brand-assets.ts). */}
           <Link
             href={`/${locale}`}
-            aria-label="PokeStudio"
-            className="order-1 inline-grid rounded-sm"
+            aria-label="PokeLab"
+            className="order-1 inline-flex items-center gap-2 rounded-sm no-underline"
           >
-            <Image
-              src={brandAssets.wordmarkOnDark}
-              alt=""
-              width={640}
-              height={160}
-              priority
-              unoptimized
-              className={`${WORDMARK_SIZE} [[data-theme=light]_&]:hidden`}
-            />
-            <Image
-              src={brandAssets.wordmarkOnLight}
-              alt=""
-              width={640}
-              height={160}
-              priority
-              unoptimized
-              className={`${WORDMARK_SIZE} hidden [[data-theme=light]_&]:block`}
-            />
+            <span className="inline-grid">
+              <Image
+                src={brandAssets.symbolOnDark}
+                alt=""
+                width={512}
+                height={512}
+                priority
+                unoptimized
+                className={`${SYMBOL_SIZE} [[data-theme=light]_&]:hidden`}
+              />
+              <Image
+                src={brandAssets.symbolPrimary}
+                alt=""
+                width={512}
+                height={512}
+                priority
+                unoptimized
+                className={`${SYMBOL_SIZE} hidden [[data-theme=light]_&]:block`}
+              />
+            </span>
+            <span className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
+              Poke<span className="text-brand">Lab</span>
+            </span>
           </Link>
 
           <nav

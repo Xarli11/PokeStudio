@@ -11,13 +11,13 @@ Pokémon Showdown's server/simulator is mature and MIT-licensed.
 
 ## Decision
 
-Use compatible Pokémon Showdown server/simulator components behind a PokeStudio battle-engine adapter.
+Use compatible Pokémon Showdown server/simulator components behind a PokeLab battle-engine adapter.
 
-Do not copy its client as PokeStudio's UI.
+Do not copy its client as PokeLab's UI.
 
 ## Consequences
 
 - faster path to accurate mechanics,
 - upstream compatibility must be tested,
-- PokeStudio can add structured traces, simulation and AI layers,
+- PokeLab can add structured traces, simulation and AI layers,
 - fork only after documented strategic need.

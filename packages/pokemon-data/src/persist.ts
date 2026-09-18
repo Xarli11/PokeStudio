@@ -5,7 +5,7 @@ import type { DataProvenance, NormalizedDataset, SourceRef } from './types';
 /**
  * Minimal write-side schema shape for the 6 tables this module writes to.
  *
- * Deliberately local rather than importing `@pokestudio/database`'s
+ * Deliberately local rather than importing `@pokelab/database`'s
  * `Database` type: `packages/database` already depends on this package for
  * shared domain types (`LocalizedName`, `BaseStats`, ...), so importing back
  * from it here would create a circular workspace dependency. This is kept
@@ -341,7 +341,7 @@ async function upsertDataSource(client: IngestClient, provenance: DataProvenance
 /**
  * Batched, identity-based upsert (Phase 1B §3/§10).
  *
- * Species/forms are matched by (source_id, external_id) — PokeStudio's
+ * Species/forms are matched by (source_id, external_id) — PokeLab's
  * record of upstream identity — never by slug. Any row that already exists
  * keeps its *original* slug (fetched first, reused verbatim in the upsert
  * payload) so re-running ingestion — or a future production re-sync — can

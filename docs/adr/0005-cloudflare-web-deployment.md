@@ -5,7 +5,7 @@
 
 ## Context
 
-PokeStudio should start cheap, fast and globally accessible. Cloudflare offers suitable web/edge deployment capabilities.
+PokeLab should start cheap, fast and globally accessible. Cloudflare offers suitable web/edge deployment capabilities.
 
 ## Decision
 
@@ -47,4 +47,4 @@ Both were evaluated against this actual repository, not just against their docum
 **Decision**: use `@opennextjs/cloudflare` now. Revisit vinext once it has matured past its
 current experimental/unreviewed state and its peer-dependency requirements no longer conflict
 with this repo's pinned versions — the two problems found are exactly the kind that resolve with
-time, not architectural incompatibility with PokeStudio's approach.
+time, not architectural incompatibility with PokeLab's approach.

@@ -249,7 +249,7 @@ async function main() {
     ...baseEnv(),
     SUPABASE_DB_URL: process.env.SUPABASE_DB_URL,
     SUPABASE_CLOUD_DEV_DB_URL: process.env.SUPABASE_DB_URL,
-    POKESTUDIO_PRODUCTION_APPROVED_SHA: name === 'production' ? sha : undefined,
+    POKELAB_PRODUCTION_APPROVED_SHA: name === 'production' ? sha : undefined,
   };
   if (ingest && !process.env.SUPABASE_INGEST_KEY) throw new Error('Missing ingestion credential.');
   run('pnpm', [`db:${name}:check`], databaseEnv);
@@ -281,8 +281,8 @@ async function main() {
   const publicEnv = {
     NEXT_PUBLIC_SUPABASE_URL: `https://${target.projectRef}.supabase.co`,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
-    POKESTUDIO_RELEASE_SHA: sha,
-    POKESTUDIO_RELEASE_TARGET: name,
+    POKELAB_RELEASE_SHA: sha,
+    POKELAB_RELEASE_TARGET: name,
   };
   writeFileSync(
     generatedConfig,
@@ -300,7 +300,7 @@ async function main() {
     ),
   );
   try {
-    run('pnpm', ['--filter', '@pokestudio/web', 'build:cf', '--config', 'wrangler.release.json'], {
+    run('pnpm', ['--filter', '@pokelab/web', 'build:cf', '--config', 'wrangler.release.json'], {
       ...baseEnv(),
       ...publicEnv,
     });
@@ -314,7 +314,7 @@ async function main() {
     summary(`Previous Worker deployment: ${before.deployments?.[0]?.id ?? 'none'}`);
     run(
       'pnpm',
-      ['--filter', '@pokestudio/web', 'deploy:cf:built', '--config', 'wrangler.release.json'],
+      ['--filter', '@pokelab/web', 'deploy:cf:built', '--config', 'wrangler.release.json'],
       {
         ...baseEnv(),
         ...publicEnv,
@@ -331,11 +331,11 @@ async function main() {
     summary(`Worker versions: ${JSON.stringify(after.deployments?.[0]?.versions ?? [])}`);
     run('pnpm', [`smoke:${name}`], {
       ...baseEnv(),
-      POKESTUDIO_CLOUD_DEV_WORKER_URL: target.url,
-      POKESTUDIO_SMOKE_URL: target.url,
-      POKESTUDIO_EXPECTED_SHA: sha,
-      POKESTUDIO_EXPECTED_PROJECT_REF: target.projectRef,
-      POKESTUDIO_EXPECTED_TARGET: name,
+      POKELAB_CLOUD_DEV_WORKER_URL: target.url,
+      POKELAB_SMOKE_URL: target.url,
+      POKELAB_EXPECTED_SHA: sha,
+      POKELAB_EXPECTED_PROJECT_REF: target.projectRef,
+      POKELAB_EXPECTED_TARGET: name,
     });
     summary('Delivery and smoke passed. This workflow success is the next baseline.');
   } finally {

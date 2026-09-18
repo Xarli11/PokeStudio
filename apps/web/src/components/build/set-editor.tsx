@@ -2,16 +2,16 @@
 
 import { useState } from 'react';
 
-import { calculateStats } from '@pokestudio/damage';
+import { calculateStats } from '@pokelab/damage';
 import type {
   ComparablePokemonForm,
   FormLearnsetAllVersionGroups,
   Item,
   Nature,
-} from '@pokestudio/database';
-import { formatMessage, type Locale } from '@pokestudio/i18n';
-import { ALL_POKEMON_TYPES } from '@pokestudio/pokemon-data';
-import type { BaseStats, PokemonType } from '@pokestudio/pokemon-data';
+} from '@pokelab/database';
+import { formatMessage, type Locale } from '@pokelab/i18n';
+import { ALL_POKEMON_TYPES } from '@pokelab/pokemon-data';
+import type { BaseStats, PokemonType } from '@pokelab/pokemon-data';
 
 import { PokemonStatBars } from '@/components/pokemon/stat-bars';
 import { PokemonTypeBadge } from '@/components/pokemon/type-badge';
@@ -63,7 +63,7 @@ export interface SetEditorLabels {
   calculatedStatsLabel: string;
   /** "Stat calculation for {game} isn't implemented yet..." — shown instead of the EV/IV editor and calculated stats whenever `capabilities.modernEvsIvs` is false (task §19: never show a false modern-formula number for a game it doesn't apply to). */
   legacyStatsUnavailableTemplate: string;
-  /** "PokeStudio hasn't fully validated {game}'s mechanics yet..." — a small honesty note shown once per set when the game's capabilities aren't fully validated (task §3/§20). */
+  /** "PokeLab hasn't fully validated {game}'s mechanics yet..." — a small honesty note shown once per set when the game's capabilities aren't fully validated (task §3/§20). */
   historicalMechanicsNoteTemplate: string;
   movesLabel: string;
   moveLegalityHint: string;

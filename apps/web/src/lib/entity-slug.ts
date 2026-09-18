@@ -2,7 +2,7 @@
  * Case-insensitive canonical entity routes (Phase 1C.3 §13) — used by
  * `middleware.ts` for `/[locale]/pokemon/[slug]`, `/[locale]/moves/[slug]`
  * and `/[locale]/abilities/[slug]`. Canonical slugs are always lowercase
- * (every slug PokeStudio's ingestion writes already is); this only decides
+ * (every slug PokeLab's ingestion writes already is); this only decides
  * *whether the requested URL itself* needs a redirect, purely from casing —
  * it never checks whether the lowercased slug actually exists. That's
  * deliberate: an existence check here would mean either doing the DB lookup

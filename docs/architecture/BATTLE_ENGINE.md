@@ -1,4 +1,4 @@
-# PokeStudio — Battle Engine Specification
+# PokeLab — Battle Engine Specification
 
 ## Goal
 
@@ -8,11 +8,11 @@ Provide accurate, testable Pokémon battle mechanics without spending years reim
 
 Use the **MIT-licensed Pokémon Showdown server/simulator** as the initial mechanics foundation where technically compatible.
 
-Do not copy the official client implementation merely to obtain a battle UI. PokeStudio owns its UX.
+Do not copy the official client implementation merely to obtain a battle UI. PokeLab owns its UX.
 
-## PokeStudio boundary
+## PokeLab boundary
 
-UI and application code must interact with a PokeStudio battle-domain interface, not raw Showdown internals.
+UI and application code must interact with a PokeLab battle-domain interface, not raw Showdown internals.
 
 Conceptual API:
 
@@ -30,7 +30,7 @@ Exact API is implementation-dependent; the boundary is mandatory.
 
 ## Why wrap upstream
 
-We need freedom to add PokeStudio-specific capabilities such as:
+We need freedom to add PokeLab-specific capabilities such as:
 
 - structured battle traces,
 - replay analysis,
@@ -43,7 +43,7 @@ We need freedom to add PokeStudio-specific capabilities such as:
 
 ## Structured battle trace
 
-PokeStudio should progressively produce machine-readable events beyond human battle text.
+PokeLab should progressively produce machine-readable events beyond human battle text.
 
 Example concepts:
 
@@ -104,7 +104,7 @@ When online PvP/long-running sessions arrive:
 
 ## Battle AI interface
 
-AI consumes a stable PokeStudio state/action representation, not UI state.
+AI consumes a stable PokeLab state/action representation, not UI state.
 
 Required properties:
 
@@ -116,7 +116,7 @@ Required properties:
 
 ## Testing
 
-Maintain PokeStudio regression tests even when upstream already has tests.
+Maintain PokeLab regression tests even when upstream already has tests.
 
 Especially test:
 
@@ -124,7 +124,7 @@ Especially test:
 - serialization,
 - state extraction,
 - generation/format selection,
-- known PokeStudio bugs,
+- known PokeLab bugs,
 - structured trace correctness,
 - compatibility when updating upstream.
 

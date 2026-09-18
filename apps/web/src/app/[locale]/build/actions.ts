@@ -5,7 +5,7 @@ import {
   getFormsBySlugs,
   type ComparablePokemonForm,
   type FormLearnsetAllVersionGroups,
-} from '@pokestudio/database';
+} from '@pokelab/database';
 
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 

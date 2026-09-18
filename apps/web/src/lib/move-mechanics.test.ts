@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getDictionary } from '@pokestudio/i18n';
+import { getDictionary } from '@pokelab/i18n';
 
 import {
   describeMoveMechanics,

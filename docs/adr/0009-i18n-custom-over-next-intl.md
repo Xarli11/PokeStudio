@@ -25,14 +25,14 @@ wrapping) to learn and maintain.
 
 Keep the custom `packages/i18n` dictionary. Do not adopt `next-intl` at this time.
 
-Rationale, evaluated against actual PokeStudio requirements (not hypothetical future ones):
+Rationale, evaluated against actual PokeLab requirements (not hypothetical future ones):
 
 - **Locales, routing, Server/Client Components, metadata, sitemap/hreflang**: already fully
   covered by the current App Router `[locale]` + middleware + `generateMetadata` implementation,
   which uses only native Next.js primitives — nothing `next-intl` provides here is unavailable.
 - **Typed translation keys**: already solved for free — `Dictionary = typeof en` gives full
   autocomplete and compile-time key checking without a codegen step or a library.
-- **ICU plurals / number-and-date formatting**: not a current requirement. PokeStudio's Phase 0/1
+- **ICU plurals / number-and-date formatting**: not a current requirement. PokeLab's Phase 0/1
   copy is short, static UI strings (nav labels, page titles, a disclaimer) with no plural or
   interpolated-number cases yet. `Intl.NumberFormat`/`Intl.DateTimeFormat` (native, zero-dependency)
   cover formatting needs if/when they arise, independent of whichever dictionary lookup is used.
@@ -41,7 +41,7 @@ Rationale, evaluated against actual PokeStudio requirements (not hypothetical fu
 - **Testing / maintenance burden**: the current implementation is fully covered by
   `packages/i18n/src/index.test.ts` and has no upstream to track. `next-intl` is well-maintained,
   but its major-version cadence and Next.js-canary-coupling (App Router support has moved fast) is
-  a real, non-zero maintenance cost that buys nothing PokeStudio needs yet.
+  a real, non-zero maintenance cost that buys nothing PokeLab needs yet.
 
 Per Ponytail (CLAUDE.md §3): _owning less code is preferable when a mature dependency solves a real
 recurring problem more simply_ — but _do not adopt a dependency unless it measurably reduces
@@ -67,6 +67,6 @@ surface around a problem the current ~90-line implementation already solves corr
 
 ## Consequences
 
-- No new dependency; the i18n surface stays inside PokeStudio's own boundary.
+- No new dependency; the i18n surface stays inside PokeLab's own boundary.
 - Future contributors must extend `packages/i18n` by hand for formatting/pluralization needs until
   one of the "Revisit when" triggers above is hit.

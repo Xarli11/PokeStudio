@@ -1,4 +1,4 @@
-# PokeStudio — Design System (Brand 1.0)
+# PokeLab — Design System (Brand 1.0)
 
 **Figma is the visual source of truth.** The official identity was designed there; the
 exported SVGs under `apps/web/public/brand/` are canonical assets, not references to
@@ -30,12 +30,12 @@ glassmorphism everywhere, excessive gradients, random futuristic decoration.
 
 | Token                   | Hex       | Role                                                |
 | ----------------------- | --------- | --------------------------------------------------- |
-| `--ps-brand-emerald`    | `#10B981` | Primary brand accent (dark mode)                    |
-| `--ps-brand-mint`       | `#34D399` | Secondary accent, hover states, focus ring          |
-| `--ps-brand-deep`       | `#047857` | Primary brand accent (light mode, AA text contrast) |
-| `--ps-neutral-charcoal` | `#0A0D0C` | Darkest neutral — dark-mode page background         |
-| `--ps-neutral-graphite` | `#151A18` | Dark-mode surface neutral                           |
-| `--ps-neutral-light`    | `#F3F7F5` | Light-mode page background / dark-mode text         |
+| `--pl-brand-emerald`    | `#10B981` | Primary brand accent (dark mode)                    |
+| `--pl-brand-mint`       | `#34D399` | Secondary accent, hover states, focus ring          |
+| `--pl-brand-deep`       | `#047857` | Primary brand accent (light mode, AA text contrast) |
+| `--pl-neutral-charcoal` | `#0A0D0C` | Darkest neutral — dark-mode page background         |
+| `--pl-neutral-graphite` | `#151A18` | Dark-mode surface neutral                           |
+| `--pl-neutral-light`    | `#F3F7F5` | Light-mode page background / dark-mode text         |
 
 Components must never reference these six values directly (or any other raw hex) — always
 go through the Layer 2 semantic tokens below, defined in `packages/ui/src/tokens.css`.
@@ -47,18 +47,18 @@ token file and the Figma source agree.
 
 | Token                                                             | Purpose                                                  |
 | ----------------------------------------------------------------- | -------------------------------------------------------- |
-| `--ps-color-bg`                                                   | Page canvas                                              |
-| `--ps-color-bg-elevated`                                          | A step above canvas (e.g. evolution-chain rows)          |
-| `--ps-color-bg-surface`                                           | Card/panel surfaces                                      |
-| `--ps-color-bg-hover` / `--ps-color-bg-active`                    | Interactive surface states                               |
-| `--ps-color-border` / `--ps-color-border-subtle`                  | Outlines and internal dividers                           |
-| `--ps-color-text` / `--ps-color-text-muted`                       | Foreground text                                          |
-| `--ps-color-primary`                                              | Product accent — active nav, links, primary actions      |
-| `--ps-color-primary-hover`                                        | Hover state for primary/accent surfaces                  |
-| `--ps-color-primary-contrast`                                     | Text/icon color on top of `--ps-color-primary`           |
-| `--ps-color-primary-soft`                                         | Low-opacity accent wash (hidden-ability tag, soft fills) |
-| `--ps-color-focus`                                                | `:focus-visible` outline color                           |
-| `--ps-color-success` / `--ps-color-warning` / `--ps-color-danger` | Feedback states (not brand accents)                      |
+| `--pl-color-bg`                                                   | Page canvas                                              |
+| `--pl-color-bg-elevated`                                          | A step above canvas (e.g. evolution-chain rows)          |
+| `--pl-color-bg-surface`                                           | Card/panel surfaces                                      |
+| `--pl-color-bg-hover` / `--pl-color-bg-active`                    | Interactive surface states                               |
+| `--pl-color-border` / `--pl-color-border-subtle`                  | Outlines and internal dividers                           |
+| `--pl-color-text` / `--pl-color-text-muted`                       | Foreground text                                          |
+| `--pl-color-primary`                                              | Product accent — active nav, links, primary actions      |
+| `--pl-color-primary-hover`                                        | Hover state for primary/accent surfaces                  |
+| `--pl-color-primary-contrast`                                     | Text/icon color on top of `--pl-color-primary`           |
+| `--pl-color-primary-soft`                                         | Low-opacity accent wash (hidden-ability tag, soft fills) |
+| `--pl-color-focus`                                                | `:focus-visible` outline color                           |
+| `--pl-color-success` / `--pl-color-warning` / `--pl-color-danger` | Feedback states (not brand accents)                      |
 
 ## Dark / light rules
 
@@ -75,17 +75,17 @@ theme — the header logo swap (see "Logo" below) uses the same attribute.
 
 ## Pokémon type-color relationship
 
-Pokémon type colors (`--ps-type-*`, 18 tokens) are a **separate semantic system** for
+Pokémon type colors (`--pl-type-*`, 18 tokens) are a **separate semantic system** for
 Pokémon data — fire badges, water accents, etc. — and are never the brand palette. A type
 color may tint a card's accent seam or a type badge; it must never be used for product
 chrome (nav, buttons, primary actions), and brand Emerald must never stand in for the
 Grass type or vice versa. Checked by hue, not assumption: brand Emerald/Mint/Deep sit at
-hue ~158–163° (a cyan-leaning green); `--ps-type-grass` sits at hue 128° (a warmer
-yellow-green, ~30° away) and `--ps-type-bug` at hue 72° (yellow-olive, ~90° away) — both
+hue ~158–163° (a cyan-leaning green); `--pl-type-grass` sits at hue 128° (a warmer
+yellow-green, ~30° away) and `--pl-type-bug` at hue 72° (yellow-olive, ~90° away) — both
 clearly distinguishable from the brand accent by role and by eye. Never turn every
 Pokémon card the same brand color either — the type identity is part of what makes a card
 _that Pokémon's_ card, even though the card's structural styling (surface, spacing,
-radius) is unmistakably PokeStudio's own.
+radius) is unmistakably PokeLab's own.
 
 ## Typography
 
@@ -102,50 +102,33 @@ in `apps/web/src/**` is 400, 600 or 700). Numerical/stat displays use
 
 ## Logo
 
-The official identity is a set of Figma-exported SVGs under `apps/web/public/brand/`.
-**Never redraw, reinterpret, simplify, normalize, recolor or otherwise regenerate their
-geometry in code** — only reference their file paths, via the small registry at
-`apps/web/src/lib/brand-assets.ts`.
+PokeLab retains the existing Figma-exported symbol, emerald palette and Inter typography.
+All original SVG files and filenames remain unchanged pending the owner’s new Figma exports.
+The header pairs a decorative symbol with live **PokeLab** lettering (Inter Semibold).
+The original wordmark/compact SVGs contain outlined “Studio” glyphs. They remain in the
+repository, but the header does not render them. The owner will change the logo in Figma
+and provide new exports; renaming a file cannot change its visible lettering.
+The source Figma file has not been modified or described as newly approved artwork.
 
-| Figma variant          | File                                     | Used for                                      |
-| ---------------------- | ---------------------------------------- | --------------------------------------------- |
-| Logo – Master          | `pokestudio-symbol-primary.svg`          | Reserved (not yet wired into a component)     |
-| Logo – Dark            | `pokestudio-symbol-on-dark.svg`          | Reserved                                      |
-| Monochrome Light       | `pokestudio-symbol-mono-on-light.svg`    | Reserved                                      |
-| Monochrome Dark        | `pokestudio-symbol-mono-on-dark.svg`     | Reserved                                      |
-| Wordmark / Light       | `pokestudio-wordmark-on-light.svg`       | PersistentShell header, light theme           |
-| Wordmark / Dark        | `pokestudio-wordmark-on-dark.svg`        | PersistentShell header, dark theme            |
-| Lockup / Compact Light | `pokestudio-lockup-compact-on-light.svg` | Reserved for a narrower header if ever needed |
-| Lockup / Compact Dark  | `pokestudio-lockup-compact-on-dark.svg`  | Reserved for a narrower header if ever needed |
-| Favicon / 16           | `pokestudio-favicon-16.svg`              | Browser tab icon / metadata icon (16×16)      |
-| Favicon / 32           | `pokestudio-favicon-32.svg`              | Browser tab icon / metadata icon (32×32)      |
+| Variant          | File                                  | Use                 |
+| ---------------- | ------------------------------------- | ------------------- |
+| Master           | `pokestudio-symbol-primary.svg`       | Header, light theme |
+| Dark             | `pokestudio-symbol-on-dark.svg`       | Header, dark theme  |
+| Monochrome Light | `pokestudio-symbol-mono-on-light.svg` | Reserved            |
+| Monochrome Dark  | `pokestudio-symbol-mono-on-dark.svg`  | Reserved            |
+| Favicon 16       | `pokestudio-favicon-16.svg`           | Browser icon        |
+| Favicon 32       | `pokestudio-favicon-32.svg`           | Browser icon        |
 
-**One variant still isn't confidently registered**: a fully-emerald mark exists in the
-asset folder (`pokestudio-symbol-light.svg`, transparent background, geometry matches the
-rest of the symbol family) but its coloring doesn't disambiguate which of two Figma-named
-exports it is — "Logo – Emerald" or "Logo – Emerald White". Rather than guess, it's left
-unregistered in `brand-assets.ts` pending designer confirmation. Don't invent a mapping
-for it.
-
-**PersistentShell theme switching**: both the dark and light wordmark render into the DOM
-at all times, stacked in the same CSS grid cell; a `[data-theme='light']` CSS rule (the
-same pattern `tokens.css` uses for colors) shows one and hides the other. There is no
-JavaScript involved in the swap, so it cannot introduce a hydration mismatch and cannot
-flash the wrong variant — the pre-hydration script already sets `data-theme` before first
-paint, and the CSS rule takes over instantly.
-
-**Asset transparency, verified**: every export (symbol/wordmark/lockup/favicon) was
-audited for a baked-in full-canvas background rect (the earlier defect where
-`pokestudio-wordmark-on-dark.svg`'s canvas was filled solid `#0A0D0C` before the mark was
-drawn) — none remain as of the current re-export. Every file's first drawn shape is the
-mark geometry itself; favicons' center "hole" is a real stroke-only transparent gap, not
-an opaque fill.
+The all-emerald `pokestudio-symbol-light.svg` remains unregistered because its original
+Figma variant mapping is ambiguous. Both registered header symbols share a grid cell;
+CSS selects the theme without JavaScript or hydration changes. Their paths are listed
+in `apps/web/src/lib/brand-assets.ts`. Preserve their geometry and colors.
 
 ## Spacing / surface principles
 
-- One shared spacing scale (`--ps-space-1` … `--ps-space-8`) — no ad hoc rem values.
+- One shared spacing scale (`--pl-space-1` … `--pl-space-8`) — no ad hoc rem values.
 - Prefer dividers/spacing over nesting another `.ps-card` inside a card ("box inside box").
-- Cards (`.ps-card`) use `--ps-color-bg-surface` with a subtle border and soft shadow —
+- Cards (`.ps-card`) use `--pl-color-bg-surface` with a subtle border and soft shadow —
   never a flat, borderless block, and never full-bleed brand-color fills.
 
 ## Iconography
@@ -166,10 +149,10 @@ approved animated variant is designed later.
 
 ## Accessibility
 
-- The brand link's accessible name is the string "PokeStudio" (an `aria-label` on the
+- The brand link's accessible name is the string "PokeLab" (an `aria-label` on the
   `<Link>`); both logo images are decorative (`alt=""`) so the name isn't announced twice.
 - Semantic heading hierarchy preserved on every page.
-- Visible focus via `--ps-color-focus` on every interactive element.
+- Visible focus via `--pl-color-focus` on every interactive element.
 - Color is never the only carrier of meaning (type badges always show the localized label).
 - Universal Pokédex numbering (`#001`, `#133`, …) is a product identifier, not translated
   prose — same format in every locale.

@@ -1,9 +1,9 @@
-# PokeStudio.app — Brand Brief v1
+# PokeLab — Brand Brief v1
 
-> The visual identity is final: Figma is the source of truth, its exported SVGs live under
-> `apps/web/public/brand/`, and palette/typography/token mapping/logo usage are documented
-> in `docs/product/DESIGN_SYSTEM.md` ("Brand 1.0"). This brief remains the source for positioning,
-> naming and legal status.
+> The owner is updating the PokeLab logo in Figma. Original SVG files remain unchanged
+> under `apps/web/public/brand/` until new exports are supplied. The existing palette and
+> typography are retained; current header usage is documented in `docs/product/DESIGN_SYSTEM.md`.
+> This brief remains the source for positioning, naming and legal status.
 
 ## Brand language
 
@@ -14,13 +14,13 @@ concise rather than restate it on every page.
 
 ## Current name
 
-**PokeStudio.app**
+**PokeLab**
 
 Treat this as the working official product name unless the owner changes it.
 
 ## Positioning
 
-PokeStudio should feel like a premium Pokémon workspace/laboratory rather than a fan wiki.
+PokeLab should feel like a premium Pokémon workspace/laboratory rather than a fan wiki.
 
 It combines:
 
@@ -51,7 +51,7 @@ Primary pillars:
 
 Horizontal intelligence layer:
 
-- **PokeStudio AI**
+- **PokeLab AI**
 
 Potential feature naming:
 
@@ -70,7 +70,7 @@ All satisfied by the shipped Brand 1.0 identity — see `docs/product/DESIGN_SYS
 implementation:
 
 - dark-first with a complete, intentionally-designed light theme,
-- original PokeStudio palette (Emerald/Mint/Deep Green/Charcoal/Graphite/Light),
+- original PokeLab palette (Emerald/Mint/Deep Green/Charcoal/Graphite/Light),
 - type colors are semantic accents, kept separate from the brand palette,
 - subtle motion,
 - minimal information hierarchy with progressive disclosure,

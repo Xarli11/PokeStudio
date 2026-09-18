@@ -1,5 +1,5 @@
-import type { PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 export interface PokemonArtSlotProps {
   initial: string;
@@ -16,7 +16,7 @@ export interface PokemonArtSlotProps {
 
 /**
  * The deliberate artwork placeholder (UX/UI 0.2 Part C, enlarged in 0.2b,
- * polished in 0.2c). PokeStudio still has no license-cleared Pokémon
+ * polished in 0.2c). PokeLab still has no license-cleared Pokémon
  * sprite/artwork source (docs/engineering/DATA_SOURCES.md "Phase 1A decision"), so this is
  * not "no image yet" — it's a designed composition: a soft per-type
  * gradient wash, a faint vignette for depth (no glossy highlight streak),
@@ -49,20 +49,20 @@ export function PokemonArtSlot({ initial, types, variant }: PokemonArtSlotProps)
       ? {
           width: '100%',
           aspectRatio: '2 / 1',
-          borderTopLeftRadius: 'var(--ps-radius-lg)',
-          borderTopRightRadius: 'var(--ps-radius-lg)',
+          borderTopLeftRadius: 'var(--pl-radius-lg)',
+          borderTopRightRadius: 'var(--pl-radius-lg)',
         }
       : variant === 'detailHero'
         ? {
             width: '100%',
             maxWidth: 'clamp(11rem, 26vw, 17rem)',
             aspectRatio: '1 / 1',
-            borderRadius: 'var(--ps-radius-xl)',
+            borderRadius: 'var(--pl-radius-xl)',
           }
         : {
             width: '6rem',
             height: '6rem',
-            borderRadius: 'var(--ps-radius-xl)',
+            borderRadius: 'var(--pl-radius-xl)',
           };
 
   const monogramSize =
@@ -85,8 +85,8 @@ export function PokemonArtSlot({ initial, types, variant }: PokemonArtSlotProps)
       style={{
         background: [
           // Faint edge vignette for depth — never a diagonal shine.
-          'radial-gradient(circle at 50% 45%, transparent 55%, color-mix(in srgb, var(--ps-color-bg) 32%, transparent) 100%)',
-          `linear-gradient(155deg, color-mix(in srgb, var(${primaryVar}) 23%, var(--ps-color-bg-elevated)), color-mix(in srgb, var(${secondaryVar}) 23%, var(--ps-color-bg-elevated)) 100%)`,
+          'radial-gradient(circle at 50% 45%, transparent 55%, color-mix(in srgb, var(--pl-color-bg) 32%, transparent) 100%)',
+          `linear-gradient(155deg, color-mix(in srgb, var(${primaryVar}) 23%, var(--pl-color-bg-elevated)), color-mix(in srgb, var(${secondaryVar}) 23%, var(--pl-color-bg-elevated)) 100%)`,
         ].join(', '),
         ...sizing,
       }}

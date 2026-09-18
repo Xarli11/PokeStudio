@@ -2,10 +2,10 @@ import { Generations, Move, Pokemon, calculate } from '@smogon/calc';
 import type { GenerationNum } from '@smogon/calc';
 
 /**
- * PokeStudio damage-domain boundary (ADR-0004).
+ * PokeLab damage-domain boundary (ADR-0004).
  *
  * Application and UI code must call this module, never `@smogon/calc` directly.
- * This keeps the upstream dependency swappable and lets PokeStudio attach its
+ * This keeps the upstream dependency swappable and lets PokeLab attach its
  * own explanation/UI layer above a trusted formula base.
  */
 

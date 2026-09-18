@@ -1,5 +1,5 @@
-import type { PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 /**
  * A Pokémon type indicator. Color is a decorative accent only — the
@@ -10,7 +10,7 @@ import { pokemonTypeColorVar } from '@pokestudio/ui';
  * Tailwind class (`bg-type-grass` etc. don't exist as a fixed set in the
  * compiled output unless every one is statically written somewhere) — the
  * `color-mix()` wash/border stays inline, driven by the same
- * `--ps-type-*`/`--color-type-*` tokens Tailwind's own type-color utilities
+ * `--pl-type-*`/`--color-type-*` tokens Tailwind's own type-color utilities
  * are aliased from, so nothing here is a hardcoded hex value.
  *
  * `size="sm"` (Search UX v2) is the same badge, shrunk for compact contexts
@@ -37,8 +37,8 @@ export function PokemonTypeBadge({
           : 'gap-1 rounded-full px-2 py-1 text-sm'
       }`}
       style={{
-        border: `1px solid color-mix(in srgb, var(${colorVar}) 38%, var(--ps-color-border))`,
-        background: `color-mix(in srgb, var(${colorVar}) 14%, var(--ps-color-bg-elevated))`,
+        border: `1px solid color-mix(in srgb, var(${colorVar}) 38%, var(--pl-color-border))`,
+        background: `color-mix(in srgb, var(${colorVar}) 14%, var(--pl-color-bg-elevated))`,
       }}
     >
       <span

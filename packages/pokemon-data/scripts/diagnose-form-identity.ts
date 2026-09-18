@@ -31,7 +31,7 @@
  *   (it shouldn't — `pokemon_form.slug` is already a real UNIQUE
  *   constraint — but this would surface it clearly if it ever did)
  *
- * Run with: pnpm --filter @pokestudio/pokemon-data diagnose-form-identity
+ * Run with: pnpm --filter @pokelab/pokemon-data diagnose-form-identity
  * Options:  --limit=N        only the first N species (fast dev iteration)
  *           --concurrency=N  requests in flight per fetch phase (default 12)
  * Always bypasses the on-disk cache — the whole point is comparing against

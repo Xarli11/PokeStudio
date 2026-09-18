@@ -1,5 +1,5 @@
-import type { BaseStats, PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { BaseStats, PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 import { STAT_TIER_TEXT_CLASS, totalStatTier, type StatTier } from '@/lib/stat-quality';
 import { cardClass, tagClass } from '@/lib/ui-classes';
@@ -105,7 +105,7 @@ export function PokemonFormSection({
           // A faint type-tinted wash across the whole panel — ties the
           // identity area to the art slot's gradient without becoming a
           // full banner (UX/UI 0.2 Part F, carried into 0.2b's wider panel).
-          background: `linear-gradient(120deg, color-mix(in srgb, var(${primaryTypeVar}) 8%, var(--ps-color-bg-surface)), var(--ps-color-bg-surface) 65%)`,
+          background: `linear-gradient(120deg, color-mix(in srgb, var(${primaryTypeVar}) 8%, var(--pl-color-bg-surface)), var(--pl-color-bg-surface) 65%)`,
         }}
       >
         <div className="flex flex-col gap-6 md:grid md:grid-cols-[minmax(200px,300px)_1fr] md:items-start md:gap-x-12 md:gap-y-6">

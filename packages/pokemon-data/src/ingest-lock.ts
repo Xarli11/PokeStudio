@@ -17,6 +17,7 @@ import { Client } from 'pg';
  * holding connection closes — including on a crash/kill — so no separate
  * cleanup step or lock row is needed.
  */
+// Stable cross-version lock: old and new tooling must contend for the same database lock.
 const INGEST_LOCK_KEY = 'pokestudio:pokemon-data:ingest';
 
 export class IngestLockedError extends Error {

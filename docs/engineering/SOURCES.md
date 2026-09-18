@@ -29,4 +29,4 @@ Always re-check current deployment guidance when scaffolding because framework/p
 - PolyForm Noncommercial 1.0.0: https://polyformproject.org/licenses/noncommercial/1.0.0
 - OSI Open Source Definition: https://opensource.org/osd
 
-The intended restriction on commercial use means PokeStudio should use the term **source-available**, not OSI Open Source, unless the license strategy changes.
+The intended restriction on commercial use means PokeLab should use the term **source-available**, not OSI Open Source, unless the license strategy changes.

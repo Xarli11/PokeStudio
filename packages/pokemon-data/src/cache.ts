@@ -8,7 +8,7 @@ import path from 'node:path';
  * Caching each raw response by URL — mirroring the API's own path shape —
  * means a second ingestion run (idempotency testing, a normalization bugfix,
  * an audit re-run) reads from disk instead of re-hitting PokéAPI. Raw
- * upstream JSON stays clearly separate from normalized PokeStudio data: nothing
+ * upstream JSON stays clearly separate from normalized PokeLab data: nothing
  * here is ever read directly by the web app or committed as product data.
  */
 export interface RawCache {

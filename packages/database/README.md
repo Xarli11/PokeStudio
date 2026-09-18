@@ -1,4 +1,4 @@
-# @pokestudio/database
+# @pokelab/database
 
 PostgreSQL/Supabase boundary: migrations, local dev workflow, and a typed connection adapter.
 
@@ -32,10 +32,10 @@ for something that genuinely needs an isolated, disposable instance (e.g. a thro
 experiment, or CI). Requires Docker (the CLI runs Postgres, GoTrue, PostgREST, etc. in containers).
 
 ```bash
-pnpm --filter @pokestudio/database db:start   # supabase start
-pnpm --filter @pokestudio/database db:reset   # apply migrations (schema/constraints/indexes only)
-pnpm --filter @pokestudio/database db:diff    # generate a new migration from schema changes
-pnpm --filter @pokestudio/database db:stop
+pnpm --filter @pokelab/database db:start   # supabase start
+pnpm --filter @pokelab/database db:reset   # apply migrations (schema/constraints/indexes only)
+pnpm --filter @pokelab/database db:diff    # generate a new migration from schema changes
+pnpm --filter @pokelab/database db:stop
 ```
 
 These scripts run with this package (`packages/database`) as the working directory, which is

@@ -1,6 +1,6 @@
-# Contributing to PokeStudio
+# Contributing to PokeLab
 
-PokeStudio is currently establishing its foundational architecture.
+PokeLab is currently establishing its foundational architecture.
 
 ## Before contributing
 
@@ -16,7 +16,7 @@ Read:
 
 External contributions may be limited until the initial architecture and contributor licensing process are stabilized.
 
-Do not assume that a public repository means unrestricted commercial reuse. PokeStudio is intended to be source-available.
+Do not assume that a public repository means unrestricted commercial reuse. PokeLab is intended to be source-available.
 
 ## Pull requests
 

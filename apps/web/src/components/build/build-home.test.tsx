@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as NextNavigation from 'next/navigation';
 
-import type { ComparablePokemonForm } from '@pokestudio/database';
+import type { ComparablePokemonForm } from '@pokelab/database';
 
 import { addTeamMember, createEmptyTeamDraft, updateTeamMember } from '@/lib/team-draft';
 import { saveTeamDraft } from '@/lib/team-storage';

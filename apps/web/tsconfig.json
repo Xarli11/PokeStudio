@@ -1,5 +1,5 @@
 {
-  "extends": "@pokestudio/config/tsconfig-nextjs.json",
+  "extends": "@pokelab/config/tsconfig-nextjs.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

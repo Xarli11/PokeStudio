@@ -18,7 +18,7 @@ export interface ConfirmDialogProps {
  * A small, focused destructive-confirmation dialog (Milestone 2, Build
  * manual review — replaces `window.confirm`, which can't be styled/
  * localized consistently and reads as a browser chrome interruption, not a
- * PokeStudio surface). Built on the native `<dialog>` element rather than a
+ * PokeLab surface). Built on the native `<dialog>` element rather than a
  * hand-rolled focus-trap: `showModal()` gives a real accessible modal for
  * free — focus trapped inside, background inert, Escape fires a cancelable
  * `cancel` event, and focus returns to whatever triggered it when closed —

@@ -1,9 +1,9 @@
 'use client';
 
-import type { ComparablePokemonForm } from '@pokestudio/database';
-import { formatMessage, type Locale } from '@pokestudio/i18n';
-import type { PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { ComparablePokemonForm } from '@pokelab/database';
+import { formatMessage, type Locale } from '@pokelab/i18n';
+import type { PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 import { PokemonArtSlot } from '@/components/pokemon/art-slot';
 import { buttonClass } from '@/lib/ui-classes';
@@ -194,7 +194,7 @@ export function FilledTeamTile({
                 <span
                   key={type}
                   className="rounded-full px-1.5 py-px text-[0.625rem] font-bold text-muted"
-                  style={{ border: '1px solid var(--ps-color-border)' }}
+                  style={{ border: '1px solid var(--pl-color-border)' }}
                 >
                   {typeLabels[type]}
                 </span>
@@ -277,7 +277,7 @@ function PokemonSpriteFrame({
     <div
       className={`relative flex ${SPRITE_VIEWPORT_CLASS} shrink-0 items-center justify-center overflow-hidden rounded-xl`}
       style={{
-        background: `linear-gradient(155deg, color-mix(in srgb, var(${primaryVar}) 16%, var(--ps-color-bg-elevated)), color-mix(in srgb, var(${secondaryVar}) 16%, var(--ps-color-bg-elevated)) 100%)`,
+        background: `linear-gradient(155deg, color-mix(in srgb, var(${primaryVar}) 16%, var(--pl-color-bg-elevated)), color-mix(in srgb, var(${secondaryVar}) 16%, var(--pl-color-bg-elevated)) 100%)`,
       }}
     >
       {/* The card's own name text already labels this Pokémon — the image
@@ -291,7 +291,7 @@ function PokemonSpriteFrame({
         src={spriteUrl}
         alt=""
         loading="lazy"
-        className="h-full w-full object-contain p-1 transition-transform duration-200 ease-ps motion-reduce:transition-none [image-rendering:pixelated] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
+        className="h-full w-full object-contain p-1 transition-transform duration-200 ease-pl motion-reduce:transition-none [image-rendering:pixelated] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
       />
     </div>
   );

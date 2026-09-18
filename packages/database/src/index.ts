@@ -1,9 +1,5 @@
 export { createPublicDatabaseClient, createServiceDatabaseClient } from './client';
-export type {
-  PokeStudioDatabaseClient,
-  SupabasePublicConfig,
-  SupabaseSecretConfig,
-} from './client';
+export type { PokeLabDatabaseClient, SupabasePublicConfig, SupabaseSecretConfig } from './client';
 export type { Database } from './types';
 export {
   getAbilityBySlug,

@@ -2,8 +2,8 @@
 export const dynamic = 'force-dynamic';
 
 export function GET(): Response {
-  const sha = process.env.POKESTUDIO_RELEASE_SHA;
-  const target = process.env.POKESTUDIO_RELEASE_TARGET;
+  const sha = process.env.POKELAB_RELEASE_SHA ?? process.env.POKESTUDIO_RELEASE_SHA;
+  const target = process.env.POKELAB_RELEASE_TARGET ?? process.env.POKESTUDIO_RELEASE_TARGET;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   return Response.json(
     {

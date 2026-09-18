@@ -2,6 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
+# Stable local Docker/volume identity, not the cloud project display name or ref.
 project_id = "pokestudio"
 
 [api]

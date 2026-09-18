@@ -131,7 +131,7 @@ export function getTypeEffectiveness(
   return multiplier as 0 | 0.25 | 0.5 | 1 | 2 | 4;
 }
 
-/** All 18 types, in PokeStudio's canonical display order (matches `dictionary.types`/existing type-badge ordering conventions). */
+/** All 18 types, in PokeLab's canonical display order (matches `dictionary.types`/existing type-badge ordering conventions). */
 export const ALL_POKEMON_TYPES: readonly PokemonType[] = [
   'normal',
   'fire',

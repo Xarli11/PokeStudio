@@ -1,5 +1,5 @@
-import type { StatSpread } from '@pokestudio/damage';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import type { StatSpread } from '@pokelab/damage';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 import {
   DEFAULT_IVS,
@@ -23,6 +23,7 @@ import {
  * window, cleared site data, or a future-incompatible shape must never
  * crash the Build page.
  */
+// Stable persisted key: renaming the product must not hide saved teams on this origin.
 const STORAGE_KEY = 'pokestudio:teams:v1';
 
 interface StoredState {

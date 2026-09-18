@@ -8,7 +8,7 @@ import {
   targets,
 } from './target.mjs';
 import { assertAppendOnly, needsIngestion, planMigrations } from './plan.mjs';
-import { assertProtection, assertApproval } from './github.mjs';
+import { assertProtection, assertApproval, assertRepositoryIdentity } from './github.mjs';
 import { hasErrorDigest, smoke } from './smoke.mjs';
 
 const ref = targets['cloud-dev'].projectRef;
@@ -224,4 +224,30 @@ test('production rejects bypass, self-approval, wrong environment and unlisted r
     assertApproval(environment, [{ ...approval, environments: [{ id: 102 }] }], [2, 2]),
   );
   assert.throws(() => assertApproval(environment, [{ ...approval, state: 'rejected' }], [2, 2]));
+});
+
+// Rebranding must not weaken the release trust boundary or orphan delivery history.
+test('release accepts the same repository before and after the approved rename', () => {
+  for (const name of ['Xarli11/PokeStudio', 'Xarli11/PokeLab']) {
+    assertRepositoryIdentity({
+      GITHUB_REPOSITORY: name,
+      GITHUB_REPOSITORY_ID: '1361937633',
+      GITHUB_REPOSITORY_OWNER_ID: '50557033',
+    });
+  }
+});
+test('release rejects a fork, transferred repo, missing identity or reused old name', () => {
+  const env = {
+    GITHUB_REPOSITORY: 'Xarli11/PokeLab',
+    GITHUB_REPOSITORY_ID: '1361937633',
+    GITHUB_REPOSITORY_OWNER_ID: '50557033',
+  };
+  for (const replacement of [
+    { GITHUB_REPOSITORY_ID: '123' },
+    { GITHUB_REPOSITORY_OWNER_ID: '123' },
+    { GITHUB_REPOSITORY: 'attacker/PokeLab' },
+    { GITHUB_REPOSITORY_ID: undefined },
+    { GITHUB_REPOSITORY: 'Xarli11/PokeStudio', GITHUB_REPOSITORY_ID: '123' },
+  ])
+    assert.throws(() => assertRepositoryIdentity({ ...env, ...replacement }), /identities/);
 });

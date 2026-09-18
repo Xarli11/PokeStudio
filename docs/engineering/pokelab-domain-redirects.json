@@ -1,0 +1,18 @@
+{
+  "description": "Pending domain ownership, TLS, production-target and owner approval; merge with existing zone rules, never replace them blindly.",
+  "rules": [
+    {
+      "description": "PokeLab secondary and www hosts to canonical HTTPS origin",
+      "expression": "(http.host in {\"pokelab.app\" \"www.pokelab.app\" \"www.pokelab.com\"})",
+      "action": "redirect",
+      "action_parameters": {
+        "from_value": {
+          "status_code": 301,
+          "target_url": { "expression": "concat(\"https://pokelab.com\", http.request.uri.path)" },
+          "preserve_query_string": true
+        }
+      },
+      "enabled": false
+    }
+  ]
+}

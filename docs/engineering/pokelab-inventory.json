@@ -1,0 +1,886 @@
+{
+  "baseline": "8de5e852898adef834c6dc934c546899b5774438",
+  "branch": "codex/pokelab-rebrand",
+  "repositoryId": 1361937633,
+  "repository": "Xarli11/PokeStudio",
+  "supabase": {
+    "displayName": "PokeStudio Dev",
+    "projectRef": "tofhupgwxsexrburoqys"
+  },
+  "githubEnvironments": ["cloud-dev"],
+  "productionConfigured": false,
+  "files": [
+    {
+      "path": ".env.example",
+      "occurrences": 4
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature.yml",
+      "occurrences": 1
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "occurrences": 4
+    },
+    {
+      "path": "CHANGELOG.md",
+      "occurrences": 33
+    },
+    {
+      "path": "CLAUDE.md",
+      "occurrences": 13
+    },
+    {
+      "path": "LICENSE",
+      "occurrences": 1
+    },
+    {
+      "path": "README.md",
+      "occurrences": 5
+    },
+    {
+      "path": "apps/web/package.json",
+      "occurrences": 9
+    },
+    {
+      "path": "apps/web/src/app/[locale]/abilities/[slug]/loading.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/abilities/[slug]/page.tsx",
+      "occurrences": 7
+    },
+    {
+      "path": "apps/web/src/app/[locale]/abilities/loading.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/abilities/page.tsx",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/app/[locale]/build/[teamId]/page.tsx",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/app/[locale]/build/actions.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/build/page.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/app/[locale]/compare/loading.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/compare/page.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/app/[locale]/dev/sprites/page.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/app/[locale]/layout.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/app/[locale]/moves/[slug]/loading.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/moves/[slug]/page.tsx",
+      "occurrences": 4
+    },
+    {
+      "path": "apps/web/src/app/[locale]/moves/loading.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/moves/page.tsx",
+      "occurrences": 4
+    },
+    {
+      "path": "apps/web/src/app/[locale]/not-found.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/page.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/pokemon/[slug]/loading.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/pokemon/[slug]/page.tsx",
+      "occurrences": 8
+    },
+    {
+      "path": "apps/web/src/app/[locale]/pokemon/loading.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/app/[locale]/pokemon/page.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/app/api/health/route.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/app/global-error.tsx",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/app/globals.css",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/app/sitemap.test.ts",
+      "occurrences": 7
+    },
+    {
+      "path": "apps/web/src/app/sitemap.ts",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/abilities/ability-search.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/build/build-home.test.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/build/build-home.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/build/build-status-header.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/build/confirm-dialog.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/build/move-picker.test.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/build/move-picker.tsx",
+      "occurrences": 4
+    },
+    {
+      "path": "apps/web/src/components/build/roster-picker.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/build/set-editor.test.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/build/set-editor.tsx",
+      "occurrences": 6
+    },
+    {
+      "path": "apps/web/src/components/build/team-analysis-panel.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/build/team-editor.test.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/build/team-editor.tsx",
+      "occurrences": 5
+    },
+    {
+      "path": "apps/web/src/components/build/team-slot.tsx",
+      "occurrences": 4
+    },
+    {
+      "path": "apps/web/src/components/dev/sprite-lab-card.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/dev/sprite-lab.tsx",
+      "occurrences": 4
+    },
+    {
+      "path": "apps/web/src/components/locale-switcher.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/persistent-shell.test.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/persistent-shell.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/pokemon/art-slot.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/pokemon/card.tsx",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/components/pokemon/compare-add-input.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/pokemon/compare-view.test.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/pokemon/compare-view.tsx",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/components/pokemon/evolution-section.test.tsx",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/components/pokemon/evolution-section.tsx",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/components/pokemon/form-section.tsx",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/components/pokemon/moves-section.test.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/pokemon/moves-section.tsx",
+      "occurrences": 4
+    },
+    {
+      "path": "apps/web/src/components/pokemon/pokemon-explorer.test.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/pokemon/pokemon-explorer.tsx",
+      "occurrences": 4
+    },
+    {
+      "path": "apps/web/src/components/pokemon/stat-bars.tsx",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/components/pokemon/type-badge.tsx",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/components/theme-toggle.test.tsx",
+      "occurrences": 7
+    },
+    {
+      "path": "apps/web/src/components/theme-toggle.tsx",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/lib/ability-search.test.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/ability-search.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/brand-assets.ts",
+      "occurrences": 12
+    },
+    {
+      "path": "apps/web/src/lib/build-game-capabilities.ts",
+      "occurrences": 7
+    },
+    {
+      "path": "apps/web/src/lib/entity-slug.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/evolution-condition.test.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/lib/evolution-condition.ts",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/lib/form-grouping.test.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/form-grouping.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/move-ailment-label.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/move-mechanics.test.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/move-mechanics.ts",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/lib/move-search.test.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/move-search.ts",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/lib/moves-explorer.test.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/moves-explorer.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/observability.ts",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/lib/pokemon-database.ts",
+      "occurrences": 4
+    },
+    {
+      "path": "apps/web/src/lib/pokemon-search.test.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/pokemon-search.ts",
+      "occurrences": 4
+    },
+    {
+      "path": "apps/web/src/lib/pokemon-sprite.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/lib/sprite-coverage-audit.ts",
+      "occurrences": 5
+    },
+    {
+      "path": "apps/web/src/lib/team-analysis.ts",
+      "occurrences": 5
+    },
+    {
+      "path": "apps/web/src/lib/team-draft.ts",
+      "occurrences": 5
+    },
+    {
+      "path": "apps/web/src/lib/team-storage.test.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/team-storage.ts",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/lib/type-matchup.ts",
+      "occurrences": 3
+    },
+    {
+      "path": "apps/web/src/lib/ui-classes.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/src/lib/version-group-label.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "apps/web/src/middleware.test.ts",
+      "occurrences": 7
+    },
+    {
+      "path": "apps/web/src/middleware.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "occurrences": 1
+    },
+    {
+      "path": "apps/web/wrangler.jsonc",
+      "occurrences": 5
+    },
+    {
+      "path": "docs/README.md",
+      "occurrences": 3
+    },
+    {
+      "path": "docs/adr/0001-monorepo-typescript-first.md",
+      "occurrences": 1
+    },
+    {
+      "path": "docs/adr/0002-supabase-postgres-auth.md",
+      "occurrences": 1
+    },
+    {
+      "path": "docs/adr/0003-showdown-battle-foundation.md",
+      "occurrences": 3
+    },
+    {
+      "path": "docs/adr/0004-smogon-calc.md",
+      "occurrences": 3
+    },
+    {
+      "path": "docs/adr/0005-cloudflare-web-deployment.md",
+      "occurrences": 2
+    },
+    {
+      "path": "docs/adr/0006-github-community-ci.md",
+      "occurrences": 1
+    },
+    {
+      "path": "docs/adr/0008-source-available-commercial-control.md",
+      "occurrences": 2
+    },
+    {
+      "path": "docs/adr/0009-i18n-custom-over-next-intl.md",
+      "occurrences": 4
+    },
+    {
+      "path": "docs/adr/0010-normalized-pokemon-data-strategy.md",
+      "occurrences": 2
+    },
+    {
+      "path": "docs/adr/0011-abilities-evolutions-schema.md",
+      "occurrences": 1
+    },
+    {
+      "path": "docs/adr/0012-tailwind-css-4-styling-foundation.md",
+      "occurrences": 4
+    },
+    {
+      "path": "docs/architecture/AI_SPEC.md",
+      "occurrences": 5
+    },
+    {
+      "path": "docs/architecture/ARCHITECTURE.md",
+      "occurrences": 9
+    },
+    {
+      "path": "docs/architecture/BATTLE_ENGINE.md",
+      "occurrences": 9
+    },
+    {
+      "path": "docs/community/COMMUNITY.md",
+      "occurrences": 1
+    },
+    {
+      "path": "docs/community/CONTRIBUTING.md",
+      "occurrences": 3
+    },
+    {
+      "path": "docs/engineering/CI_CD.md",
+      "occurrences": 3
+    },
+    {
+      "path": "docs/engineering/DATABASE.md",
+      "occurrences": 17
+    },
+    {
+      "path": "docs/engineering/DATA_SOURCES.md",
+      "occurrences": 11
+    },
+    {
+      "path": "docs/engineering/DEPENDENCY_POLICY.md",
+      "occurrences": 10
+    },
+    {
+      "path": "docs/engineering/OBSERVABILITY.md",
+      "occurrences": 1
+    },
+    {
+      "path": "docs/engineering/SECURITY.md",
+      "occurrences": 1
+    },
+    {
+      "path": "docs/engineering/SOURCES.md",
+      "occurrences": 1
+    },
+    {
+      "path": "docs/engineering/TESTING.md",
+      "occurrences": 2
+    },
+    {
+      "path": "docs/legal/LICENSING_STRATEGY.md",
+      "occurrences": 7
+    },
+    {
+      "path": "docs/product/BRAND_BRIEF.md",
+      "occurrences": 5
+    },
+    {
+      "path": "docs/product/DESIGN_SYSTEM.md",
+      "occurrences": 16
+    },
+    {
+      "path": "docs/product/FEATURE_MATRIX.md",
+      "occurrences": 2
+    },
+    {
+      "path": "docs/product/MASTER_PROMPT.md",
+      "occurrences": 7
+    },
+    {
+      "path": "docs/product/MONETIZATION.md",
+      "occurrences": 3
+    },
+    {
+      "path": "docs/product/PRODUCT_SPEC.md",
+      "occurrences": 9
+    },
+    {
+      "path": "docs/product/ROADMAP.md",
+      "occurrences": 4
+    },
+    {
+      "path": "package.json",
+      "occurrences": 5
+    },
+    {
+      "path": "packages/battle-engine/package.json",
+      "occurrences": 3
+    },
+    {
+      "path": "packages/battle-engine/src/adapter.test.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/battle-engine/src/adapter.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/battle-engine/src/parse-event.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/battle-engine/src/types.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/battle-engine/tsconfig.json",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/config/eslint-base.mjs",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/config/package.json",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/damage/package.json",
+      "occurrences": 4
+    },
+    {
+      "path": "packages/damage/src/index.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/damage/src/stats.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/damage/tsconfig.json",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/README.md",
+      "occurrences": 5
+    },
+    {
+      "path": "packages/database/package.json",
+      "occurrences": 5
+    },
+    {
+      "path": "packages/database/src/client.ts",
+      "occurrences": 4
+    },
+    {
+      "path": "packages/database/src/index.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/src/queries.ts",
+      "occurrences": 20
+    },
+    {
+      "path": "packages/database/src/types.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/supabase/config.toml",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/supabase/migrations/20260908000001_reference_schema.sql",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/database/supabase/migrations/20260909150000_pokemon_species_forms.sql",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/database/supabase/migrations/20260909160000_pokemon_identity_upsert_constraints.sql",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/supabase/migrations/20260910120000_pokemon_abilities.sql",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/supabase/migrations/20260910130000_pokemon_evolutions.sql",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/supabase/migrations/20260912140000_move_version_reference.sql",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/supabase/migrations/20260912141000_pokemon_form_move.sql",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/supabase/migrations/20260914201000_items.sql",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/supabase/seed.sql",
+      "occurrences": 3
+    },
+    {
+      "path": "packages/database/tests/ability-effects-coverage.integration.test.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/database/tests/queries.integration.test.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/database/tests/rls.integration.test.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/database/tsconfig.json",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/i18n/package.json",
+      "occurrences": 3
+    },
+    {
+      "path": "packages/i18n/src/ability-effects-es.ts",
+      "occurrences": 3
+    },
+    {
+      "path": "packages/i18n/src/locales/en.json",
+      "occurrences": 12
+    },
+    {
+      "path": "packages/i18n/src/locales/es.json",
+      "occurrences": 12
+    },
+    {
+      "path": "packages/i18n/tsconfig.json",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/pokemon-data/README.md",
+      "occurrences": 6
+    },
+    {
+      "path": "packages/pokemon-data/package.json",
+      "occurrences": 3
+    },
+    {
+      "path": "packages/pokemon-data/scripts/audit.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/pokemon-data/scripts/diagnose-form-identity.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/pokemon-data/scripts/ingest.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/pokemon-data/src/audit.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/pokemon-data/src/cache.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/pokemon-data/src/ingest-lock.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/pokemon-data/src/normalize.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/pokemon-data/src/persist.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/pokemon-data/src/pipeline.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/pokemon-data/src/pokeapi-client.ts",
+      "occurrences": 4
+    },
+    {
+      "path": "packages/pokemon-data/src/type-chart.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/pokemon-data/src/types.ts",
+      "occurrences": 10
+    },
+    {
+      "path": "packages/pokemon-data/tests/ingest-lock.integration.test.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/pokemon-data/tests/persist.integration.test.ts",
+      "occurrences": 3
+    },
+    {
+      "path": "packages/pokemon-data/tsconfig.json",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/ui/package.json",
+      "occurrences": 3
+    },
+    {
+      "path": "packages/ui/src/pokemon-type-colors.ts",
+      "occurrences": 1
+    },
+    {
+      "path": "packages/ui/src/theme.ts",
+      "occurrences": 2
+    },
+    {
+      "path": "packages/ui/src/tokens.css",
+      "occurrences": 5
+    },
+    {
+      "path": "packages/ui/tsconfig.json",
+      "occurrences": 1
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "occurrences": 16
+    },
+    {
+      "path": "research/python/README.md",
+      "occurrences": 1
+    },
+    {
+      "path": "research/python/pokestudio_research/__init__.py",
+      "occurrences": 1
+    },
+    {
+      "path": "research/python/pyproject.toml",
+      "occurrences": 2
+    },
+    {
+      "path": "research/python/tests/test_damage_rolls.py",
+      "occurrences": 1
+    },
+    {
+      "path": "scripts/ci/github.mjs",
+      "occurrences": 1
+    },
+    {
+      "path": "scripts/ci/integration-env.mjs",
+      "occurrences": 1
+    },
+    {
+      "path": "scripts/ci/release.mjs",
+      "occurrences": 10
+    },
+    {
+      "path": "scripts/ci/release.test.mjs",
+      "occurrences": 7
+    },
+    {
+      "path": "scripts/ci/smoke.mjs",
+      "occurrences": 4
+    },
+    {
+      "path": "scripts/ci/targets.json",
+      "occurrences": 2
+    },
+    {
+      "path": "scripts/db-cloud-dev-check.sh",
+      "occurrences": 3
+    },
+    {
+      "path": "scripts/db-cloud-dev-guard.sh",
+      "occurrences": 4
+    },
+    {
+      "path": "scripts/db-cloud-dev-migrate.sh",
+      "occurrences": 2
+    },
+    {
+      "path": "scripts/db-pi-check.sh",
+      "occurrences": 2
+    },
+    {
+      "path": "scripts/db-pi-guard.sh",
+      "occurrences": 8
+    },
+    {
+      "path": "scripts/db-pi-migrate.sh",
+      "occurrences": 1
+    },
+    {
+      "path": "scripts/db-production.sh",
+      "occurrences": 3
+    },
+    {
+      "path": "scripts/dev-pi.sh",
+      "occurrences": 2
+    },
+    {
+      "path": "scripts/ingest-cloud-dev.sh",
+      "occurrences": 3
+    },
+    {
+      "path": "scripts/ingest-pi.sh",
+      "occurrences": 3
+    },
+    {
+      "path": "scripts/ingest-production.sh",
+      "occurrences": 2
+    },
+    {
+      "path": "scripts/smoke-cloud-dev.sh",
+      "occurrences": 3
+    }
+  ]
+}

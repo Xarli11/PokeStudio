@@ -1,4 +1,4 @@
-import type { FormLearnsetAllEntry, VersionGroupSummary } from '@pokestudio/database';
+import type { FormLearnsetAllEntry, VersionGroupSummary } from '@pokelab/database';
 
 /**
  * Pure client-side derivation for the Pokémon detail Moves explorer (Phase

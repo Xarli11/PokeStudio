@@ -1,4 +1,4 @@
-import { generationForNationalDexNumber } from '@pokestudio/pokemon-data';
+import { generationForNationalDexNumber } from '@pokelab/pokemon-data';
 
 import { GAME_ERA_SPRITE_SOURCES, POKESPRITE_MAX_DEX } from './pokemon-sprite';
 
@@ -8,12 +8,12 @@ import { GAME_ERA_SPRITE_SOURCES, POKESPRITE_MAX_DEX } from './pokemon-sprite';
  * a hand-inspected sample. Two different kinds of fact are deliberately kept
  * separate here:
  *
- * - What's computable purely from PokeStudio's own data (a species'
+ * - What's computable purely from PokeLab's own data (a species'
  *   generation, via the same `generationForNationalDexNumber` ranges Build's
  *   species-availability validation already uses) — computed live, below,
  *   so it never goes stale as the species table grows.
  * - What depends on an external source's own file listing (PokéSprite's
- *   exact per-slug icon coverage) — that can't be derived from PokeStudio's
+ *   exact per-slug icon coverage) — that can't be derived from PokeLab's
  *   own data at all, so it isn't faked here. It was audited directly
  *   (2026-09-16) against `github.com/msikma/pokesprite`'s `data/pokemon.json`
  *   (905 keyed entries — Generation IX has none at all) and its
@@ -35,7 +35,7 @@ export interface GameEraCoverageResult {
 }
 
 /**
- * For each `'game-era'` source PokeStudio has an audited sprite folder for,
+ * For each `'game-era'` source PokeLab has an audited sprite folder for,
  * how many of the given species could ever resolve there — a species
  * postdates a game's own generation is never "coverable", regardless of
  * whether the exact file exists (task §12: never invent a Gen I Garchomp).
@@ -82,7 +82,7 @@ export function auditBoxDexRangeCoverage(species: readonly SpeciesForAudit[]): {
  * The external, dated snapshot mentioned above — real numbers from a real
  * one-off audit script run against this project's own `species`/
  * `pokemon_form` tables and PokéSprite's public GitHub data, not
- * hand-inspected and not re-derivable from PokeStudio's own data alone
+ * hand-inspected and not re-derivable from PokeLab's own data alone
  * (requires PokéSprite's actual file listing). Re-run the same audit
  * methodology (fetch `data/pokemon.json` + the `pokemon-gen8/regular` git
  * tree, cross-reference by exact form slug) if this needs refreshing.

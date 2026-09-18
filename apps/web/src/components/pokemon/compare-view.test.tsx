@@ -6,7 +6,7 @@ import type {
   ComparablePokemonForm,
   SpeciesSearchAlias,
   SpeciesSearchItem,
-} from '@pokestudio/database';
+} from '@pokelab/database';
 
 import { CompareView, type CompareViewLabels } from './compare-view';
 

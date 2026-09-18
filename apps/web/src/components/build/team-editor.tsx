@@ -10,9 +10,9 @@ import type {
   SpeciesSearchAlias,
   SpeciesSearchItem,
   VersionGroupSummary,
-} from '@pokestudio/database';
-import { formatMessage, type Locale } from '@pokestudio/i18n';
-import type { DamageClass, PokemonType } from '@pokestudio/pokemon-data';
+} from '@pokelab/database';
+import { formatMessage, type Locale } from '@pokelab/i18n';
+import type { DamageClass, PokemonType } from '@pokelab/pokemon-data';
 
 import { resolveBuildGameCapabilities } from '@/lib/build-game-capabilities';
 import {
@@ -356,7 +356,7 @@ export function TeamEditor({
   const selectedLearnset: FormLearnsetAllVersionGroups | undefined = selectedMember
     ? referenceData.learnsets[selectedMember.formSlug]
     : undefined;
-  // Every generation PokeStudio has data for, grouped for the selector
+  // Every generation PokeLab has data for, grouped for the selector
   // (task §1 — reversing the earlier Scarlet/Violet-only restriction).
   const versionGroupsByGeneration = groupVersionGroupsByGeneration(versionGroups);
 
@@ -392,7 +392,7 @@ export function TeamEditor({
               }
               className="rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground"
             >
-              {/* Every historical game/version-group PokeStudio has data
+              {/* Every historical game/version-group PokeLab has data
                   for (task §1) — grouped by generation, never a raw slug
                   (task §1/§26/§27: "no raw slugs", "grouped options if
                   applicable/accessibly supported"). */}

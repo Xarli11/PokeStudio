@@ -8,7 +8,7 @@ import { createPublicDatabaseClient } from '../src/client';
  *
  * Requires a reachable Supabase instance — normally the Raspberry Pi (`pnpm db:pi:check` to
  * confirm; CLAUDE.md §21), or an isolated local Supabase stack (`pnpm --filter
- * @pokestudio/database db:start`, exceptional — see that package's README) for CI/offline work.
+ * @pokelab/database db:start`, exceptional — see that package's README) for CI/offline work.
  * Skipped automatically when SUPABASE_URL is not set — environments without either still get a
  * green run, but this test is the executable spec for the RLS guarantee and must be run before
  * shipping further Explore data.

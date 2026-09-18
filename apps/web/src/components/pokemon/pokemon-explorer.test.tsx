@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type * as NextNavigation from 'next/navigation';
 
-import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database';
+import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokelab/database';
 
 import { MAX_POKEMON_SUGGESTIONS } from '@/lib/pokemon-search';
 

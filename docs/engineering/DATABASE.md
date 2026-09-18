@@ -1,14 +1,14 @@
-# PokeStudio — Database Strategy
+# PokeLab — Database Strategy
 
 ## Decision
 
 Initial managed database/auth platform: **Supabase**, using PostgreSQL as the durable data model.
 
-PokeStudio must remain PostgreSQL-centric rather than spreading Supabase-specific assumptions throughout domain code.
+PokeLab must remain PostgreSQL-centric rather than spreading Supabase-specific assumptions throughout domain code.
 
 ## Raspberry Pi local development
 
-Normal PokeStudio development runs the web app on the Mac but talks to a self-hosted Supabase
+Normal PokeLab development runs the web app on the Mac but talks to a self-hosted Supabase
 instance on a Raspberry Pi over the LAN. That Pi is the canonical local-development database —
 **not** a Supabase stack started on the Mac (CLAUDE.md §21 "Local Development Database"). The
 deployed Cloudflare Worker DEV environment is a separate, unrelated target:
@@ -33,11 +33,11 @@ Cloudflare Worker
 
 - **App/runtime access** (`apps/web`, `NEXT_PUBLIC_SUPABASE_URL`) and the **ingestion pipeline**
   (`SUPABASE_URL`) go through the API gateway on `:8002`.
-- **Migrations and direct DB administration** (`POKESTUDIO_PI_DB_URL`) use PostgreSQL on `:5434`
+- **Migrations and direct DB administration** (`POKELAB_PI_DB_URL`) use PostgreSQL on `:5434`
   directly — this is what `pnpm db:pi:check`/`db:pi:migrate`/`db:pi:types` target.
 - Supavisor (`:5433`/`:6543`, connection pooling) is reachable on the Pi but is not used by any
-  current PokeStudio tooling; direct Postgres is simpler for a single-developer local-dev target.
-- `supabase start` on the Mac is **not** part of normal PokeStudio development — the Pi's stack is
+  current PokeLab tooling; direct Postgres is simpler for a single-developer local-dev target.
+- `supabase start` on the Mac is **not** part of normal PokeLab development — the Pi's stack is
   Docker-Compose-managed directly (`setup.sh`/`run.sh` on the Pi), not `supabase`-CLI-managed. A
   Mac-local Supabase CLI stack remains available only as an isolated test environment
   (`packages/database/README.md` "Isolated local Supabase (exceptional)") — never the default.
@@ -46,13 +46,13 @@ Cloudflare Worker
 
 Commands (root `package.json`, `scripts/db-pi-*.sh`/`dev-pi.sh`/`ingest-pi.sh`):
 
-| Command              | Target                           | Guards against                            |
-| -------------------- | -------------------------------- | ----------------------------------------- |
-| `pnpm dev:pi`        | `NEXT_PUBLIC_SUPABASE_URL`       | a leftover localhost URL                  |
-| `pnpm db:pi:check`   | `POKESTUDIO_PI_DB_URL` (`:5434`) | wrong host/port/database; read-only       |
-| `pnpm db:pi:migrate` | `POKESTUDIO_PI_DB_URL` (`:5434`) | wrong host/port/database, before applying |
-| `pnpm db:pi:types`   | `POKESTUDIO_PI_DB_URL` (`:5434`) | wrong host/port/database                  |
-| `pnpm ingest:pi`     | `SUPABASE_URL` (`:8002`)         | localhost or Supabase Cloud               |
+| Command              | Target                        | Guards against                            |
+| -------------------- | ----------------------------- | ----------------------------------------- |
+| `pnpm dev:pi`        | `NEXT_PUBLIC_SUPABASE_URL`    | a leftover localhost URL                  |
+| `pnpm db:pi:check`   | `POKELAB_PI_DB_URL` (`:5434`) | wrong host/port/database; read-only       |
+| `pnpm db:pi:migrate` | `POKELAB_PI_DB_URL` (`:5434`) | wrong host/port/database, before applying |
+| `pnpm db:pi:types`   | `POKELAB_PI_DB_URL` (`:5434`) | wrong host/port/database                  |
+| `pnpm ingest:pi`     | `SUPABASE_URL` (`:8002`)      | localhost or Supabase Cloud               |
 
 Each guard aborts with a clear error (never printing the connection string/key) if the target
 doesn't match `192.168.1.236` on the expected port — see `scripts/db-pi-guard.sh`.
@@ -101,7 +101,7 @@ Never reorder step 4 ahead of 1–3 for a change that requires new Cloud DEV sch
 (default/regional/battle/cosmetic — types and base stats live here, since they can differ by form)
 are separate tables, per ADR-0010. Reference data is public-read (`anon`/`authenticated`) via RLS
 policy; writes are service-role only, same pattern as `data_sources`. Fully populated: the complete
-PokéAPI species/form dataset (~1025 species, ~1580 forms) via `pnpm --filter @pokestudio/pokemon-data
+PokéAPI species/form dataset (~1025 species, ~1580 forms) via `pnpm --filter @pokelab/pokemon-data
 ingest`, not a hand-picked sample.
 
 **Abilities and evolutions** (Phase 1C.1, ADR-0011) are implemented too:
@@ -137,7 +137,7 @@ needs them (YAGNI).
 `supabase/seed.sql` (run by `db:reset`) is schema-adjacent bootstrap data only — small, genuinely
 static, deterministic lookup tables, if any ever exist. It is _not_ how Pokémon reference data gets
 into the database. `species`/`pokemon_form`/`data_sources` are populated exclusively by
-`packages/pokemon-data`'s ingestion pipeline (`pnpm --filter @pokestudio/pokemon-data ingest`),
+`packages/pokemon-data`'s ingestion pipeline (`pnpm --filter @pokelab/pokemon-data ingest`),
 which upserts its own `data_sources` provenance row too. Phase 1A briefly hand-mirrored a 3-species
 sample into `seed.sql`; that stopped being viable once the dataset became the real ~1025-species
 Pokédex (see `packages/pokemon-data/README.md`) and was deliberately not continued at scale.
@@ -261,7 +261,7 @@ Normalize only where normalization improves correctness and querying.
 
 ## Supabase Auth boundary
 
-Application identity should expose a PokeStudio user identifier and capabilities rather than leaking auth-provider-specific assumptions everywhere.
+Application identity should expose a PokeLab user identifier and capabilities rather than leaking auth-provider-specific assumptions everywhere.
 
 Initial providers may include:
 
@@ -297,7 +297,7 @@ Migrations, full Pokémon ingestion, and large audits are not free — check sta
 - **Ingestion**: a UI-only or documentation-only change never needs a rerun. A normalization/schema
   change needs targeted unit tests first (`packages/pokemon-data`'s fixture-based tests, no network
   call) — only run `pnpm ingest:pi` once those pass and a real schema/data change needs verifying
-  end-to-end. `pnpm --filter @pokestudio/pokemon-data audit` (report-only, no writes) is often
+  end-to-end. `pnpm --filter @pokelab/pokemon-data audit` (report-only, no writes) is often
   enough to confirm a normalization change behaves correctly without writing anything.
 - **Row counts/evidence**: a prior session's ingestion report (species/form/move counts, "N
   validation issues") is valid evidence of current state unless the schema or source data changed

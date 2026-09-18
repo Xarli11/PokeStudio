@@ -19,7 +19,7 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 
 echo "Read-only identity check before migrating..."
-psql "$POKESTUDIO_PI_DB_URL" -X -q -c "select current_database(), current_user, version();" >/dev/null
+psql "$POKELAB_PI_DB_URL" -X -q -c "select current_database(), current_user, version();" >/dev/null
 echo "OK — confirmed target is the Raspberry Pi ($PI_DB_HOST:$PI_DB_PORT/$PI_DB_NAME)."
 
 # supabase/config.toml lives in packages/database — running from anywhere

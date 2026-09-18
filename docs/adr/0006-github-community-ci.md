@@ -5,7 +5,7 @@
 
 ## Context
 
-PokeStudio intends to be source-visible/community-driven and needs pull requests, CI, issues, discussions and contributor workflows.
+PokeLab intends to be source-visible/community-driven and needs pull requests, CI, issues, discussions and contributor workflows.
 
 ## Decision
 

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-import { themeInitScript } from '@pokestudio/ui';
+import { themeInitScript } from '@pokelab/ui';
 
 import { captureException } from '@/lib/observability';
 import { buttonClass } from '@/lib/ui-classes';
@@ -13,7 +13,7 @@ import './globals.css';
  * The root error boundary (a whole-app crash) replaces `<html>` entirely, so
  * it can't reuse `[locale]/layout.tsx` or read the locale dictionary the
  * normal way — kept intentionally minimal and English-only (Part K), but
- * still on PokeStudio's actual tokens/theme instead of unstyled system UI.
+ * still on PokeLab's actual tokens/theme instead of unstyled system UI.
  */
 export default function GlobalError({
   error,

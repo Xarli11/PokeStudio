@@ -4,12 +4,12 @@
  * upstream (PokéAPI, cached) → fetch → normalize → validate → persist (Postgres)
  *
  * Fetches every supported species and every form under it (varieties +
- * cosmetic sub-forms), normalizes into the PokeStudio species/form model
+ * cosmetic sub-forms), normalizes into the PokeLab species/form model
  * (ADR-0010), validates dataset invariants, and upserts into Postgres by
  * upstream identity (idempotent — safe to re-run). Prints a classification
  * audit and performance report on completion.
  *
- * Run with: pnpm --filter @pokestudio/pokemon-data ingest
+ * Run with: pnpm --filter @pokelab/pokemon-data ingest
  * Options:  --limit=N        only the first N species (fast dev iteration)
  *           --concurrency=N  requests in flight per fetch phase (default 12)
  *           --no-cache       bypass the on-disk raw-response cache

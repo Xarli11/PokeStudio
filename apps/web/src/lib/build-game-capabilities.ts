@@ -1,7 +1,7 @@
 /**
  * Build's central game/ruleset capability model (Milestone 2, final product
  * shape pass — reverses the earlier Scarlet/Violet-only restriction). Build
- * now exposes every historical game/version-group PokeStudio has data for;
+ * now exposes every historical game/version-group PokeLab has data for;
  * what changes per game is which mechanics apply, resolved here once and
  * consumed by the game selector, the Set Editor's conditional fields, and
  * team validity — never a scattered `if (versionGroupSlug === 'x')` check.
@@ -23,7 +23,7 @@ export interface BuildGameCapabilities {
   abilities: boolean;
   natures: boolean;
   heldItems: boolean;
-  /** The Gen III+ EV/IV/nature stat formula `@pokestudio/damage`'s `calculateStats` implements — false wherever that formula is known to be wrong for this game (Gen I/II's different DV/stat-experience systems, and every special-ruleset game's own non-standard investment system). */
+  /** The Gen III+ EV/IV/nature stat formula `@pokelab/damage`'s `calculateStats` implements — false wherever that formula is known to be wrong for this game (Gen I/II's different DV/stat-experience systems, and every special-ruleset game's own non-standard investment system). */
   modernEvsIvs: boolean;
   tera: boolean;
   dynamax: boolean;
@@ -32,7 +32,7 @@ export interface BuildGameCapabilities {
   specialRuleset: BuildSpecialRuleset | null;
   statModel: BuildStatModel;
   /**
-   * Whether PokeStudio's current engine can back a VALID status for this
+   * Whether PokeLab's current engine can back a VALID status for this
    * game context at all. `false` doesn't mean "invalid" — it means the
    * engine has known gaps here (no legacy stat model, no special-ruleset
    * legality), so team status must never claim full validity regardless of
@@ -41,14 +41,14 @@ export interface BuildGameCapabilities {
   fullyValidated: boolean;
   /**
    * Whether Team Analysis' canonical modern 18-type chart
-   * (`@pokestudio/pokemon-data`'s `getTypeEffectiveness`) is historically
+   * (`@pokelab/pokemon-data`'s `getTypeEffectiveness`) is historically
    * accurate for this game (manual review, final correction pass §4) — a
    * *separate* axis from `fullyValidated`: unsupported strategic analysis
    * never makes a Pokémon itself invalid, it only means Team Analysis
    * itself renders a restrained honest message instead of the modern
    * Defensive/Offensive breakdown. Fairy type (and the type chart settling
    * into its current, stable form) shipped in Generation VI — every earlier
-   * generation's real type chart differs from the modern one PokeStudio
+   * generation's real type chart differs from the modern one PokeLab
    * only has one (modern) implementation of, so those contexts render
    * honestly unsupported rather than a chart that quietly gets some
    * matchups wrong (task: "do not claim more historical accuracy than we
@@ -108,7 +108,7 @@ export function resolveBuildGameCapabilities(versionGroup: {
 
   // Special-ruleset games (Let's Go, Legends: Arceus, the announced Legends:
   // Z-A) each replace large parts of the standard mechanics/investment
-  // system with their own — PokeStudio doesn't model any of them yet, so
+  // system with their own — PokeLab doesn't model any of them yet, so
   // every mechanic flag stays honestly false rather than guessed at (task
   // §2/§3: "identifiable as special-rule contexts", never "pretend
   // unsupported validation is complete").
@@ -163,7 +163,7 @@ export function resolveBuildGameCapabilities(versionGroup: {
     };
   }
 
-  // Generation III+ "standard" games: PokeStudio's ability/nature/held-item
+  // Generation III+ "standard" games: PokeLab's ability/nature/held-item
   // data and modern EV/IV/nature stat formula are all genuinely accurate
   // here — this is the one bucket Build could already validate (previously
   // restricted to Scarlet/Violet alone; now extended honestly to every

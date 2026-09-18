@@ -8,8 +8,8 @@ import type {
   ComparablePokemonForm,
   FormLearnsetAllVersionGroups,
   VersionGroupSummary,
-} from '@pokestudio/database';
-import { formatMessage, type Locale } from '@pokestudio/i18n';
+} from '@pokelab/database';
+import { formatMessage, type Locale } from '@pokelab/i18n';
 
 import { resolveBuildGameCapabilities } from '@/lib/build-game-capabilities';
 import { buttonClass, cardClass } from '@/lib/ui-classes';
@@ -74,7 +74,7 @@ export function BuildHome({
   const router = useRouter();
   const [teams, setTeams] = useState<TeamDraft[] | null>(null);
   // Manual review: a browser-native `window.confirm` isn't styled/localized
-  // consistently and reads as a chrome interruption, not a PokeStudio
+  // consistently and reads as a chrome interruption, not a PokeLab
   // surface — replaced with `ConfirmDialog`. Holding the target team here
   // (not just a boolean) keeps its name available for the dialog's
   // description without re-reading storage.

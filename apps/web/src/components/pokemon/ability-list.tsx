@@ -50,7 +50,7 @@ export function PokemonAbilityList({
             {ability.href ? (
               <Link
                 href={ability.href}
-                className="text-base font-semibold text-foreground no-underline transition-colors duration-200 ease-ps hover:text-brand hover:underline focus-visible:text-brand"
+                className="text-base font-semibold text-foreground no-underline transition-colors duration-200 ease-pl hover:text-brand hover:underline focus-visible:text-brand"
               >
                 {ability.name}
               </Link>

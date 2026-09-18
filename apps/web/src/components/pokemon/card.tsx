@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
-import type { PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 import { interactiveCardClass } from '@/lib/ui-classes';
 

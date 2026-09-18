@@ -1,4 +1,4 @@
-# PokeStudio — Monetization Principles
+# PokeLab — Monetization Principles
 
 ## Goal
 
@@ -18,7 +18,7 @@ Keep broad access to:
 
 Exact limits may evolve.
 
-## PokeStudio+ candidates
+## PokeLab+ candidates
 
 Prefer premium features with real cost or significant added value:
 
@@ -53,4 +53,4 @@ Never interrupt an active battle with interstitial/video advertising.
 
 ## Community principle
 
-Monetization should feel like supporting/enhancing PokeStudio, not paying to unlock basic Pokémon knowledge.
+Monetization should feel like supporting/enhancing PokeLab, not paying to unlock basic Pokémon knowledge.

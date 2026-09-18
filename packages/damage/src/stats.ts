@@ -1,11 +1,11 @@
-import type { BaseStatKey, BaseStats } from '@pokestudio/pokemon-data';
+import type { BaseStatKey, BaseStats } from '@pokelab/pokemon-data';
 
 /**
  * Exact derived-stat calculation (Milestone 2, Stage 2.0) — the real
  * Generation III+ formulas, implemented directly rather than routed through
  * `@smogon/calc` (this file's sibling `index.ts`): that wrapper resolves a
  * Pokémon's base stats from its own bundled species dex by name, which
- * isn't a reliable match for PokeStudio's own ingested `base_stats` per
+ * isn't a reliable match for PokeLab's own ingested `base_stats` per
  * form/slug — the formula itself is fixed, public and unambiguous, so
  * reimplementing it directly here avoids that integration risk. Team
  * Builder v1's set editor is the first caller; a future Damage Calculator/

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
-import type { EvolutionFamily } from '@pokestudio/database';
-import { formatMessage, type Dictionary, type Locale } from '@pokestudio/i18n';
+import type { EvolutionFamily } from '@pokelab/database';
+import { formatMessage, type Dictionary, type Locale } from '@pokelab/i18n';
 
 import { groupEvolutionsByParent } from '@/lib/evolution-condition';
 import { tagClass } from '@/lib/ui-classes';
@@ -17,7 +17,7 @@ function MemberChip({ slug, name, locale }: { slug: string; name: string; locale
   return (
     <Link
       href={`/${locale}/pokemon/${slug}`}
-      className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface py-1 pr-3 pl-1 text-base font-semibold text-foreground no-underline transition-[border-color,transform] duration-150 ease-ps hover:-translate-y-px hover:border-brand/45 focus-visible:-translate-y-px focus-visible:border-brand/45 motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
+      className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface py-1 pr-3 pl-1 text-base font-semibold text-foreground no-underline transition-[border-color,transform] duration-150 ease-pl hover:-translate-y-px hover:border-brand/45 focus-visible:-translate-y-px focus-visible:border-brand/45 motion-reduce:hover:translate-y-0 motion-reduce:focus-visible:translate-y-0"
     >
       <span
         aria-hidden="true"

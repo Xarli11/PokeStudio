@@ -1,12 +1,12 @@
-# PokeStudio — AI Specification
+# PokeLab — AI Specification
 
 ## Principle
 
-PokeStudio AI is **contextual intelligence over verified Pokémon systems**, not a generic chatbot with Pokémon branding.
+PokeLab AI is **contextual intelligence over verified Pokémon systems**, not a generic chatbot with Pokémon branding.
 
 ## Source-of-truth hierarchy
 
-- PokeStudio data layer → structured facts
+- PokeLab data layer → structured facts
 - legality/format engine → valid/invalid
 - damage engine → damage numbers/ranges
 - battle engine → battle mechanics/state
@@ -35,7 +35,7 @@ Example:
 Pipeline:
 
 1. parse intent into structured constraints,
-2. validate/filter against PokeStudio data,
+2. validate/filter against PokeLab data,
 3. optionally rank using deterministic/meta signals,
 4. explain results.
 
@@ -169,6 +169,6 @@ Potential future advanced feature:
 
 - users may supply their own provider key,
 - keys must be stored/handled securely or not persisted depending on implementation,
-- BYOK does not automatically grant all PokeStudio+ product benefits.
+- BYOK does not automatically grant all PokeLab+ product benefits.
 
 Do not implement before there is demand.

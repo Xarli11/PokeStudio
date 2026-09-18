@@ -3,6 +3,20 @@ import { appendFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { targetFor } from './target.mjs';
 
+// Numeric GitHub identities survive a repository rename and reject a reused old name.
+export const TRUSTED_REPOSITORY_ID = '1361937633';
+export const TRUSTED_OWNER_ID = '50557033';
+
+export function assertRepositoryIdentity(env = process.env) {
+  if (
+    env.GITHUB_REPOSITORY_ID !== TRUSTED_REPOSITORY_ID ||
+    env.GITHUB_REPOSITORY_OWNER_ID !== TRUSTED_OWNER_ID ||
+    !['Xarli11/PokeStudio', 'Xarli11/PokeLab'].includes(env.GITHUB_REPOSITORY)
+  ) {
+    throw new Error('Release requires the original repository and owner identities.');
+  }
+}
+
 export async function github(path) {
   if (!process.env.GITHUB_TOKEN) throw new Error('Missing GitHub read token.');
   const response = await fetch(
@@ -82,7 +96,7 @@ export async function successfulRun(target, sha) {
         String(run.id) !== process.env.GITHUB_RUN_ID &&
         ['push', 'workflow_dispatch'].includes(run.event) &&
         run.conclusion === 'success' &&
-        run.head_repository?.full_name === process.env.GITHUB_REPOSITORY &&
+        String(run.head_repository?.id) === TRUSTED_REPOSITORY_ID &&
         (!sha || run.head_sha === sha),
     );
     if (match) return match.head_sha;
@@ -92,8 +106,8 @@ export async function successfulRun(target, sha) {
 }
 
 export async function assertMain() {
+  assertRepositoryIdentity();
   if (
-    process.env.GITHUB_REPOSITORY !== 'Xarli11/PokeStudio' ||
     process.env.GITHUB_REF !== 'refs/heads/main' ||
     !/^[0-9a-f]{40}$/.test(process.env.GITHUB_SHA ?? '')
   )

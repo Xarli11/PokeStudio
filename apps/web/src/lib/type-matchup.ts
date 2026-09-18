@@ -1,12 +1,12 @@
-import { ALL_POKEMON_TYPES, getTypeEffectiveness } from '@pokestudio/pokemon-data';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import { ALL_POKEMON_TYPES, getTypeEffectiveness } from '@pokelab/pokemon-data';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 /**
  * A form's defensive type profile against every attacking type (Milestone
  * 2, Stage 2A — Compare). Pure and testable, mirroring
  * `pokemon-search.ts`'s "derive everything from the shared domain module"
  * shape — the actual multiplier table lives once, in
- * `@pokestudio/pokemon-data`'s type chart, not duplicated here.
+ * `@pokelab/pokemon-data`'s type chart, not duplicated here.
  *
  * Neutral (1x) attacking types are omitted entirely — Compare only needs to
  * call out what's actually notable about a form's defensive profile.

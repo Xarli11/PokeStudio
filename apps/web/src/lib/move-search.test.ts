@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { MoveSummary } from '@pokestudio/database';
+import type { MoveSummary } from '@pokelab/database';
 
 import { moveDisplayName, searchMoves } from './move-search';
 

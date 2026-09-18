@@ -1,5 +1,5 @@
 /**
- * PokeStudio observability boundary (docs/engineering/OBSERVABILITY.md).
+ * PokeLab observability boundary (docs/engineering/OBSERVABILITY.md).
  *
  * No Sentry DSN is configured yet, so this reports to the console for now.
  * Swap the body of `captureException`/`captureMessage` for `@sentry/nextjs`
@@ -7,9 +7,9 @@
  * Never pass secrets, tokens or private user/team content through here.
  */
 export function captureException(error: unknown, context?: Record<string, unknown>): void {
-  console.error('[pokestudio:error]', error, context ?? {});
+  console.error('[pokelab:error]', error, context ?? {});
 }
 
 export function captureMessage(message: string, context?: Record<string, unknown>): void {
-  console.warn('[pokestudio:message]', message, context ?? {});
+  console.warn('[pokelab:message]', message, context ?? {});
 }

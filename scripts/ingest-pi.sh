@@ -4,7 +4,7 @@
 # packages/pokemon-data/scripts/ingest.ts as-is (SUPABASE_URL/SUPABASE_SECRET_KEY
 # driven) — this only guards which target it's allowed to point at.
 #
-# Also exports INGEST_LOCK_DB_URL (from POKESTUDIO_PI_DB_URL) so ingest.ts
+# Also exports INGEST_LOCK_DB_URL (from POKELAB_PI_DB_URL) so ingest.ts
 # can hold a Postgres advisory lock for the run's duration — see
 # src/ingest-lock.ts and scripts/ingest-cloud-dev.sh's matching comment.
 set -euo pipefail
@@ -16,7 +16,7 @@ source scripts/load-env.sh
 source scripts/db-pi-guard.sh
 
 require_pi_db_url
-export INGEST_LOCK_DB_URL="$POKESTUDIO_PI_DB_URL"
+export INGEST_LOCK_DB_URL="$POKELAB_PI_DB_URL"
 
 PI_API_URL="http://192.168.1.236:8002"
 
@@ -41,4 +41,4 @@ if [ -z "${SUPABASE_SECRET_KEY:-}" ]; then
 fi
 
 echo "Ingesting into the Raspberry Pi ($SUPABASE_URL)..."
-pnpm --filter @pokestudio/pokemon-data ingest "$@"
+pnpm --filter @pokelab/pokemon-data ingest "$@"

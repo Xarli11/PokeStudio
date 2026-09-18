@@ -1,8 +1,8 @@
 {
-  "name": "@pokestudio/damage",
+  "name": "@pokelab/damage",
   "private": true,
   "version": "0.0.0",
-  "description": "PokeStudio damage-domain boundary around @smogon/calc (ADR-0004). UI and application code must not import @smogon/calc directly.",
+  "description": "PokeLab damage-domain boundary around @smogon/calc (ADR-0004). UI and application code must not import @smogon/calc directly.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "main": "./src/index.ts",
@@ -14,11 +14,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@pokestudio/pokemon-data": "workspace:*",
+    "@pokelab/pokemon-data": "workspace:*",
     "@smogon/calc": "0.11.0"
   },
   "devDependencies": {
-    "@pokestudio/config": "workspace:*",
+    "@pokelab/config": "workspace:*",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }

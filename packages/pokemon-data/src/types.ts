@@ -1,5 +1,5 @@
 /**
- * PokeStudio normalized Pokémon reference schema (ADR-0010).
+ * PokeLab normalized Pokémon reference schema (ADR-0010).
  *
  * Deliberately small: species + form only, generation-scoped stat history and
  * game/format availability are deferred until a real feature needs them
@@ -48,9 +48,9 @@ export interface LocalizedName {
 }
 
 /**
- * Where one PokeStudio record came from. PokeStudio's own `slug`/id is the
+ * Where one PokeLab record came from. PokeLab's own `slug`/id is the
  * primary key everywhere — this is provenance, never used to look records up
- * (ADR-0010 "canonical PokeStudio id/slug distinct from any external source id").
+ * (ADR-0010 "canonical PokeLab id/slug distinct from any external source id").
  */
 export interface SourceRef {
   /** FK to `data_sources.source_id`, e.g. `"pokeapi"`. */
@@ -61,7 +61,7 @@ export interface SourceRef {
 
 /** The biological/canonical Pokémon species — dex number, evolution family, base identity. */
 export interface NormalizedSpecies {
-  /** Stable PokeStudio identity, independent of any upstream source id. */
+  /** Stable PokeLab identity, independent of any upstream source id. */
   slug: string;
   nationalDexNumber: number;
   name: LocalizedName;
@@ -75,7 +75,7 @@ export interface NormalizedSpecies {
  * from Kantonian Meowth, despite sharing a species.
  */
 export interface NormalizedForm {
-  /** Stable PokeStudio identity, e.g. `"meowth-alola"`. */
+  /** Stable PokeLab identity, e.g. `"meowth-alola"`. */
   slug: string;
   /** FK by slug to the owning species. */
   speciesSlug: string;
@@ -103,7 +103,7 @@ export interface DataProvenance {
  * ability — never invented when absent (CLAUDE.md §14 "no fake completeness").
  */
 export interface NormalizedAbility {
-  /** Stable PokeStudio identity — PokéAPI's ability name is already kebab-case. */
+  /** Stable PokeLab identity — PokéAPI's ability name is already kebab-case. */
   slug: string;
   nameEn: string;
   nameEs?: string | undefined;
@@ -113,7 +113,7 @@ export interface NormalizedAbility {
   source: SourceRef;
 }
 
-/** Which ability belongs to which form, in which slot — the join PokeStudio owns (ADR-0010 decision #4). */
+/** Which ability belongs to which form, in which slot — the join PokeLab owns (ADR-0010 decision #4). */
 export interface NormalizedFormAbility {
   formSlug: string;
   abilitySlug: string;
@@ -258,7 +258,7 @@ export interface NormalizedLearnMethod {
  * so level cannot be dropped or deduplicated away without losing that fact.
  * `level` is PokéAPI's raw `level_learned_at`: 0 for every non-level-up
  * method (not applicable) *and* for a level-up entry meaning "known
- * immediately upon evolving" — never a PokeStudio-invented sentinel.
+ * immediately upon evolving" — never a PokeLab-invented sentinel.
  */
 export interface NormalizedLearnsetEntry {
   formSlug: string;
@@ -283,7 +283,7 @@ export interface NormalizedMachine {
   source: SourceRef;
 }
 
-/** PokéStudio's 6-base-stat vocabulary, in PokéAPI's own stat-name form — the domain `NormalizedNature.increasedStat`/`decreasedStat` share (accuracy/evasion excluded: natures never touch those, unlike `MoveStat`). */
+/** PokeLab's 6-base-stat vocabulary, in PokéAPI's own stat-name form — the domain `NormalizedNature.increasedStat`/`decreasedStat` share (accuracy/evasion excluded: natures never touch those, unlike `MoveStat`). */
 export type BaseStatKey = 'attack' | 'defense' | 'special-attack' | 'special-defense' | 'speed';
 
 /**

@@ -1,10 +1,10 @@
-import type { ComparablePokemonForm, FormLearnsetAllVersionGroups } from '@pokestudio/database';
+import type { ComparablePokemonForm, FormLearnsetAllVersionGroups } from '@pokelab/database';
 import {
   ALL_POKEMON_TYPES,
   generationForNationalDexNumber,
   getTypeEffectiveness,
-} from '@pokestudio/pokemon-data';
-import type { DamageClass, PokemonType } from '@pokestudio/pokemon-data';
+} from '@pokelab/pokemon-data';
+import type { DamageClass, PokemonType } from '@pokelab/pokemon-data';
 
 import type { BuildGameCapabilities } from './build-game-capabilities';
 import {
@@ -119,7 +119,7 @@ const SEVERITY_BY_CODE: Record<TeamWarningCode, TeamWarningSeverity> = {
   evTotalExceeded: 'invalid',
   evStatExceeded: 'invalid',
   invalidIv: 'invalid',
-  // 'incomplete', not 'invalid': PokeStudio genuinely doesn't know whether
+  // 'incomplete', not 'invalid': PokeLab genuinely doesn't know whether
   // this configuration is legal for this historical/special-ruleset game —
   // that's an engine gap, not a proven mistake in the user's team (task
   // §18: distinguish "no known errors" from "proven fully valid"). Still
@@ -145,7 +145,7 @@ export interface MemberValidationContext {
   types: PokemonType[];
   validAbilitySlugs: string[];
   legalMoveSlugs: string[];
-  /** The underlying species' National Dex number — species-level only (never per-form), since that's the one generation-of-introduction fact PokeStudio's data can actually prove (final correction pass §3). */
+  /** The underlying species' National Dex number — species-level only (never per-form), since that's the one generation-of-introduction fact PokeLab's data can actually prove (final correction pass §3). */
   nationalDexNumber: number;
 }
 

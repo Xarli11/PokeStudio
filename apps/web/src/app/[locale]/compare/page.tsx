@@ -1,8 +1,9 @@
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getFormsBySlugs, getSpeciesSearchIndex } from '@pokestudio/database';
-import { getDictionary, isLocale, locales } from '@pokestudio/i18n';
+import { getFormsBySlugs, getSpeciesSearchIndex } from '@pokelab/database';
+import { getDictionary, isLocale, locales } from '@pokelab/i18n';
 
 import { CompareView } from '@/components/pokemon/compare-view';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
@@ -35,7 +36,7 @@ export async function generateMetadata({
   const dictionary = getDictionary(locale);
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
     title: dictionary.compare.title,
     description: dictionary.compare.indexDescription,
     alternates: {
@@ -47,6 +48,7 @@ export async function generateMetadata({
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/compare`])),
     },
     openGraph: {
+      siteName: SITE_NAME,
       title: dictionary.compare.title,
       description: dictionary.compare.tagline,
       locale,

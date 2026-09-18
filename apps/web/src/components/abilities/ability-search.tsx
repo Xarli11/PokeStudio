@@ -3,8 +3,8 @@
 import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
-import type { AbilityListItem } from '@pokestudio/database';
-import { abilityEffectsEs, formatMessage, type Locale } from '@pokestudio/i18n';
+import type { AbilityListItem } from '@pokelab/database';
+import { abilityEffectsEs, formatMessage, type Locale } from '@pokelab/i18n';
 
 import { ClearIcon, SearchIcon } from '@/components/search-field-icons';
 import { filterAbilities } from '@/lib/ability-search';
@@ -25,7 +25,7 @@ export interface AbilityIndexExplorerProps {
  * A short, locale-appropriate effect preview for the index card — same
  * fallback chain the Pokémon detail page's ability list already uses
  * (upstream Spanish, kept first in case PokéAPI ever publishes one →
- * PokeStudio-owned Spanish → English, honestly, never machine-translated).
+ * PokeLab-owned Spanish → English, honestly, never machine-translated).
  * Without this fallback every Spanish-locale card would show no preview at
  * all: PokéAPI has 0/313 abilities with an upstream Spanish effect.
  */
@@ -102,7 +102,7 @@ export function AbilityIndexExplorer({
                   href={`/${locale}/abilities/${ability.slug}`}
                   className={interactiveCardClass('group flex flex-col gap-1.5 px-4 py-3')}
                 >
-                  <span className="font-semibold transition-colors duration-200 ease-ps group-hover:text-brand group-focus-visible:text-brand">
+                  <span className="font-semibold transition-colors duration-200 ease-pl group-hover:text-brand group-focus-visible:text-brand">
                     {name}
                   </span>
                   {preview ? (

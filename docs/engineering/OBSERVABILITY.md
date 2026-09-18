@@ -1,4 +1,4 @@
-# PokeStudio — Observability
+# PokeLab — Observability
 
 ## Initial tool
 

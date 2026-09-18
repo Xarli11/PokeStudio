@@ -4,7 +4,7 @@ import type { RawCache } from './cache';
  * Thin fetch layer for the PokéAPI endpoints ingestion needs.
  *
  * This module only fetches and types the raw upstream shape — it does not
- * normalize anything into PokeStudio domain structures (see `normalize.ts`).
+ * normalize anything into PokeLab domain structures (see `normalize.ts`).
  * Keeping fetch and normalize separate lets normalization be unit-tested
  * against fixture JSON without a network call (docs/product/ROADMAP.md/CLAUDE.md §10:
  * PokéAPI is an ingestion-time source, never a runtime dependency).
@@ -166,7 +166,7 @@ export interface PokeApiMove {
 export interface PokeApiVersionGroup {
   id: number;
   name: string;
-  /** PokéAPI's own chronological ordering — lets PokeStudio pick "the latest version group" without hardcoding a slug. */
+  /** PokéAPI's own chronological ordering — lets PokeLab pick "the latest version group" without hardcoding a slug. */
   order: number;
   generation: PokeApiNamedResource;
 }
@@ -262,7 +262,7 @@ export function createPokeApiClient(options: { cache?: RawCache | undefined } = 
 
     requestCount++;
     const response = await fetch(url, {
-      headers: { 'User-Agent': 'PokeStudio-ingestion/0.2 (+https://pokestudio.app)' },
+      headers: { 'User-Agent': 'PokeLab-ingestion/0.2 (+https://pokelab.com)' },
     });
     if (!response.ok) {
       throw new Error(`Fetch failed for ${url}: ${response.status} ${response.statusText}`);

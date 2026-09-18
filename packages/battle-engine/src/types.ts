@@ -1,5 +1,5 @@
 /**
- * PokeStudio battle-domain boundary (docs/architecture/BATTLE_ENGINE.md, ADR-0003).
+ * PokeLab battle-domain boundary (docs/architecture/BATTLE_ENGINE.md, ADR-0003).
  *
  * This Phase 0 spike proves the boundary works end-to-end (headless,
  * deterministic, structured trace) around Pokémon Showdown's simulator.

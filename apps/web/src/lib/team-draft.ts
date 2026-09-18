@@ -1,5 +1,5 @@
-import type { StatSpread } from '@pokestudio/damage';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import type { StatSpread } from '@pokelab/damage';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 /**
  * The Build pillar's own domain model (Milestone 2, Stage 2B) — a draft
@@ -74,7 +74,7 @@ export interface TeamDraft {
 }
 
 function randomId(): string {
-  // `crypto.randomUUID` is available in every browser PokeStudio targets
+  // `crypto.randomUUID` is available in every browser PokeLab targets
   // and in Node's test environment (jsdom polyfills `crypto` via Node's own
   // `webcrypto`) — no uuid dependency needed (Ponytail: platform capability
   // beats a library).
@@ -154,7 +154,7 @@ export function updateTeamMember(
 }
 
 /**
- * Non-destructive form swap (manual review v2 — "PokeStudio never destroys
+ * Non-destructive form swap (manual review v2 — "PokeLab never destroys
  * user work merely because a draft becomes invalid"): a form change used to
  * reset ability and moves to null outright. Now it only changes `formSlug`
  * — ability/moves are *kept* and simply revalidated against the new form
@@ -183,7 +183,7 @@ export function setTeamVersionGroup(draft: TeamDraft, versionGroupSlug: string):
   // invalid-move UI) — never silently deleted. Switching back to a
   // compatible version makes it valid again automatically, with no
   // re-selection needed, since the move slug itself was never touched.
-  // Ability/item aren't version-group-scoped in PokeStudio's model, so they
+  // Ability/item aren't version-group-scoped in PokeLab's model, so they
   // were already kept.
   return touch({ ...draft, versionGroupSlug });
 }
