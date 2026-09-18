@@ -91,7 +91,7 @@ function pendingMigrations() {
   );
 }
 
-async function cloudflare(path, endpoint) {
+async function cloudflare(path, endpoint, { latestDeploymentOnly = false } = {}) {
   let response;
   try {
     response = await fetch(
@@ -118,7 +118,9 @@ async function cloudflare(path, endpoint) {
       `Cloudflare target audit failed (GET ${endpoint}; HTTP ${response.status}; Cloudflare codes: ${codes.join(', ') || 'unavailable'}).`,
     );
   }
-  if (payload.result_info?.total_pages > 1)
+  // Deployment history is newest-first; callers only record the latest entry.
+  // Identity and trigger audits still require complete responses.
+  if (payload.result_info?.total_pages > 1 && !latestDeploymentOnly)
     throw new Error(`Cloudflare audit response is incomplete (GET ${endpoint}).`);
   return payload.result;
 }
@@ -307,6 +309,7 @@ async function main() {
     const before = await cloudflare(
       `workers/scripts/${target.worker}/deployments`,
       '/accounts/{account_id}/workers/scripts/{worker_name}/deployments',
+      { latestDeploymentOnly: true },
     );
     summary(`Previous Worker deployment: ${before.deployments?.[0]?.id ?? 'none'}`);
     run(
@@ -322,6 +325,7 @@ async function main() {
     const after = await cloudflare(
       `workers/scripts/${target.worker}/deployments`,
       '/accounts/{account_id}/workers/scripts/{worker_name}/deployments',
+      { latestDeploymentOnly: true },
     );
     summary(`Worker deployment: ${after.deployments?.[0]?.id ?? 'unavailable'}`);
     summary(`Worker versions: ${JSON.stringify(after.deployments?.[0]?.versions ?? [])}`);
