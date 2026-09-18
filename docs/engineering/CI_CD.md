@@ -6,15 +6,15 @@ Status: implemented for review; remote activation and production release are not
 
 Audited on 2026-09-15/16 (Madrid) against `Xarli11/PokeLab`:
 
-| Area                     | Evidence                                                                                                   |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| Checkout and GitHub main | `1a09413776611d602a72b5e3d5895cd1db1ccf38`, clean checkout                                                 |
-| Workflows                | Only `.github/workflows/ci.yml`, active; Node and Python lanes                                             |
-| GitHub Environments      | API returned no environments                                                                               |
-| Main protection          | Classic protection returned 404; effective branch rules API returned `[]`                                  |
-| Worker                   | `pokestudio`, from tracked Wrangler config; previous release report records Workers Builds Git integration |
-| Cloud DEV                | Approved ref `tofhupgwxsexrburoqys`; prior release report records canonical migrations and full ingestion  |
-| Production               | No approved project ref, Worker or origin in the repository                                                |
+| Area                     | Evidence                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Checkout and GitHub main | `1a09413776611d602a72b5e3d5895cd1db1ccf38`, clean checkout                                                                                        |
+| Workflows                | Only `.github/workflows/ci.yml`, active; Node and Python lanes                                                                                    |
+| GitHub Environments      | API returned no environments                                                                                                                      |
+| Main protection          | Classic protection returned 404; effective branch rules API returned `[]`                                                                         |
+| Worker                   | `pokelab` (was `pokestudio`, see RENAME_POKELAB.md), from tracked Wrangler config; previous release report records Workers Builds Git integration |
+| Cloud DEV                | Approved ref `tofhupgwxsexrburoqys`; prior release report records canonical migrations and full ingestion                                         |
+| Production               | No approved project ref, Worker or origin in the repository                                                                                       |
 
 The prior release's database counts and Cloudflare state are historical evidence, not a fresh remote database audit. This implementation session did not migrate, ingest, deploy, create Environments or alter remote settings. Existing Cloudflare build triggers were not changed or independently authenticated in this audit.
 

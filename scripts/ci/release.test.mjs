@@ -87,7 +87,7 @@ globalThis.fetch = async (input, options) => {
     if (process.env.SCENARIO === 'cf-network') throw new Error('test-cf-token');
     let result;
     if (url.pathname.endsWith('/workers/subdomain')) result = { subdomain: 'carlosgt2001' };
-    else if (url.pathname.endsWith('/workers/scripts')) result = [{ id: 'pokestudio', tag: 'a'.repeat(32) }];
+    else if (url.pathname.endsWith('/workers/scripts')) result = [{ id: 'pokelab', tag: 'a'.repeat(32) }];
     else if (url.pathname.endsWith('/triggers')) result = process.env.SCENARIO === 'active-build' ? [{}] : [];
     else if (url.pathname.endsWith('/settings')) result = { bindings: [] };
     else if (url.pathname.endsWith('/deployments')) result = process.env.SCENARIO === 'no-deployments' ? { deployments: [] } : { deployments: [{ id: 'deployment', versions: [{ percentage: 100, version_id: 'version' }] }] };
@@ -115,7 +115,7 @@ function scenario(name, environment = {}) {
       writeFileSync(join(directory, 'packages/database/supabase/migrations', file), '');
     }
     writeFileSync(join(directory, 'scripts/ci/integrity.sql'), 'select integrity');
-    writeFileSync(join(directory, 'apps/web/wrangler.jsonc'), '{"name":"pokestudio"}');
+    writeFileSync(join(directory, 'apps/web/wrangler.jsonc'), '{"name":"pokelab"}');
     writeFileSync(join(directory, 'mock.mjs'), fixture);
     const result = spawnSync(
       process.execPath,

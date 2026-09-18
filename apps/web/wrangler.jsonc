@@ -8,10 +8,9 @@
   // 2026-09-09; the Worker was never actually named pokestudio-web-dev despite
   // that being this field's value since the file was introduced, which is why
   // `wrangler tail pokestudio-web-dev` failed with Cloudflare error 10007.
-  // Intentionally still "pokestudio": Cloudflare cannot rename a Worker, so the brand rename
-  // needs a new Worker (docs/engineering/RENAME_POKELAB.md). Change together with
-  // scripts/ci/targets.json only when that migration is approved.
-  "name": "pokestudio",
+  // Renamed from "pokestudio": Cloudflare cannot rename a Worker, so "pokelab" is a new Worker
+  // (docs/engineering/RENAME_POKELAB.md). Keep in sync with scripts/ci/targets.json.
+  "name": "pokelab",
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-05-05",
   "compatibility_flags": ["nodejs_compat"],
