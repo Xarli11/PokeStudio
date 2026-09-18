@@ -92,7 +92,10 @@ globalThis.fetch = async (input, options) => {
     else if (url.pathname.endsWith('/settings')) result = { bindings: [] };
     else if (url.pathname.endsWith('/deployments')) result = { deployments: [{ id: 'deployment', versions: [{ percentage: 100, version_id: 'version' }] }] };
     else throw new Error('Unexpected Cloudflare call');
-    return Response.json({ success: true, result });
+    const paginated = process.env.SCENARIO === 'deployment-history-pages' && endpoint === 'deployments' ||
+      process.env.SCENARIO === 'trigger-pages' && endpoint === 'triggers' ||
+      process.env.SCENARIO === 'worker-pages' && endpoint === 'scripts';
+    return Response.json({ success: true, result, ...(paginated ? { result_info: { total_pages: 2 } } : {}) });
   }
   if (url.hostname === 'tofhupgwxsexrburoqys.supabase.co') {
     if (options.headers.apikey !== 'sb_publishable_test') throw new Error('Privileged public read');
@@ -282,6 +285,22 @@ for (const stage of ['migration-history', 'reference-integrity']) {
     );
     assert.equal((result.stdout + result.stderr).includes('private-relation'), false);
     assert.equal((result.stdout + result.stderr).includes('test-cf-token'), false);
+  });
+}
+
+test('paginated deployment history records latest entry and deploys exactly once', () => {
+  const result = scenario('deployment-history-pages');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.calls.filter((call) => call.args?.includes('deploy:cf:built')).length, 1);
+  assert.ok(result.calls.some((call) => call.args?.[0] === 'smoke:cloud-dev'));
+});
+
+for (const name of ['trigger-pages', 'worker-pages']) {
+  test(`${name} still fails closed before deployment`, () => {
+    const result = scenario(name);
+    assert.equal(result.status, 1);
+    assert.ok(result.stderr.includes('Cloudflare audit response is incomplete'), result.stderr);
+    assert.deepEqual(result.calls, []);
   });
 }
 
