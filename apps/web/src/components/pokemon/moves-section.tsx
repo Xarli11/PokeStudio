@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 
-import type { DamageClass, PokemonType } from '@pokestudio/pokemon-data';
-import type { FormLearnsetAllEntry } from '@pokestudio/database';
-import { formatMessage } from '@pokestudio/i18n';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { DamageClass, PokemonType } from '@pokelab/pokemon-data';
+import type { FormLearnsetAllEntry } from '@pokelab/database';
+import { formatMessage } from '@pokelab/i18n';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 import { PopoverDisclosure } from '@/components/popover-disclosure';
 import { cardClass } from '@/lib/ui-classes';

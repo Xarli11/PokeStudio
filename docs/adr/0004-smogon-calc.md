@@ -5,14 +5,14 @@
 
 ## Context
 
-PokeStudio requires reliable damage calculations across generations and multiple product contexts.
+PokeLab requires reliable damage calculations across generations and multiple product contexts.
 
 ## Decision
 
-Use the MIT-licensed `@smogon/calc` package through a PokeStudio damage-domain adapter.
+Use the MIT-licensed `@smogon/calc` package through a PokeLab damage-domain adapter.
 
 ## Consequences
 
 - trusted formula base,
-- PokeStudio owns UI/explanation integration,
+- PokeLab owns UI/explanation integration,
 - compatibility tests protect our adapter when upgrading.

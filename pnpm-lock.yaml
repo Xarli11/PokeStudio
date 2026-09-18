@@ -29,22 +29,22 @@ importers:
       '@opennextjs/cloudflare':
         specifier: ^1.20.6
         version: 1.20.6(encoding@0.1.13)(next@15.5.25(@types/node@22.20.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(wrangler@4.130.0)
-      '@pokestudio/battle-engine':
+      '@pokelab/battle-engine':
         specifier: workspace:*
         version: link:../../packages/battle-engine
-      '@pokestudio/damage':
+      '@pokelab/damage':
         specifier: workspace:*
         version: link:../../packages/damage
-      '@pokestudio/database':
+      '@pokelab/database':
         specifier: workspace:*
         version: link:../../packages/database
-      '@pokestudio/i18n':
+      '@pokelab/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
-      '@pokestudio/pokemon-data':
+      '@pokelab/pokemon-data':
         specifier: workspace:*
         version: link:../../packages/pokemon-data
-      '@pokestudio/ui':
+      '@pokelab/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       next:
@@ -60,7 +60,7 @@ importers:
       '@eslint/eslintrc':
         specifier: ^3.2.0
         version: 3.3.7
-      '@pokestudio/config':
+      '@pokelab/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@tailwindcss/postcss':
@@ -100,7 +100,7 @@ importers:
         specifier: 0.11.11
         version: 0.11.11(@types/node@22.20.1)
     devDependencies:
-      '@pokestudio/config':
+      '@pokelab/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -121,14 +121,14 @@ importers:
 
   packages/damage:
     dependencies:
-      '@pokestudio/pokemon-data':
+      '@pokelab/pokemon-data':
         specifier: workspace:*
         version: link:../pokemon-data
       '@smogon/calc':
         specifier: 0.11.0
         version: 0.11.0
     devDependencies:
-      '@pokestudio/config':
+      '@pokelab/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -140,17 +140,17 @@ importers:
 
   packages/database:
     dependencies:
-      '@pokestudio/pokemon-data':
+      '@pokelab/pokemon-data':
         specifier: workspace:*
         version: link:../pokemon-data
       '@supabase/supabase-js':
         specifier: ^2.47.10
         version: 2.116.0
     devDependencies:
-      '@pokestudio/config':
+      '@pokelab/config':
         specifier: workspace:*
         version: link:../config
-      '@pokestudio/i18n':
+      '@pokelab/i18n':
         specifier: workspace:*
         version: link:../i18n
       supabase:
@@ -165,7 +165,7 @@ importers:
 
   packages/i18n:
     devDependencies:
-      '@pokestudio/config':
+      '@pokelab/config':
         specifier: workspace:*
         version: link:../config
       typescript:
@@ -184,7 +184,7 @@ importers:
         specifier: ^8.23.0
         version: 8.23.0
     devDependencies:
-      '@pokestudio/config':
+      '@pokelab/config':
         specifier: workspace:*
         version: link:../config
       '@types/pg':
@@ -202,7 +202,7 @@ importers:
 
   packages/ui:
     devDependencies:
-      '@pokestudio/config':
+      '@pokelab/config':
         specifier: workspace:*
         version: link:../config
       typescript:

@@ -41,9 +41,9 @@ Pokédex slice genuinely needs (YAGNI — do not create every table below on day
    forms — never duplicated inline as free text on the species/form row, since they are reused
    across hundreds of forms and need independent localization and (for moves) per-generation data
    of their own (power/accuracy/effect changes).
-5. **Every table carries a canonical PokeStudio id/slug distinct from any external source id.**
+5. **Every table carries a canonical PokeLab id/slug distinct from any external source id.**
    External ids (PokéAPI numeric ids, etc.) are recorded as provenance/source references
-   (`source_id` + external id), never used as PokeStudio's primary key — so a future source change
+   (`source_id` + external id), never used as PokeLab's primary key — so a future source change
    or multi-source merge does not require renumbering the domain.
 6. **Localized names live alongside the canonical row** (as Phase 0 already does with `name_en`/
    `name_es` columns) for the small, fixed locale set; move to a separate `localized_text` table

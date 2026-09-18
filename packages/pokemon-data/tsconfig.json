@@ -1,5 +1,5 @@
 {
-  "extends": "@pokestudio/config/tsconfig-base.json",
+  "extends": "@pokelab/config/tsconfig-base.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "."

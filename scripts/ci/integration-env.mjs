@@ -4,7 +4,7 @@ import { appendFileSync } from 'node:fs';
 // Only on the throwaway hosted runner; never source generated shell text.
 const status = execFileSync(
   'pnpm',
-  ['--filter', '@pokestudio/database', 'exec', 'supabase', 'status', '-o', 'env'],
+  ['--filter', '@pokelab/database', 'exec', 'supabase', 'status', '-o', 'env'],
   { encoding: 'utf8' },
 );
 const values = Object.fromEntries(

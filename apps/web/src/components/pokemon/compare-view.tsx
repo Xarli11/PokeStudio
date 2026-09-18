@@ -6,9 +6,9 @@ import type {
   ComparablePokemonForm,
   SpeciesSearchAlias,
   SpeciesSearchItem,
-} from '@pokestudio/database';
-import { formatMessage, type Locale } from '@pokestudio/i18n';
-import type { BaseStats, PokemonType } from '@pokestudio/pokemon-data';
+} from '@pokelab/database';
+import { formatMessage, type Locale } from '@pokelab/i18n';
+import type { BaseStats, PokemonType } from '@pokelab/pokemon-data';
 
 import { cardClass, tagClass } from '@/lib/ui-classes';
 import { dexNumberLabel } from '@/lib/pokemon-search';

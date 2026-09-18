@@ -9,10 +9,10 @@ import { IngestLockedError, withIngestLock } from '../src/ingest-lock';
  * re-inserting `pokemon_form_move`).
  *
  * Requires a direct Postgres connection string — normally the Raspberry Pi
- * (CLAUDE.md §21). Skipped automatically when POKESTUDIO_PI_DB_URL is not
+ * (CLAUDE.md §21). Skipped automatically when POKELAB_PI_DB_URL is not
  * set, same pattern as tests/persist.integration.test.ts.
  */
-const dbUrl = process.env.INGEST_LOCK_TEST_DB_URL ?? process.env.POKESTUDIO_PI_DB_URL;
+const dbUrl = process.env.INGEST_LOCK_TEST_DB_URL ?? process.env.POKELAB_PI_DB_URL;
 const hasDirectPgUrl = Boolean(dbUrl);
 
 describe.skipIf(!hasDirectPgUrl)('withIngestLock', () => {

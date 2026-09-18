@@ -5,7 +5,7 @@ import type { HeadlessBattleInput, HeadlessBattleResult, StructuredBattleEvent }
 
 /**
  * Runs a full battle headlessly, both sides choosing Showdown's default legal
- * action each turn. Proves the PokeStudio boundary can invoke the upstream
+ * action each turn. Proves the PokeLab boundary can invoke the upstream
  * simulator deterministically and extract a structured trace, without any
  * UI code touching `pokemon-showdown` directly (docs/architecture/BATTLE_ENGINE.md).
  */

@@ -28,7 +28,7 @@ describe('simulateHeadlessBattle (adapter spike over pokemon-showdown)', () => {
     expect(first.turnCount).toBe(second.turnCount);
     expect(first.turnCount).toBeGreaterThan(0);
 
-    // Raw upstream internals must not leak: every event is one of PokeStudio's
+    // Raw upstream internals must not leak: every event is one of PokeLab's
     // own structured event types, never a raw pokemon-showdown object.
     const eventTypes = new Set(first.events.map((event) => event.type));
     expect(eventTypes.has('turn')).toBe(true);

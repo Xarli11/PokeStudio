@@ -5,13 +5,13 @@
 
 ## Context
 
-The owner wants public source, community participation and noncommercial self-hosting while preventing third parties from freely monetizing PokeStudio commercially.
+The owner wants public source, community participation and noncommercial self-hosting while preventing third parties from freely monetizing PokeLab commercially.
 
 OSI Open Source licenses permit commercial use, so that label would not accurately describe the intended restriction.
 
 ## Decision
 
-PokeStudio will be described as **source-available**.
+PokeLab will be described as **source-available**.
 
 Evaluate a standardized noncommercial/competitive-use-restricted license such as PolyForm plus a contributor agreement before broad public contributions.
 

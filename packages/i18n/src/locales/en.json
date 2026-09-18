@@ -10,7 +10,7 @@
     "exploreNavigation": "Explore sections"
   },
   "home": {
-    "title": "PokeStudio",
+    "title": "PokeLab",
     "tagline": "Search. Learn. Build. Simulate. Battle. Analyze. Improve. Collect.",
     "status": "The foundation is live. Explore, Build and Battle Lab are under active construction.",
     "cta": "See the roadmap",
@@ -27,7 +27,7 @@
     "dark": "Dark"
   },
   "footer": {
-    "disclaimer": "PokeStudio is an unofficial fan-made project and is not affiliated with, endorsed by, or sponsored by Nintendo, Game Freak, or The Pokémon Company."
+    "disclaimer": "PokeLab is an unofficial fan-made project and is not affiliated with, endorsed by, or sponsored by Nintendo, Game Freak, or The Pokémon Company."
   },
   "notFound": {
     "title": "Page not found",
@@ -58,8 +58,8 @@
     "eyebrow": "National Pokédex",
     "title": "Pokédex",
     "tagline": "Every Pokémon, with clear types, stats, abilities and evolutions.",
-    "indexDescription": "Browse types and base stats for {count} Pokémon in the PokeStudio Pokédex.",
-    "detailDescription": "{name}: types, base stats{formsNote} in the PokeStudio Pokédex.",
+    "indexDescription": "Browse types and base stats for {count} Pokémon in the PokeLab Pokédex.",
+    "detailDescription": "{name}: types, base stats{formsNote} in the PokeLab Pokédex.",
     "detailDescriptionWithForms": " and {formCount} forms",
     "types": "Types",
     "baseStats": "Base stats",
@@ -145,9 +145,9 @@
   },
   "moves": {
     "title": "Moves",
-    "tagline": "Type, damage class, power, accuracy and PP for every move in the PokeStudio database.",
-    "indexDescription": "Browse type, damage class, power, accuracy and PP for {count} moves in the PokeStudio database.",
-    "detailDescription": "{name}: type, damage class, power, accuracy, PP and effect in the PokeStudio database.",
+    "tagline": "Type, damage class, power, accuracy and PP for every move in the PokeLab database.",
+    "indexDescription": "Browse type, damage class, power, accuracy and PP for {count} moves in the PokeLab database.",
+    "detailDescription": "{name}: type, damage class, power, accuracy, PP and effect in the PokeLab database.",
     "backToMoves": "Back to Moves",
     "backToPokemon": "Back to {name}",
     "power": "Power",
@@ -281,7 +281,7 @@
     "eyebrow": "Explore",
     "title": "Compare",
     "tagline": "Compare base stats, types and abilities for up to 4 Pokémon or forms, side by side.",
-    "indexDescription": "Compare base stats, types and abilities for any Pokémon or form in the PokeStudio Pokédex.",
+    "indexDescription": "Compare base stats, types and abilities for any Pokémon or form in the PokeLab Pokédex.",
     "entryLink": "Compare Pokémon",
     "emptyState": "Add a Pokémon or form to start comparing.",
     "addPokemon": "Add Pokémon",
@@ -305,8 +305,8 @@
   "abilities": {
     "title": "Abilities",
     "tagline": "Every ability's exact effect, and which Pokémon can have it.",
-    "indexDescription": "Browse effects for {count} Pokémon abilities in the PokeStudio database.",
-    "detailDescription": "{name}: effect and which Pokémon can have this ability, in the PokeStudio database.",
+    "indexDescription": "Browse effects for {count} Pokémon abilities in the PokeLab database.",
+    "detailDescription": "{name}: effect and which Pokémon can have this ability, in the PokeLab database.",
     "search": "Search",
     "searchPlaceholder": "Search abilities…",
     "resultCount": "{count} of {total} abilities",
@@ -387,7 +387,7 @@
     "ivsLabel": "IVs",
     "calculatedStatsLabel": "Calculated stats",
     "legacyStatsUnavailableTemplate": "Stat calculation for {game} isn't implemented yet, so no numbers are shown here.",
-    "historicalMechanicsNoteTemplate": "PokeStudio hasn't fully validated {game}'s mechanics yet — some fields are hidden or simplified.",
+    "historicalMechanicsNoteTemplate": "PokeLab hasn't fully validated {game}'s mechanics yet — some fields are hidden or simplified.",
     "movesLabel": "Moves",
     "moveSlotEmpty": "(empty)",
     "moveSearchPlaceholder": "Search this form's moves…",
@@ -432,7 +432,7 @@
       "evTotalExceeded": "{member}'s total EVs exceed 510.",
       "evStatExceeded": "{member} has an EV outside the 0-252 range.",
       "invalidIv": "{member} has an IV outside the 0-31 range.",
-      "unsupportedRuleset": "PokeStudio hasn't fully validated {game}'s ruleset yet — some checks may be incomplete.",
+      "unsupportedRuleset": "PokeLab hasn't fully validated {game}'s ruleset yet — some checks may be incomplete.",
       "speciesUnavailableInGeneration": "{member} is not available in {game}."
     },
     "loadingReferenceData": "Loading…"

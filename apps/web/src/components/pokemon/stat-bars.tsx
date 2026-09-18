@@ -1,4 +1,4 @@
-import type { BaseStats } from '@pokestudio/pokemon-data';
+import type { BaseStats } from '@pokelab/pokemon-data';
 
 import { STAT_TIER_BAR_CLASS, statTier } from '@/lib/stat-quality';
 
@@ -50,7 +50,7 @@ export function PokemonStatBars({
               className="h-[0.4375rem] overflow-hidden rounded-full border border-border-subtle bg-surface-raised"
             >
               <div
-                className={`h-full rounded-full ${STAT_TIER_BAR_CLASS[tier]} transition-[width] duration-200 ease-ps`}
+                className={`h-full rounded-full ${STAT_TIER_BAR_CLASS[tier]} transition-[width] duration-200 ease-pl`}
                 style={{ width: `${Math.min(100, (stats[key] / MAX_DISPLAY_STAT) * 100)}%` }}
               />
             </div>

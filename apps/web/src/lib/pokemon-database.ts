@@ -6,8 +6,8 @@ import {
   getMoveBySlug,
   getSpeciesBySlug,
   listAbilities,
-  type PokeStudioDatabaseClient,
-} from '@pokestudio/database';
+  type PokeLabDatabaseClient,
+} from '@pokelab/database';
 
 /**
  * Server-only accessor for the Pokémon reference-data database client.
@@ -16,9 +16,9 @@ import {
  * the client bundle). Uses the publishable key: species/form reference data
  * is public-read by RLS policy, so no secret key is needed here.
  */
-let cachedClient: PokeStudioDatabaseClient | undefined;
+let cachedClient: PokeLabDatabaseClient | undefined;
 
-export function getPokemonDatabaseClient(): PokeStudioDatabaseClient {
+export function getPokemonDatabaseClient(): PokeLabDatabaseClient {
   if (cachedClient) return cachedClient;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

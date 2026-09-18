@@ -1,7 +1,7 @@
 'use client';
 
-import type { PokemonType } from '@pokestudio/pokemon-data';
-import { pokemonTypeColorVar } from '@pokestudio/ui';
+import type { PokemonType } from '@pokelab/pokemon-data';
+import { pokemonTypeColorVar } from '@pokelab/ui';
 
 import { buttonClass } from '@/lib/ui-classes';
 
@@ -16,7 +16,7 @@ import { buttonClass } from '@/lib/ui-classes';
  * - a slightly stronger (still subtle) type-derived aura behind the sprite,
  * - name/types set clearly to the right of it.
  *
- * PokeStudio's own emerald/charcoal identity stays dominant — the aura is a
+ * PokeLab's own emerald/charcoal identity stays dominant — the aura is a
  * soft gradient wash behind the sprite only, never a full-card type tint.
  */
 export function SpriteLabCard({
@@ -47,7 +47,7 @@ export function SpriteLabCard({
           style={{
             width: spriteSizePx,
             height: spriteSizePx,
-            background: `radial-gradient(circle at 50% 45%, color-mix(in srgb, var(${primaryVar}) 26%, var(--ps-color-bg-elevated)), color-mix(in srgb, var(${secondaryVar}) 12%, var(--ps-color-bg-elevated)) 100%)`,
+            background: `radial-gradient(circle at 50% 45%, color-mix(in srgb, var(${primaryVar}) 26%, var(--pl-color-bg-elevated)), color-mix(in srgb, var(${secondaryVar}) 12%, var(--pl-color-bg-elevated)) 100%)`,
           }}
         >
           {spriteUrl && !broken ? (
@@ -69,7 +69,7 @@ export function SpriteLabCard({
               <span
                 key={type}
                 className="rounded-full px-1.5 py-px text-[0.625rem] font-bold text-muted"
-                style={{ border: '1px solid var(--ps-color-border)' }}
+                style={{ border: '1px solid var(--pl-color-border)' }}
               >
                 {typeLabels[type]}
               </span>

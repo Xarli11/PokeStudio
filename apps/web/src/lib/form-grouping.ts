@@ -1,4 +1,4 @@
-import type { SpeciesFormDetail } from '@pokestudio/database';
+import type { SpeciesFormDetail } from '@pokelab/database';
 
 export interface PartitionedForms {
   /** Mechanically distinct from the default form (different types or base stats) — get a full detail card. */

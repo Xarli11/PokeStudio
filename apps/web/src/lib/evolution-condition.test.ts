@@ -1,4 +1,4 @@
-import { getDictionary } from '@pokestudio/i18n';
+import { getDictionary } from '@pokelab/i18n';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -6,7 +6,7 @@ import {
   groupEvolutionEdges,
   groupEvolutionsByParent,
 } from './evolution-condition';
-import type { EvolutionCondition, EvolutionEdge } from '@pokestudio/database';
+import type { EvolutionCondition, EvolutionEdge } from '@pokelab/database';
 
 const dictionary = getDictionary('en');
 const evolutionDictionary = dictionary.pokedex.evolution;

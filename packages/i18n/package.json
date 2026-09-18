@@ -1,8 +1,8 @@
 {
-  "name": "@pokestudio/i18n",
+  "name": "@pokelab/i18n",
   "private": true,
   "version": "0.0.0",
-  "description": "PokeStudio internationalization skeleton (ES/EN) — locale dictionaries and lookup.",
+  "description": "PokeLab internationalization skeleton (ES/EN) — locale dictionaries and lookup.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "main": "./src/index.ts",
@@ -14,7 +14,7 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "@pokestudio/config": "workspace:*",
+    "@pokelab/config": "workspace:*",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 
-import { defaultLocale, getDictionary, isLocale } from '@pokestudio/i18n';
+import { defaultLocale, getDictionary, isLocale } from '@pokelab/i18n';
 
 import { Skeleton } from '@/components/ui/skeleton';
 

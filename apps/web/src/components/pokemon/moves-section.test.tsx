@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { FormLearnsetAllEntry } from '@pokestudio/database';
+import type { FormLearnsetAllEntry } from '@pokelab/database';
 
 import { PokemonMovesSection, type MovesExplorerMove } from './moves-section';
 

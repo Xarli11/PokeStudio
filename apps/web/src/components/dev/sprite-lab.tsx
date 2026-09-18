@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 
-import type { ComparablePokemonForm, VersionGroupSummary } from '@pokestudio/database';
-import type { Locale } from '@pokestudio/i18n';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import type { ComparablePokemonForm, VersionGroupSummary } from '@pokelab/database';
+import type { Locale } from '@pokelab/i18n';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 import { FilledTeamTile, type TeamSlotLabels } from '@/components/build/team-slot';
 import { createEmptyTeamMember } from '@/lib/team-draft';
@@ -63,7 +63,7 @@ export interface SpriteLabProps {
 /**
  * Dev-only Sprite Lab UI (final visual review). Compares the four
  * candidate sprite strategies (`pokemon-sprite.ts`'s `SpriteStrategy` —
- * 'modern' / 'box' / 'game-era' / 'showdown') inside PokeStudio's actual
+ * 'modern' / 'box' / 'game-era' / 'showdown') inside PokeLab's actual
  * approved roster card (`FilledTeamTile`, reused completely unmodified as
  * the fixed baseline — task §9/§14: this Lab never changes production
  * behavior) alongside a refined-composition experiment (`SpriteLabCard`)

@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
 
-import { formatMessage } from '@pokestudio/i18n';
-import { ALL_POKEMON_TYPES } from '@pokestudio/pokemon-data';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import { formatMessage } from '@pokelab/i18n';
+import { ALL_POKEMON_TYPES } from '@pokelab/pokemon-data';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 import { cardClass } from '@/lib/ui-classes';
 import type { TeamDefensiveProfile, TeamWarning, TeamWarningSeverity } from '@/lib/team-analysis';
@@ -41,7 +41,7 @@ export interface TeamAnalysisLabels {
  * Severity is a decorative accent (background wash + border), never the
  * readable text color — same accessibility discipline as `PokemonTypeBadge`
  * (`../pokemon/type-badge.tsx`). A prior version used the raw type-color
- * variable as text color directly; `--ps-type-electric` (`#f5cf4d`, a light
+ * variable as text color directly; `--pl-type-electric` (`#f5cf4d`, a light
  * gold) against the card's light-mode background fails contrast as body
  * text — caught in manual review, fixed by keeping text on the normal
  * `text-foreground` token and moving color to the wash/border instead.
@@ -49,12 +49,12 @@ export interface TeamAnalysisLabels {
 export const SEVERITY_BADGE_STYLE: Record<TeamWarningSeverity, CSSProperties | undefined> = {
   incomplete: undefined,
   warning: {
-    border: '1px solid color-mix(in srgb, var(--ps-type-electric) 45%, var(--ps-color-border))',
-    background: 'color-mix(in srgb, var(--ps-type-electric) 16%, var(--ps-color-bg-elevated))',
+    border: '1px solid color-mix(in srgb, var(--pl-type-electric) 45%, var(--pl-color-border))',
+    background: 'color-mix(in srgb, var(--pl-type-electric) 16%, var(--pl-color-bg-elevated))',
   },
   invalid: {
-    border: '1px solid color-mix(in srgb, var(--ps-type-fire) 45%, var(--ps-color-border))',
-    background: 'color-mix(in srgb, var(--ps-type-fire) 16%, var(--ps-color-bg-elevated))',
+    border: '1px solid color-mix(in srgb, var(--pl-type-fire) 45%, var(--pl-color-border))',
+    background: 'color-mix(in srgb, var(--pl-type-fire) 16%, var(--pl-color-bg-elevated))',
   },
 };
 

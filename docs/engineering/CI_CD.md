@@ -2,9 +2,11 @@
 
 Status: implemented for review; remote activation and production release are not approved by this change.
 
+Current 2026-09-18 state and proposed renames: [PokeLab cutover inventory](POKELAB_RENAME.md). The starting-point table and activation procedure below describe the original CI/CD rollout.
+
 ## Audited starting point
 
-Audited on 2026-09-15/16 (Madrid) against `Xarli11/PokeStudio`:
+Audited on 2026-09-15/16 (Madrid) against repository ID `1361937633` (then and currently `Xarli11/PokeStudio`; rename pending):
 
 | Area                     | Evidence                                                                                                   |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------- |

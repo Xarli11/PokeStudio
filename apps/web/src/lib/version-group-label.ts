@@ -2,7 +2,7 @@
  * Short display names for PokéAPI's `version_group` slugs (Phase 1C.2b's
  * version-group selector, task §4: "localized display names"). Game titles
  * are proper nouns, not prose — kept identical across locales rather than
- * guessed at as official Spanish box-art titles PokeStudio hasn't verified
+ * guessed at as official Spanish box-art titles PokeLab hasn't verified
  * (CLAUDE.md §14 "no fake completeness" applies to naming claims too, not
  * just mechanics). The *localized* part of the selector is the generation
  * label around this ("Generación 9" vs "Generation 9"), not the game name
@@ -10,7 +10,7 @@
  *
  * Falls back to a humanized slug (same technique as
  * `evolution-condition.ts`'s `humanizeSlug`) for any version group not yet
- * in this table — never blocks on a name PokeStudio hasn't hand-verified.
+ * in this table — never blocks on a name PokeLab hasn't hand-verified.
  */
 const VERSION_GROUP_NAMES: Record<string, string> = {
   'red-blue': 'Red / Blue',

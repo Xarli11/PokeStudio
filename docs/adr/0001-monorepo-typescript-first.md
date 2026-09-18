@@ -5,7 +5,7 @@
 
 ## Context
 
-PokeStudio combines web UI, data/domain logic, battle integration and AI orchestration. Sharing types and domain code is valuable, while early microservices would add operational cost.
+PokeLab combines web UI, data/domain logic, battle integration and AI orchestration. Sharing types and domain code is valuable, while early microservices would add operational cost.
 
 ## Decision
 

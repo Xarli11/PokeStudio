@@ -1,5 +1,6 @@
 /**
- * PokeStudio Brand 1.0 — official asset registry.
+ * PokeLab asset registry — original Brand 1.0 symbols and favicons.
+ * The owner is updating the logo in Figma; SVG paths remain unchanged until export.
  *
  * These are Figma exports under `apps/web/public/brand/`; Figma is the
  * source of truth for their geometry/color. Never redraw, recolor or
@@ -17,10 +18,6 @@ export const brandAssets = {
   symbolOnDark: '/brand/pokestudio-symbol-on-dark.svg',
   symbolMonoOnLight: '/brand/pokestudio-symbol-mono-on-light.svg',
   symbolMonoOnDark: '/brand/pokestudio-symbol-mono-on-dark.svg',
-  wordmarkOnDark: '/brand/pokestudio-wordmark-on-dark.svg',
-  wordmarkOnLight: '/brand/pokestudio-wordmark-on-light.svg',
-  compactOnDark: '/brand/pokestudio-lockup-compact-on-dark.svg',
-  compactOnLight: '/brand/pokestudio-lockup-compact-on-light.svg',
   favicon16: '/brand/pokestudio-favicon-16.svg',
   favicon32: '/brand/pokestudio-favicon-32.svg',
 } as const;

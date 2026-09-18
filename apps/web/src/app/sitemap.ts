@@ -1,7 +1,8 @@
+import { SITE_URL } from '@/lib/site';
 import type { MetadataRoute } from 'next';
 
-import { listAbilities, listMovesPage, listSpecies } from '@pokestudio/database';
-import { locales } from '@pokestudio/i18n';
+import { listAbilities, listMovesPage, listSpecies } from '@pokelab/database';
+import { locales } from '@pokelab/i18n';
 
 import { captureException } from '@/lib/observability';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
@@ -17,8 +18,6 @@ import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 // Assumption: an hour of staleness after an ingestion is acceptable for a
 // sitemap (crawlers poll infrequently; this isn't user-facing data).
 export const revalidate = 3600;
-
-const SITE_URL = 'https://pokestudio.app';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const localeEntries = locales.map((locale) => ({

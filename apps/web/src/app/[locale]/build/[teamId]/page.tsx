@@ -6,8 +6,8 @@ import {
   listItems,
   listNatures,
   listVersionGroups,
-} from '@pokestudio/database';
-import { getDictionary, isLocale } from '@pokestudio/i18n';
+} from '@pokelab/database';
+import { getDictionary, isLocale } from '@pokelab/i18n';
 
 import { TeamEditor } from '@/components/build/team-editor';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';

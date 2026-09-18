@@ -1,4 +1,4 @@
-# PokeStudio Python research lane
+# PokeLab Python research lane
 
 Research/tooling only (ADR-0007). Used for:
 

@@ -5,7 +5,7 @@
 
 ## Context
 
-PokeStudio needs a low-cost PostgreSQL foundation and will later need authentication, private user data and storage. Supabase bundles these capabilities while retaining PostgreSQL underneath.
+PokeLab needs a low-cost PostgreSQL foundation and will later need authentication, private user data and storage. Supabase bundles these capabilities while retaining PostgreSQL underneath.
 
 ## Decision
 

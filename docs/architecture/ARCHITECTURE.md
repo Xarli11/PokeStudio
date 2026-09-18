@@ -1,4 +1,4 @@
-# PokeStudio — Architecture v1
+# PokeLab — Architecture v1
 
 ## Architectural style
 
@@ -100,7 +100,7 @@ what changed architecturally:
 
 - **`seed.sql` no longer carries Pokémon data.** `packages/database/supabase/seed.sql` is now
   reserved for small static bootstrap lookups (none exist yet); `species`/`pokemon_form` come
-  exclusively from `pnpm --filter @pokestudio/pokemon-data ingest` (docs/engineering/DATABASE.md "Seed vs.
+  exclusively from `pnpm --filter @pokelab/pokemon-data ingest` (docs/engineering/DATABASE.md "Seed vs.
   ingestion"). `db:reset` alone no longer produces a Pokédex-ready database — a second, separate
   step is required, by design.
 - **Ingestion writes directly to Postgres** (batched, identity-based upsert —
@@ -114,7 +114,7 @@ what changed architecturally:
   (a real circular-workspace-dependency risk hit while building the persist layer, since `database`
   already depends on `pokemon-data` for shared domain types): `pokemon-data`'s write path uses
   `@supabase/supabase-js` directly with its own minimal local schema type instead of importing
-  `@pokestudio/database`.
+  `@pokelab/database`.
 - **PostgREST's default 1000-row response cap** (`max_rows`) is a real constraint at this scale —
   both the ingestion write path and `packages/database/src/queries.ts`'s `listSpecies` now
   paginate reads past it; this was found via a real failure during the first full ingestion run,
@@ -152,7 +152,7 @@ Must not encode battle formulas, legality rules or database-specific behavior.
 
 ### Application/domain
 
-PokeStudio use cases and domain interfaces.
+PokeLab use cases and domain interfaces.
 
 Examples:
 
@@ -182,7 +182,7 @@ Conceptually:
 
 ```text
 Client A ─┐
-          ├─ WebSocket/transport ─ Battle Server ─ PokeStudio Battle API ─ Showdown adapter
+          ├─ WebSocket/transport ─ Battle Server ─ PokeLab Battle API ─ Showdown adapter
 Client B ─┘
 ```
 
@@ -195,7 +195,7 @@ Battle domain should be transport-independent.
 ```text
 User intent/context
       ↓
-PokeStudio AI orchestration
+PokeLab AI orchestration
       ├─ normalized data queries
       ├─ format/legal validation
       ├─ damage engine
@@ -219,7 +219,7 @@ validation
    ↓
 versioning/provenance
    ↓
-PokeStudio PostgreSQL / generated artifacts
+PokeLab PostgreSQL / generated artifacts
    ↓
 application APIs/pages
 ```
@@ -249,10 +249,10 @@ Only separate services after profiling/operational evidence.
 
 - PostgreSQL schema/migrations live in the repo.
 - Domain code cannot assume Supabase-specific table semantics everywhere.
-- Auth uses a PokeStudio identity abstraction.
+- Auth uses a PokeLab identity abstraction.
 - Storage uses a boundary where appropriate.
 - AI providers use adapters.
-- Battle simulator uses a PokeStudio boundary.
+- Battle simulator uses a PokeLab boundary.
 
 ## Phase 0.5 confirmations
 

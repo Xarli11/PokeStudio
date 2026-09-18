@@ -1,12 +1,12 @@
-# PokeStudio.app — Product Specification v1
+# PokeLab — Product Specification v1
 
 ## Vision
 
-**PokeStudio is the definitive Pokémon toolkit for casual and competitive players.**
+**PokeLab is the definitive Pokémon toolkit for casual and competitive players.**
 
 It should be useful to someone checking how a Pokémon evolves and to someone preparing a tournament team.
 
-PokeStudio is not a collection of unrelated utilities. Features should connect into workflows.
+PokeLab is not a collection of unrelated utilities. Features should connect into workflows.
 
 Example target workflow:
 
@@ -80,7 +80,7 @@ Long-term modules:
 - spectating later,
 - tournaments later.
 
-## PokeStudio AI
+## PokeLab AI
 
 AI is contextual and embedded.
 
@@ -188,7 +188,7 @@ Long-term analytics:
 - trends,
 - tournament evidence when licensable/available.
 
-PokeStudio should progressively build its own historical analytics layer from legitimate data sources rather than permanently depending on competitor websites.
+PokeLab should progressively build its own historical analytics layer from legitimate data sources rather than permanently depending on competitor websites.
 
 ## Collection
 
@@ -223,7 +223,7 @@ Owner has final product decision authority.
 
 ## Public API / SDK
 
-A public PokeStudio API/SDK is a future capability, not an initial requirement.
+A public PokeLab API/SDK is a future capability, not an initial requirement.
 
 If introduced, it should have explicit versioning, rate limits, stable contracts and a monetization strategy only where usage creates real operating cost.
 
@@ -257,7 +257,7 @@ Only create a page family when it provides unique user value.
 
 ## Monetization principles
 
-PokeStudio should earn the right to charge.
+PokeLab should earn the right to charge.
 
 Core reference functionality should remain broadly accessible.
 
@@ -284,4 +284,4 @@ BYOK may be supported later for advanced users.
 
 ## Success principle
 
-PokeStudio succeeds when users stop thinking in terms of separate Pokémon utilities and instead treat PokeStudio as the place where they research, build, test and improve.
+PokeLab succeeds when users stop thinking in terms of separate Pokémon utilities and instead treat PokeLab as the place where they research, build, test and improve.

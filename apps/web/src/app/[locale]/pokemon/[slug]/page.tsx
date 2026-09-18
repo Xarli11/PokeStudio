@@ -1,3 +1,4 @@
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -6,14 +7,8 @@ import {
   getEvolutionFamily,
   getFormLearnsetAllVersionGroups,
   type SpeciesFormDetail,
-} from '@pokestudio/database';
-import {
-  abilityEffectsEs,
-  formatMessage,
-  getDictionary,
-  isLocale,
-  locales,
-} from '@pokestudio/i18n';
+} from '@pokelab/database';
+import { abilityEffectsEs, formatMessage, getDictionary, isLocale, locales } from '@pokelab/i18n';
 
 import { PokemonEvolutionSection } from '@/components/pokemon/evolution-section';
 import { PokemonFormSection } from '@/components/pokemon/form-section';
@@ -58,23 +53,23 @@ function formSectionProps(
     baseStatTotalLabel: dictionary.pokedex.baseStatTotal,
     abilities: form.abilities.map((ability) => {
       // PokéAPI never publishes a Spanish ability effect (docs/engineering/DATA_SOURCES.md) —
-      // 0 of 313 abilities have one upstream, so PokeStudio owns this layer
+      // 0 of 313 abilities have one upstream, so PokeLab owns this layer
       // (Phase 1C.2b, packages/i18n/src/ability-effects-es.ts, 313/313,
       // verified against the live dataset — see
       // packages/database/tests/ability-effects-coverage.integration.test.ts).
       // Fallback chain: upstream Spanish (kept first in case PokéAPI ever
-      // publishes one) → PokeStudio Spanish → upstream English (marked
+      // publishes one) → PokeLab Spanish → upstream English (marked
       // honestly, never mislabeled as Spanish) → "unavailable" message.
-      const pokeStudioEs = abilityEffectsEs[ability.slug];
+      const pokeLabEs = abilityEffectsEs[ability.slug];
       const description =
-        locale === 'es' ? (ability.effectEs ?? pokeStudioEs ?? ability.effectEn) : ability.effectEn;
+        locale === 'es' ? (ability.effectEs ?? pokeLabEs ?? ability.effectEn) : ability.effectEn;
       return {
         slug: ability.slug,
         href: `/${locale}/abilities/${ability.slug}`,
         name: locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn,
         description,
         descriptionIsFallback:
-          locale === 'es' && !ability.effectEs && !pokeStudioEs && description !== undefined,
+          locale === 'es' && !ability.effectEs && !pokeLabEs && description !== undefined,
         isHidden: ability.isHidden,
       };
     }),
@@ -105,7 +100,7 @@ export async function generateMetadata({
       : '';
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
     title: `${species.name[locale]} — ${dictionary.pokedex.title}`,
     description: formatMessage(dictionary.pokedex.detailDescription, {
       name: species.name[locale],
@@ -121,6 +116,7 @@ export async function generateMetadata({
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/pokemon/${slug}`])),
     },
     openGraph: {
+      siteName: SITE_NAME,
       title: species.name[locale],
       description: dictionary.pokedex.tagline,
       locale,

@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { getDictionary } from '@pokestudio/i18n';
+import { getDictionary } from '@pokelab/i18n';
 
 import { PersistentShell } from './persistent-shell';
 

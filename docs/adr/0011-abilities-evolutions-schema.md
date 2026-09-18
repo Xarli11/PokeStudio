@@ -62,7 +62,7 @@ Structured condition columns (`min_level`, `item_slug`, `trigger`, `time_of_day`
 ...) cover the evolution methods Part B's requirements name explicitly. `raw_condition jsonb`
 preserves PokéAPI's complete evolution-details entry verbatim alongside them, so a future
 condition this migration didn't anticipate is not silently lost — CLAUDE.md §14 ("no fake
-completeness") applies to schema coverage claims too: PokeStudio does not claim to model every
+completeness") applies to schema coverage claims too: PokeLab does not claim to model every
 condition PokéAPI can express, only the common ones, and says so via the raw column rather than
 truncating data.
 

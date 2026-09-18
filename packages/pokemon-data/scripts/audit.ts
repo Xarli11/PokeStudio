@@ -7,7 +7,7 @@
  * on-disk cache when `ingest`/a previous `audit` run already populated it,
  * so this does not need the network or a running Supabase instance.
  *
- * Run with: pnpm --filter @pokestudio/pokemon-data audit
+ * Run with: pnpm --filter @pokelab/pokemon-data audit
  * Options:  --limit=N        only the first N species
  *           --concurrency=N  requests in flight per fetch phase (default 12)
  *           --no-cache       bypass the on-disk raw-response cache

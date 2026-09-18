@@ -72,7 +72,7 @@ globalThis.fetch = async (input, options) => {
     if (url.pathname.endsWith('/commits/main')) return Response.json({ sha: after });
     if (url.pathname.endsWith('/deployment-branch-policies')) return Response.json({ branch_policies: [{ name: 'main', type: 'branch' }] });
     if (url.pathname.includes('/environments/')) return Response.json({ deployment_branch_policy: { custom_branch_policies: true } });
-    if (url.pathname.includes('/actions/workflows/')) return Response.json({ workflow_runs: [{ id: 2, event: 'push', conclusion: 'success', head_sha: before, head_repository: { full_name: 'Xarli11/PokeStudio' } }] });
+    if (url.pathname.includes('/actions/workflows/')) return Response.json({ workflow_runs: [{ id: 2, event: 'push', conclusion: 'success', head_sha: before, head_repository: { id: 1361937633, full_name: 'Xarli11/PokeStudio' } }] });
   }
   if (url.hostname === 'api.cloudflare.com') {
     const endpoint = url.pathname.split('/').at(-1);
@@ -106,7 +106,7 @@ globalThis.fetch = async (input, options) => {
 `;
 
 function scenario(name, environment = {}) {
-  const directory = mkdtempSync(join(tmpdir(), 'pokestudio-release-test-'));
+  const directory = mkdtempSync(join(tmpdir(), 'pokelab-release-test-'));
   try {
     for (const path of ['apps/web', 'scripts/ci', 'packages/database/supabase/migrations']) {
       mkdirSync(join(directory, path), { recursive: true });
@@ -131,7 +131,9 @@ function scenario(name, environment = {}) {
           PATH: process.env.PATH,
           CI: 'true',
           GITHUB_TOKEN: 'test-token',
-          GITHUB_REPOSITORY: 'Xarli11/PokeStudio',
+          GITHUB_REPOSITORY: 'Xarli11/PokeLab',
+          GITHUB_REPOSITORY_ID: '1361937633',
+          GITHUB_REPOSITORY_OWNER_ID: '50557033',
           GITHUB_REF: 'refs/heads/main',
           GITHUB_SHA: 'b'.repeat(40),
           GITHUB_RUN_ID: '3',
@@ -332,8 +334,8 @@ test('frontend delivery skips DB mutations, builds without privileged credential
   const commands = result.calls.map((call) => call.args.join(' '));
   assert.deepEqual(commands, [
     'db:cloud-dev:check',
-    '--filter @pokestudio/web build:cf --config wrangler.release.json',
-    '--filter @pokestudio/web deploy:cf:built --config wrangler.release.json',
+    '--filter @pokelab/web build:cf --config wrangler.release.json',
+    '--filter @pokelab/web deploy:cf:built --config wrangler.release.json',
     'smoke:cloud-dev',
   ]);
   const build = result.calls.find((call) => call.args.includes('build:cf'));

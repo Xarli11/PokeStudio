@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { abilityEffectsEs } from '@pokestudio/i18n';
+import { abilityEffectsEs } from '@pokelab/i18n';
 
 import { createPublicDatabaseClient } from '../src/client';
 
 /**
- * Proves the PokeStudio-owned Spanish ability-effect dataset
+ * Proves the PokeLab-owned Spanish ability-effect dataset
  * (packages/i18n/src/ability-effects-es.ts, Phase 1C.2b) actually covers
  * every real, currently-ingested ability — 313/313 against the live
  * dataset, not just an internal self-consistency check (see

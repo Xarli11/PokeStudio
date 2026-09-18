@@ -1,4 +1,4 @@
-# PokeStudio — Testing Strategy
+# PokeLab — Testing Strategy
 
 ## Philosophy
 
@@ -57,7 +57,7 @@ Cover:
 
 ## Damage testing
 
-Test PokeStudio wrapper behavior and representative known calculations.
+Test PokeLab wrapper behavior and representative known calculations.
 
 Do not duplicate every upstream test unless we need compatibility guarantees at our boundary.
 

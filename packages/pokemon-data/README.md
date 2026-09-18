@@ -1,9 +1,9 @@
-# @pokestudio/pokemon-data
+# @pokelab/pokemon-data
 
 Full Pokédex ingestion pipeline (Phase 1B/1C.1/1C.2, ADR-0010, ADR-0011, ADR-0013): fetch/cache →
 normalize → validate → persist. Not a runtime PokéAPI client — the web app never imports this
 package or calls PokéAPI at request time (CLAUDE.md §10); it only reads what this pipeline already
-wrote to Postgres, via `@pokestudio/database`.
+wrote to Postgres, via `@pokelab/database`.
 
 ## Commands
 
@@ -14,12 +14,12 @@ Database"), with the schema migrations already applied (`pnpm db:pi:migrate`) an
 
 ```bash
 pnpm ingest:pi                                   # full pipeline against the Pi — refuses any other SUPABASE_URL
-pnpm --filter @pokestudio/pokemon-data ingest     # same pipeline, targets whatever SUPABASE_URL/SUPABASE_SECRET_KEY are set to
-pnpm --filter @pokestudio/pokemon-data audit      # same pipeline, report-only — no DB writes, no secret key needed
+pnpm --filter @pokelab/pokemon-data ingest     # same pipeline, targets whatever SUPABASE_URL/SUPABASE_SECRET_KEY are set to
+pnpm --filter @pokelab/pokemon-data audit      # same pipeline, report-only — no DB writes, no secret key needed
 ```
 
 `pnpm ingest:pi` is the normal entry point — it guards against an accidental localhost or Supabase
-Cloud target (`scripts/ingest-pi.sh`). The unguarded `pnpm --filter @pokestudio/pokemon-data ingest`
+Cloud target (`scripts/ingest-pi.sh`). The unguarded `pnpm --filter @pokelab/pokemon-data ingest`
 still exists for an isolated test instance or Supabase Cloud; point `SUPABASE_URL`/`SUPABASE_SECRET_KEY`
 at that target explicitly when using it.
 
@@ -123,7 +123,7 @@ version_group, method)` — the same combination can legitimately occur at two d
 
 `fetchAndNormalize` (`src/pipeline.ts`) explicitly excludes the handful of moves carrying PokéAPI's
 non-standard `"shadow"` type (Pokémon Colosseum/XD's Shadow Pokémon mechanic — a battle-only
-overlay PokeStudio's `PokemonType` domain doesn't model) and their learnset entries, rather than
+overlay PokeLab's `PokemonType` domain doesn't model) and their learnset entries, rather than
 letting them surface as validation orphans.
 
 See `src/audit.ts`'s `moves`/`learnsets` report sections and docs/engineering/DATA_SOURCES.md "Moves and learnsets"

@@ -10,7 +10,7 @@
     "exploreNavigation": "Secciones de Explorar"
   },
   "home": {
-    "title": "PokeStudio",
+    "title": "PokeLab",
     "tagline": "Busca. Aprende. Construye. Simula. Combate. Analiza. Mejora. Colecciona.",
     "status": "La base ya está lista. Explorar, Equipo y el Laboratorio de Combate están en construcción activa.",
     "cta": "Ver la hoja de ruta",
@@ -27,7 +27,7 @@
     "dark": "Oscuro"
   },
   "footer": {
-    "disclaimer": "PokeStudio es un proyecto no oficial hecho por fans y no está afiliado, respaldado ni patrocinado por Nintendo, Game Freak o The Pokémon Company."
+    "disclaimer": "PokeLab es un proyecto no oficial hecho por fans y no está afiliado, respaldado ni patrocinado por Nintendo, Game Freak o The Pokémon Company."
   },
   "notFound": {
     "title": "Página no encontrada",
@@ -58,8 +58,8 @@
     "eyebrow": "Pokédex Nacional",
     "title": "Pokédex",
     "tagline": "Todos los Pokémon, con tipos, estadísticas, habilidades y evoluciones claras.",
-    "indexDescription": "Consulta tipos y estadísticas base de {count} Pokémon en la Pokédex de PokeStudio.",
-    "detailDescription": "{name}: tipos, estadísticas base{formsNote} en la Pokédex de PokeStudio.",
+    "indexDescription": "Consulta tipos y estadísticas base de {count} Pokémon en la Pokédex de PokeLab.",
+    "detailDescription": "{name}: tipos, estadísticas base{formsNote} en la Pokédex de PokeLab.",
     "detailDescriptionWithForms": " y {formCount} formas",
     "types": "Tipos",
     "baseStats": "Estadísticas base",
@@ -145,9 +145,9 @@
   },
   "moves": {
     "title": "Movimientos",
-    "tagline": "Tipo, categoría de daño, potencia, precisión y PP de todos los movimientos en la base de datos de PokeStudio.",
-    "indexDescription": "Consulta tipo, categoría de daño, potencia, precisión y PP de {count} movimientos en la base de datos de PokeStudio.",
-    "detailDescription": "{name}: tipo, categoría de daño, potencia, precisión, PP y efecto en la base de datos de PokeStudio.",
+    "tagline": "Tipo, categoría de daño, potencia, precisión y PP de todos los movimientos en la base de datos de PokeLab.",
+    "indexDescription": "Consulta tipo, categoría de daño, potencia, precisión y PP de {count} movimientos en la base de datos de PokeLab.",
+    "detailDescription": "{name}: tipo, categoría de daño, potencia, precisión, PP y efecto en la base de datos de PokeLab.",
     "backToMoves": "Volver a Movimientos",
     "backToPokemon": "Volver a {name}",
     "power": "Potencia",
@@ -281,7 +281,7 @@
     "eyebrow": "Explorar",
     "title": "Comparar",
     "tagline": "Compara estadísticas base, tipos y habilidades de hasta 4 Pokémon o formas, en paralelo.",
-    "indexDescription": "Compara estadísticas base, tipos y habilidades de cualquier Pokémon o forma en la Pokédex de PokeStudio.",
+    "indexDescription": "Compara estadísticas base, tipos y habilidades de cualquier Pokémon o forma en la Pokédex de PokeLab.",
     "entryLink": "Comparar Pokémon",
     "emptyState": "Agrega un Pokémon o forma para empezar a comparar.",
     "addPokemon": "Agregar Pokémon",
@@ -305,8 +305,8 @@
   "abilities": {
     "title": "Habilidades",
     "tagline": "El efecto exacto de cada habilidad y qué Pokémon pueden tenerla.",
-    "indexDescription": "Consulta el efecto de {count} habilidades Pokémon en la base de datos de PokeStudio.",
-    "detailDescription": "{name}: efecto y qué Pokémon pueden tener esta habilidad, en la base de datos de PokeStudio.",
+    "indexDescription": "Consulta el efecto de {count} habilidades Pokémon en la base de datos de PokeLab.",
+    "detailDescription": "{name}: efecto y qué Pokémon pueden tener esta habilidad, en la base de datos de PokeLab.",
     "search": "Buscar",
     "searchPlaceholder": "Buscar habilidades…",
     "resultCount": "{count} de {total} habilidades",
@@ -387,7 +387,7 @@
     "ivsLabel": "IVs",
     "calculatedStatsLabel": "Estadísticas calculadas",
     "legacyStatsUnavailableTemplate": "El cálculo de estadísticas para {game} aún no está implementado, así que no se muestran números aquí.",
-    "historicalMechanicsNoteTemplate": "PokeStudio aún no ha validado por completo la mecánica de {game} — algunos campos están ocultos o simplificados.",
+    "historicalMechanicsNoteTemplate": "PokeLab aún no ha validado por completo la mecánica de {game} — algunos campos están ocultos o simplificados.",
     "movesLabel": "Movimientos",
     "moveSlotEmpty": "(vacío)",
     "moveSearchPlaceholder": "Buscar movimientos de esta forma…",
@@ -432,7 +432,7 @@
       "evTotalExceeded": "El total de EVs de {member} supera 510.",
       "evStatExceeded": "{member} tiene un EV fuera del rango 0-252.",
       "invalidIv": "{member} tiene un IV fuera del rango 0-31.",
-      "unsupportedRuleset": "PokeStudio aún no ha validado por completo las reglas de {game} — algunas comprobaciones pueden estar incompletas.",
+      "unsupportedRuleset": "PokeLab aún no ha validado por completo las reglas de {game} — algunas comprobaciones pueden estar incompletas.",
       "speciesUnavailableInGeneration": "{member} no está disponible en {game}."
     },
     "loadingReferenceData": "Cargando…"

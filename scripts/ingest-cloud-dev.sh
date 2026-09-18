@@ -40,4 +40,4 @@ fi
 export SUPABASE_SECRET_KEY="$SUPABASE_CLOUD_DEV_SECRET_KEY"
 
 echo "Ingesting into Supabase Cloud PokeStudio Dev ($SUPABASE_URL)..."
-pnpm --filter @pokestudio/pokemon-data ingest "$@"
+pnpm --filter @pokelab/pokemon-data ingest "$@"

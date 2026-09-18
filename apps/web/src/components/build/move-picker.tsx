@@ -2,10 +2,10 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
-import type { MoveSummary } from '@pokestudio/database';
-import type { Locale } from '@pokestudio/i18n';
-import { ALL_POKEMON_TYPES } from '@pokestudio/pokemon-data';
-import type { DamageClass, PokemonType } from '@pokestudio/pokemon-data';
+import type { MoveSummary } from '@pokelab/database';
+import type { Locale } from '@pokelab/i18n';
+import { ALL_POKEMON_TYPES } from '@pokelab/pokemon-data';
+import type { DamageClass, PokemonType } from '@pokelab/pokemon-data';
 
 import { SearchIcon } from '@/components/search-field-icons';
 import { searchInputClass } from '@/lib/ui-classes';

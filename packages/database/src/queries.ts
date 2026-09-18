@@ -6,9 +6,9 @@ import type {
   LocalizedName,
   MoveStat,
   PokemonType,
-} from '@pokestudio/pokemon-data';
+} from '@pokelab/pokemon-data';
 
-import type { PokeStudioDatabaseClient } from './client';
+import type { PokeLabDatabaseClient } from './client';
 
 /**
  * Domain-shaped Pokémon reference-data queries (docs/engineering/DATABASE.md, ADR-0010).
@@ -110,7 +110,7 @@ async function selectAllRows<T>(
 }
 
 /** Every species with its default form (Pokédex index — one card per species). */
-export async function listSpecies(client: PokeStudioDatabaseClient): Promise<SpeciesListItem[]> {
+export async function listSpecies(client: PokeLabDatabaseClient): Promise<SpeciesListItem[]> {
   const [speciesRows, defaultFormRows] = await Promise.all([
     selectAllRows((from, to) =>
       client
@@ -163,7 +163,7 @@ export interface SpeciesPage {
  * (~6MB/one page) rather than a "keep it simple for now" case.
  */
 export async function listSpeciesPage(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   options: { page: number; pageSize: number },
 ): Promise<SpeciesPage> {
   const from = (options.page - 1) * options.pageSize;
@@ -225,7 +225,7 @@ export async function listSpeciesPage(
 
 /** A single species with all of its forms (Pokédex detail page). Null if the slug doesn't exist. */
 export async function getSpeciesBySlug(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   slug: string,
 ): Promise<SpeciesDetail | null> {
   const speciesResult = await client
@@ -299,7 +299,7 @@ function toAbilitySummary(row: AbilityRow, link: FormAbilityRow): AbilitySummary
  * dataset-wide reads above.
  */
 async function loadAbilitiesByFormId(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   formIds: string[],
 ): Promise<Map<string, AbilitySummary[]>> {
   const abilitiesByFormId = new Map<string, AbilitySummary[]>();
@@ -435,7 +435,7 @@ function toEvolutionCondition(row: SpeciesEvolutionRow): EvolutionCondition {
  * that id. Returns null only if the species slug itself doesn't exist.
  */
 export async function getEvolutionFamily(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   speciesSlug: string,
 ): Promise<EvolutionFamily | null> {
   const speciesResult = await client
@@ -636,7 +636,7 @@ interface MoveStatChangeRow {
 
 /** A single move by slug (move detail page). Null if the slug doesn't exist. */
 export async function getMoveBySlug(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   slug: string,
 ): Promise<MoveDetail | null> {
   const result = await client
@@ -689,7 +689,7 @@ export async function getMoveBySlug(
  * total), run in parallel.
  */
 export async function listVersionGroups(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
 ): Promise<VersionGroupSummary[]> {
   const versionGroupsResult = await client
     .from('version_group')
@@ -727,7 +727,7 @@ export async function listVersionGroups(
 
 /** The version group to default the UI to when none is explicitly selected — the newest one with real data. */
 export async function getDefaultVersionGroup(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
 ): Promise<VersionGroupSummary | null> {
   const versionGroups = await listVersionGroups(client);
   return versionGroups[0] ?? null; // already newest-first
@@ -763,7 +763,7 @@ export interface FormLearnsetAllVersionGroups {
  * doesn't exist.
  */
 export async function getFormLearnsetAllVersionGroups(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   formSlug: string,
 ): Promise<FormLearnsetAllVersionGroups | null> {
   const formResult = await client
@@ -877,7 +877,7 @@ const MOVE_SORT_COLUMN: Record<NonNullable<MoveListFilters['sortBy']>, string> =
 
 /** One page of the move index, filtered/sorted entirely in Postgres — never loads the full ~937-move table into the browser to filter client-side. */
 export async function listMovesPage(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   options: { page: number; pageSize: number; filters?: MoveListFilters },
 ): Promise<MovePage> {
   const from = (options.page - 1) * options.pageSize;
@@ -1009,7 +1009,7 @@ export interface SpeciesSearchIndex {
  * server-side search endpoint (task §4 "measure first").
  */
 export async function getSpeciesSearchIndex(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
 ): Promise<SpeciesSearchIndex> {
   const [speciesRows, formRows] = await Promise.all([
     selectAllRows<{
@@ -1096,7 +1096,7 @@ export interface ComparablePokemonForm {
  * Result order follows `formSlugs`, not database order.
  */
 export async function getFormsBySlugs(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   formSlugs: string[],
 ): Promise<ComparablePokemonForm[]> {
   if (formSlugs.length === 0) return [];
@@ -1177,7 +1177,7 @@ function toAbilityListItem(row: AbilityListRow): AbilityListItem {
 }
 
 /** Every ability (Phase 1C.3 ability index) — 313 rows, well under PostgREST's 1000-row page cap, so a single request. */
-export async function listAbilities(client: PokeStudioDatabaseClient): Promise<AbilityListItem[]> {
+export async function listAbilities(client: PokeLabDatabaseClient): Promise<AbilityListItem[]> {
   const result = await client
     .from('ability')
     .select('slug, name_en, name_es, effect_en, effect_es')
@@ -1194,7 +1194,7 @@ export async function listAbilities(client: PokeStudioDatabaseClient): Promise<A
  * `move`/`MoveDetail` which genuinely has extra fields.
  */
 export async function getAbilityBySlug(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   slug: string,
 ): Promise<AbilityListItem | null> {
   const result = await client
@@ -1235,7 +1235,7 @@ export interface AbilityPokemonPage {
 
 /** Forms (grouped to their species) that can have a given ability. Null if the ability doesn't exist; an empty page would mean a real data-integrity issue (every ability is linked to at least one form by construction), not a normal empty state. */
 export async function getPokemonForAbility(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   abilitySlug: string,
   options: { page: number; pageSize: number },
 ): Promise<AbilityPokemonPage | null> {
@@ -1329,7 +1329,7 @@ export async function getPokemonForAbility(
  * empty page is a real state (no form learns it in this version group).
  */
 export async function getMoveLearners(
-  client: PokeStudioDatabaseClient,
+  client: PokeLabDatabaseClient,
   moveSlug: string,
   versionGroupSlug: string,
   options: { page: number; pageSize: number },
@@ -1443,7 +1443,7 @@ function toNature(row: NatureRow): Nature {
 }
 
 /** Every nature (Team Builder v1's nature selector) — exactly 25 rows, one request. */
-export async function listNatures(client: PokeStudioDatabaseClient): Promise<Nature[]> {
+export async function listNatures(client: PokeLabDatabaseClient): Promise<Nature[]> {
   const result = await client
     .from('nature')
     .select('slug, name_en, name_es, increased_stat, decreased_stat')
@@ -1487,7 +1487,7 @@ function toItem(row: ItemRow): Item {
 }
 
 /** Every held item (Team Builder v1's item selector) — ~175 rows, well under PostgREST's page cap, one request. */
-export async function listItems(client: PokeStudioDatabaseClient): Promise<Item[]> {
+export async function listItems(client: PokeLabDatabaseClient): Promise<Item[]> {
   const result = await client
     .from('item')
     .select('slug, name_en, name_es, effect_en, effect_es, category')

@@ -1,8 +1,12 @@
-# PokeStudio.app
+# PokeLab
+
+Primary domain: **pokelab.com**. **pokelab.app** is reserved in the plan for a redirect, pending domain setup and owner approval.
+
+The code rebrand is prepared on a branch. External resource names remain unchanged until the [reviewed cutover](docs/engineering/POKELAB_RENAME.md).
 
 **Explore · Build · Battle Lab**
 
-PokeStudio is being designed as a complete Pokémon toolkit for casual and competitive players: reference data, team building, battle simulation, AI opponents, competitive intelligence, replay analysis, collection tools and contextual AI in one coherent product.
+PokeLab is being designed as a complete Pokémon toolkit for casual and competitive players: reference data, team building, battle simulation, AI opponents, competitive intelligence, replay analysis, collection tools and contextual AI in one coherent product.
 
 ## Current status
 
@@ -21,7 +25,7 @@ This repository should not claim feature completeness until the corresponding ro
 - source-available licensing direction,
 - subtle monetization focused on expensive/premium capabilities,
 - strong privacy defaults,
-- reuse mature battle/calculation foundations while owning PokeStudio differentiators.
+- reuse mature battle/calculation foundations while owning PokeLab differentiators.
 
 ## Start developing
 
@@ -49,7 +53,7 @@ pnpm dev:pi                                          # run the web app (http://l
 
 pnpm db:pi:migrate                                   # apply packages/database/supabase/migrations/*.sql to the Pi
 pnpm ingest:pi                                       # fetch -> normalize -> validate -> persist the Pokédex to the Pi
-pnpm --filter @pokestudio/pokemon-data audit          # same pipeline, report-only, no DB writes
+pnpm --filter @pokelab/pokemon-data audit          # same pipeline, report-only, no DB writes
 
 pnpm validate:full     # format, lint, typecheck, all tests, Next build, Cloudflare build — full gate
 pnpm validate:changed  # same checks scoped to changed packages/dependents — for use mid-implementation
@@ -71,7 +75,7 @@ environment, never the normal dev path. See `packages/database/README.md` "Isola
 `apps/web` builds and runs as a Cloudflare Worker via `@opennextjs/cloudflare` (ADR-0005), deployed
 manually (no CI auto-deploy) to a `*.workers.dev` subdomain — DEV/staging only, no custom domain or
 production routes configured yet (`apps/web/wrangler.jsonc`). Normal local development is
-unaffected — `pnpm --filter @pokestudio/web dev` still runs plain `next dev`.
+unaffected — `pnpm --filter @pokelab/web dev` still runs plain `next dev`.
 
 ```bash
 pnpm build:cf     # Cloudflare-target build (opennextjs-cloudflare build) — outputs apps/web/.open-next

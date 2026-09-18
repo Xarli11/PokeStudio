@@ -2,9 +2,9 @@
 
 import { useId, useMemo, useRef, useState } from 'react';
 
-import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database';
-import { formatMessage, type Locale } from '@pokestudio/i18n';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokelab/database';
+import { formatMessage, type Locale } from '@pokelab/i18n';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 import { SearchIcon } from '@/components/search-field-icons';
 import { searchInputClass } from '@/lib/ui-classes';

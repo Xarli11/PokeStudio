@@ -1,9 +1,11 @@
-# PokeStudio documentation index
+# PokeLab documentation index
 
 `README.md` (repository root) is the public project entry point. `CLAUDE.md` (repository root) is
 the mandatory operating context for Claude Code — read automatically before any change, and the
 current execution entry point (superseding `docs/product/MASTER_PROMPT.md`, the original Phase 0
 bootstrap prompt, kept only as a historical record).
+
+See the [PokeLab rename inventory and approval runbook](engineering/POKELAB_RENAME.md) for the current branding transition and retained technical identities.
 
 ## Authority order
 
@@ -20,7 +22,7 @@ Do not silently resolve contradictions. Update the relevant document or create a
 
 ## Product
 
-- [`product/PRODUCT_SPEC.md`](product/PRODUCT_SPEC.md) — what PokeStudio is and its product principles.
+- [`product/PRODUCT_SPEC.md`](product/PRODUCT_SPEC.md) — what PokeLab is and its product principles.
 - [`product/ROADMAP.md`](product/ROADMAP.md) — phase sequencing; what to build next and what to defer.
 - [`product/FEATURE_MATRIX.md`](product/FEATURE_MATRIX.md) — feature status by pillar.
 - [`product/BRAND_BRIEF.md`](product/BRAND_BRIEF.md) — brand direction and visual identity brief.
@@ -32,7 +34,7 @@ Do not silently resolve contradictions. Update the relevant document or create a
 
 - [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) — system architecture overview.
 - [`architecture/BATTLE_ENGINE.md`](architecture/BATTLE_ENGINE.md) — battle simulation boundary.
-- [`architecture/AI_SPEC.md`](architecture/AI_SPEC.md) — PokeStudio AI design and constraints.
+- [`architecture/AI_SPEC.md`](architecture/AI_SPEC.md) — PokeLab AI design and constraints.
 
 ## Engineering & data
 

@@ -1,4 +1,4 @@
-import type { Locale } from '@pokestudio/i18n';
+import type { Locale } from '@pokelab/i18n';
 
 /**
  * Hand-verified phrasing for the small set of well-known status ailments

@@ -1,8 +1,8 @@
 {
-  "name": "@pokestudio/ui",
+  "name": "@pokelab/ui",
   "private": true,
   "version": "0.0.0",
-  "description": "PokeStudio design tokens and theme primitives (dark-first, light-supported).",
+  "description": "PokeLab design tokens and theme primitives (dark-first, light-supported).",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "main": "./src/index.ts",
@@ -18,7 +18,7 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "@pokestudio/config": "workspace:*",
+    "@pokelab/config": "workspace:*",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }

@@ -11,7 +11,7 @@ source scripts/load-env.sh
 case "${NEXT_PUBLIC_SUPABASE_URL:-}" in
   http://127.0.0.1:*|http://localhost:*)
     echo "error: NEXT_PUBLIC_SUPABASE_URL points at localhost ($NEXT_PUBLIC_SUPABASE_URL)." >&2
-    echo "  Normal PokeStudio development uses the Raspberry Pi (http://192.168.1.236:8002)," >&2
+    echo "  Normal PokeLab development uses the Raspberry Pi (http://192.168.1.236:8002)," >&2
     echo "  not a local Supabase stack. Update .env.local — see CLAUDE.md §21." >&2
     exit 1
     ;;
@@ -22,4 +22,4 @@ case "${NEXT_PUBLIC_SUPABASE_URL:-}" in
 esac
 
 echo "Starting web dev server against Raspberry Pi Supabase ($NEXT_PUBLIC_SUPABASE_URL)..."
-pnpm --filter @pokestudio/web dev
+pnpm --filter @pokelab/web dev

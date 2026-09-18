@@ -1,5 +1,5 @@
-import { formatMessage, type Dictionary, type Locale } from '@pokestudio/i18n';
-import type { MoveStat } from '@pokestudio/pokemon-data';
+import { formatMessage, type Dictionary, type Locale } from '@pokelab/i18n';
+import type { MoveStat } from '@pokelab/pokemon-data';
 
 import { ailmentFallbackLabel, ailmentPhrasing } from './move-ailment-label';
 
@@ -166,7 +166,7 @@ export function describeMoveMechanics(
 /**
  * Whether the move detail page's "Description" section should render at
  * all (Phase 1C.2 polish, task §6). A missing prose description never
- * implies PokeStudio knows nothing about the move — when structured
+ * implies PokeLab knows nothing about the move — when structured
  * technical effects exist, showing an empty "Description not available"
  * block above them just reads as broken for no reason, so it's omitted
  * and the technical effects carry the page instead. Only shown (with the

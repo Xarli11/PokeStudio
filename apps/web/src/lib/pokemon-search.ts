@@ -1,7 +1,7 @@
-import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database';
-import type { Locale } from '@pokestudio/i18n';
-import { generationForNationalDexNumber } from '@pokestudio/pokemon-data';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokelab/database';
+import type { Locale } from '@pokelab/i18n';
+import { generationForNationalDexNumber } from '@pokelab/pokemon-data';
+import type { PokemonType } from '@pokelab/pokemon-data';
 
 /**
  * Whole-Pokédex client-side search (Phase 1C.3 §3/§4, Search UX v2) — pure

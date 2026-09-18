@@ -9,3 +9,6 @@ if [ "${CI:-}" != "true" ] && [ -f ".env.local" ]; then
   source .env.local
   set +a
 fi
+
+# Compatibility with existing private .env.local files; never rewrite their secrets.
+export POKELAB_PI_DB_URL="${POKELAB_PI_DB_URL:-${POKESTUDIO_PI_DB_URL:-}}"

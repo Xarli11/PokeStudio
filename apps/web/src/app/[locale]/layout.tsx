@@ -1,9 +1,10 @@
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { notFound } from 'next/navigation';
 
-import { getDictionary, isLocale, locales } from '@pokestudio/i18n';
-import { themeInitScript } from '@pokestudio/ui';
+import { getDictionary, isLocale, locales } from '@pokelab/i18n';
+import { themeInitScript } from '@pokelab/ui';
 
 import { brandAssets } from '@/lib/brand-assets';
 import { PersistentShell } from '@/components/persistent-shell';
@@ -17,7 +18,7 @@ import '../globals.css';
 const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '600', '700'],
-  variable: '--ps-font-inter',
+  variable: '--pl-font-inter',
   display: 'swap',
 });
 
@@ -35,7 +36,15 @@ export async function generateMetadata({
   const dictionary = getDictionary(locale);
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
+    applicationName: SITE_NAME,
+    openGraph: {
+      siteName: SITE_NAME,
+      type: 'website',
+      locale,
+      title: dictionary.home.title,
+      description: dictionary.home.tagline,
+    },
     title: dictionary.home.title,
     description: dictionary.home.tagline,
     alternates: {

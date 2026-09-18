@@ -1,7 +1,7 @@
 [project]
-name = "pokestudio-research"
+name = "pokelab-research"
 version = "0.0.0"
-description = "PokeStudio Python research lane: simulation, Battle AI evaluation, statistical analysis (ADR-0007). Not a production service."
+description = "PokeLab Python research lane: simulation, Battle AI evaluation, statistical analysis (ADR-0007). Not a production service."
 requires-python = ">=3.11"
 dependencies = ["numpy>=2.0"]
 

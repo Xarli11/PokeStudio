@@ -1,7 +1,8 @@
+import { SITE_NAME, SITE_URL } from '@/lib/site';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
+import { formatMessage, getDictionary, isLocale, locales } from '@pokelab/i18n';
 
 import { AbilityIndexExplorer } from '@/components/abilities/ability-search';
 import { getCachedAbilitiesList, getPokemonDatabaseClient } from '@/lib/pokemon-database';
@@ -22,7 +23,7 @@ export async function generateMetadata({
   const abilities = await getCachedAbilitiesList(getPokemonDatabaseClient());
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
     title: dictionary.abilities.title,
     description: formatMessage(dictionary.abilities.indexDescription, {
       count: abilities.length,
@@ -32,6 +33,7 @@ export async function generateMetadata({
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/abilities`])),
     },
     openGraph: {
+      siteName: SITE_NAME,
       title: dictionary.abilities.title,
       description: dictionary.abilities.tagline,
       locale,

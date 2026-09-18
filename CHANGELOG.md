@@ -1,10 +1,19 @@
 # Changelog
 
-All notable PokeStudio changes should be recorded here.
+All notable PokeLab changes should be recorded here.
 
 Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
+
+### PokeLab rebrand (2026-09-18, external cutover pending)
+
+- Rename application branding, workspace packages/imports, Python package, design token prefixes, current documentation and workflows to PokeLab.
+- Centralize the public origin at `https://pokelab.com` for metadata, canonical URLs, OpenGraph and sitemaps; prepare a disabled Cloudflare redirect rule for `pokelab.app`.
+- Retain all original SVG assets pending the owner’s Figma logo update; render PokeLab text beside the unchanged symbol in the header.
+- Preserve saved-team/theme keys, the ingestion lock, Supabase refs/local volumes and current cloud resources; accept legacy local Pi settings.
+- Authorize delivery by stable GitHub repository/owner IDs across the proposed repository rename. Production remains disabled.
+- Inventory and approval/rollback steps: `docs/engineering/POKELAB_RENAME.md`. Earlier entries below describe historical PokeStudio releases.
 
 ### Guarded CI/CD (prepared for review)
 

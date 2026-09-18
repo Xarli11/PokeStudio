@@ -1,13 +1,13 @@
-# PokeStudio.app — Master Prompt for Claude Code
+# PokeLab — Master Prompt for Claude Code
 
 > **Historical record, not an active instruction set.** This was the original Phase 0 bootstrap
 > prompt. `CLAUDE.md` (repository root) is the current mandatory operating context and execution
 > entry point — it supersedes this document for any ongoing decision. Kept here for the historical
 > record of original intent (Phase 1C.2b documentation reorganization).
 
-You are the principal software engineer and product engineer responsible for building **PokeStudio.app**.
+You are the principal software engineer and product engineer responsible for building **PokeLab**.
 
-PokeStudio is intended to become the definitive Pokémon companion for both casual and competitive players.
+PokeLab is intended to become the definitive Pokémon companion for both casual and competitive players.
 
 Its product model is:
 
@@ -17,7 +17,7 @@ Its long-term promise is:
 
 > Search. Learn. Build. Simulate. Battle. Analyze. Improve. Collect.
 
-PokeStudio must not become merely another Pokédex, another damage calculator, another Pokémon Showdown frontend, or a generic AI chat wrapper.
+PokeLab must not become merely another Pokédex, another damage calculator, another Pokémon Showdown frontend, or a generic AI chat wrapper.
 
 The core differentiator is the **integration** of Pokémon knowledge, teambuilding, battle simulation, competitive analysis, collection tracking, training tools and contextual AI in one coherent experience.
 
@@ -43,7 +43,7 @@ Establish a production-quality foundation:
 - TypeScript-first monorepo.
 - React / Next.js web application.
 - PostgreSQL with Supabase as the initial managed platform.
-- Supabase Auth behind a PokeStudio identity boundary.
+- Supabase Auth behind a PokeLab identity boundary.
 - Cloudflare-targeted web deployment architecture without hard-coupling domain logic to Cloudflare.
 - Dedicated battle-domain boundary around the MIT-licensed Pokémon Showdown simulator/server code where compatible.
 - Damage-domain boundary around `@smogon/calc` where compatible.
@@ -68,7 +68,7 @@ At minimum:
 5. Database migration strategy and local Supabase workflow.
 6. Data-ingestion architecture skeleton, not a fake full dataset.
 7. Battle-engine adapter spike proving we can invoke the chosen upstream simulator boundary without coupling UI code to it.
-8. Damage-calculator adapter spike proving `@smogon/calc` can be called through a PokeStudio API.
+8. Damage-calculator adapter spike proving `@smogon/calc` can be called through a PokeLab API.
 9. i18n skeleton with ES/EN.
 10. Design tokens and theme primitives.
 11. Test harness and CI.
@@ -103,7 +103,7 @@ Fix failures caused by your changes. Report unrelated pre-existing failures expl
 - Do not fork external dependencies for convenience.
 - Strategic external dependencies require an adapter boundary, tests, upgrade plan and exit strategy.
 - If an upstream component is good, reuse it.
-- If PokeStudio needs product-specific behavior, extend above it.
+- If PokeLab needs product-specific behavior, extend above it.
 - If a generic improvement is useful upstream, consider contributing it upstream.
 - If an upstream limitation blocks a strategically important capability, document and evaluate a minimal maintained fork.
 - Performance is a product feature.

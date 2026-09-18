@@ -1,4 +1,4 @@
-# PokeStudio — Community Model
+# PokeLab — Community Model
 
 ## Principle
 
