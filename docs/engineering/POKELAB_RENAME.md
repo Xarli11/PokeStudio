@@ -88,7 +88,10 @@ Do not imply that changing DNS migrates `localStorage`.
    package changes and may run ingestion even though the schema/data model did not change;
    it must remain guarded and use the unchanged advisory lock. No guard is bypassed.
 2. **Repository rename:** owner approves `Xarli11/PokeStudio` → `Xarli11/PokeLab`.
-   First check destination availability, connected Apps and Actions references; confirm the
+   First land and successfully deliver the compatibility code from this PR after separate
+   merge/DEV-delivery approval: the previous `main` guard only accepts the old repository
+   name. Do not rename the live repository while its default-branch delivery code still
+   requires the old name. Check destination availability, connected Apps and Actions references; confirm the
    numeric ID after rename. Update local origin, repository description/homepage, external
    links and integrations. Keep branch protections/check names. Do not recreate the old
    repo name, which would break its redirect. No GitHub Pages config was found in code.
