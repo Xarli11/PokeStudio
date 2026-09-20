@@ -218,6 +218,23 @@ describe.skipIf(!hasLocalSupabase)(
       }
     });
 
+    // Fase 2A perf (version_group_with_learnset_data view, migration
+    // 20260920213419): the three real cases the view's `EXISTS` filter must
+    // tell apart, all present in the live dataset rather than seeded —
+    // "champions" already covers "has rows, but none via level-up" above;
+    // "the-crown-tundra" (a real DLC pack with zero pokemon_form_move rows
+    // at all, not yet ingested at the moves level) covers "no rows
+    // whatsoever"; "scarlet-violet" covers the real, included case.
+    it('listVersionGroups excludes a version group with zero pokemon_form_move rows at all', async () => {
+      const versionGroups = await listVersionGroups(client());
+      expect(versionGroups.map((vg) => vg.slug)).not.toContain('the-crown-tundra');
+    });
+
+    it('listVersionGroups includes a real version group with level-up rows', async () => {
+      const versionGroups = await listVersionGroups(client());
+      expect(versionGroups.map((vg) => vg.slug)).toContain('scarlet-violet');
+    });
+
     it('getMoveBySlug returns null for an unknown slug', async () => {
       expect(await getMoveBySlug(client(), 'does-not-exist')).toBeNull();
     });
