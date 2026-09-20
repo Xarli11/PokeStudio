@@ -6,6 +6,14 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Final brand and public domain (2026-09-20)
+
+- Confirm **PokeStudio** as the brand and **https://pokestudio.pro** as its public SEO origin.
+- Share the origin across metadata and sitemap; publish absolute robots sitemap discovery,
+  homepage canonicals and explicit Open Graph URLs for public pages in both locales.
+- Preserve Cloud DEV's `pokestudio` Worker, stable identifiers and ingestion/release policy.
+  DNS, custom-domain activation and production remain separate from this code change.
+
 ### Guarded CI/CD (prepared for review)
 
 - Reuse full validation for PRs and deliveries, with isolated database integration tests.

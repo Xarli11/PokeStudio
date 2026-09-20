@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { getDefaultVersionGroup, getMoveLearners } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
+import { SITE_URL } from '@/lib/site-url';
 import { PokemonTypeBadge } from '@/components/pokemon/type-badge';
 import { describeMoveMechanics, shouldShowMoveDescription } from '@/lib/move-mechanics';
 import { getCachedMoveBySlug, getPokemonDatabaseClient } from '@/lib/pokemon-database';
@@ -48,14 +49,20 @@ export async function generateMetadata({
 
   const name = locale === 'es' ? (move.nameEs ?? move.nameEn) : move.nameEn;
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
     title: `${name} — ${dictionary.moves.title}`,
     description: formatMessage(dictionary.moves.detailDescription, { name }),
     alternates: {
       canonical: `/${locale}/moves/${slug}`,
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/moves/${slug}`])),
     },
-    openGraph: { title: name, description: dictionary.moves.tagline, locale, type: 'website' },
+    openGraph: {
+      url: `/${locale}/moves/${slug}`,
+      title: name,
+      description: dictionary.moves.tagline,
+      locale,
+      type: 'website',
+    },
   };
 }
 

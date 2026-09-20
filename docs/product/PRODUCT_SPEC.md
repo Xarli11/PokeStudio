@@ -1,4 +1,4 @@
-# PokeStudio.app — Product Specification v1
+# PokeStudio — Product Specification v1
 
 ## Vision
 

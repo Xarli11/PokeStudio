@@ -44,8 +44,8 @@ describe.skipIf(!hasLocalSupabase)('sitemap', () => {
   it('includes the Compare shell but no per-comparison query-state URL (no sitemap cardinality explosion)', async () => {
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
-    expect(urls).toContain('https://pokestudio.app/en/compare');
-    expect(urls).toContain('https://pokestudio.app/es/compare');
+    expect(urls).toContain('https://pokestudio.pro/en/compare');
+    expect(urls).toContain('https://pokestudio.pro/es/compare');
     expect(urls.every((url) => !url.includes('compare?'))).toBe(true);
   });
 
@@ -65,8 +65,8 @@ describe.skipIf(!hasLocalSupabase)('sitemap', () => {
   it('includes ability detail pages for both locales', async () => {
     const entries = await sitemap();
     const urls = new Set(entries.map((entry) => entry.url));
-    expect(urls.has('https://pokestudio.app/en/abilities/overgrow')).toBe(true);
-    expect(urls.has('https://pokestudio.app/es/abilities/overgrow')).toBe(true);
-    expect(urls.has('https://pokestudio.app/en/abilities')).toBe(true);
+    expect(urls.has('https://pokestudio.pro/en/abilities/overgrow')).toBe(true);
+    expect(urls.has('https://pokestudio.pro/es/abilities/overgrow')).toBe(true);
+    expect(urls.has('https://pokestudio.pro/en/abilities')).toBe(true);
   });
 });

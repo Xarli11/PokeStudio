@@ -11,6 +11,7 @@ import {
   locales,
 } from '@pokestudio/i18n';
 
+import { SITE_URL } from '@/lib/site-url';
 import { getCachedAbilityBySlug, getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { buttonClass, cardClass, eyebrowClass, tagClass } from '@/lib/ui-classes';
 
@@ -58,7 +59,7 @@ export async function generateMetadata({
 
   const name = locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn;
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
     title: `${name} — ${dictionary.abilities.title}`,
     description: formatMessage(dictionary.abilities.detailDescription, { name }),
     alternates: {
@@ -68,6 +69,7 @@ export async function generateMetadata({
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/abilities/${slug}`])),
     },
     openGraph: {
+      url: `/${locale}/abilities/${slug}`,
       title: name,
       description: dictionary.abilities.tagline,
       locale,

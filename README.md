@@ -1,4 +1,7 @@
-# PokeStudio.app
+# PokeStudio
+
+Primary public domain: **https://pokestudio.pro**. The brand is **PokeStudio**, without the TLD.
+Domain activation is pending; see [the domain runbook](docs/engineering/DOMAIN.md).
 
 **Explore · Build · Battle Lab**
 

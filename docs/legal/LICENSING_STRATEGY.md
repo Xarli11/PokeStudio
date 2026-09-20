@@ -70,6 +70,7 @@ Final wording should be reviewed in context.
 
 ## Trademark/name status
 
-Current working product name: **PokeStudio.app**.
+Selected product name: **PokeStudio**. Primary public domain: **https://pokestudio.pro**.
+This naming decision does not change the existing license or trademark-clearance status.
 
 There are prior uses of similar names in the Pokémon ecosystem. Before significant public launch/brand spend, perform dedicated trademark clearance and obtain legal advice if appropriate.

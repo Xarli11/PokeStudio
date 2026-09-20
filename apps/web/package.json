@@ -2,7 +2,7 @@
   "name": "@pokestudio/web",
   "private": true,
   "version": "0.0.0",
-  "description": "PokeStudio.app web application (Next.js).",
+  "description": "PokeStudio web application (Next.js).",
   "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "dev": "next dev",

@@ -4,7 +4,7 @@ This file is mandatory operating context for Claude Code.
 
 ## 1. Mission
 
-Build **PokeStudio.app**, a fast, elegant, trustworthy and community-driven Pokémon platform for casual and competitive players.
+Build **PokeStudio**, a fast, elegant, trustworthy and community-driven Pokémon platform for casual and competitive players.
 
 The product pillars are:
 
@@ -231,7 +231,9 @@ Use canonical URLs, structured metadata, sitemap infrastructure and localized me
 
 ## 18. Brand rule
 
-Current product name: **PokeStudio.app**.
+Current product name: **PokeStudio**. Primary public domain: **https://pokestudio.pro**.
+The TLD is not part of the brand. Keep technical identifiers and the Cloud DEV Worker
+`pokestudio` stable; follow `docs/engineering/DOMAIN.md` before any domain activation.
 
 Visual direction:
 
