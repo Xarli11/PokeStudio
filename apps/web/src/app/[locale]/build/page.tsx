@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { listVersionGroups } from '@pokestudio/database';
 import { getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
+import { SITE_URL } from '@/lib/site-url';
 import { BuildHome } from '@/components/build/build-home';
 import { DEFAULT_BUILD_VERSION_GROUP_SLUG } from '@/lib/build-game-capabilities';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
@@ -25,7 +26,7 @@ export async function generateMetadata({
   const dictionary = getDictionary(locale);
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
     title: dictionary.build.title,
     description: dictionary.build.tagline,
     alternates: {
@@ -33,6 +34,7 @@ export async function generateMetadata({
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/build`])),
     },
     openGraph: {
+      url: `/${locale}/build`,
       title: dictionary.build.title,
       description: dictionary.build.tagline,
       locale,

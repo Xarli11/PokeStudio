@@ -1,3 +1,5 @@
+import type { Metadata } from 'next';
+import { SITE_URL } from '@/lib/site-url';
 import Link from 'next/link';
 import { type Locale, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 import { notFound } from 'next/navigation';
@@ -6,6 +8,32 @@ import { buttonClass, interactiveCardClass, cardClass, soonBadgeClass } from '@/
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) return {};
+  const dictionary = getDictionary(locale);
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: dictionary.home.title,
+    description: dictionary.home.tagline,
+    alternates: {
+      canonical: `/${locale}`,
+      languages: Object.fromEntries(locales.map((l) => [l, `/${l}`])),
+    },
+    openGraph: {
+      url: `/${locale}`,
+      title: dictionary.home.title,
+      description: dictionary.home.tagline,
+      locale,
+      type: 'website',
+    },
+  };
 }
 
 function PillarCard({

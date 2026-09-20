@@ -4,37 +4,37 @@ import { describe, expect, it } from 'vitest';
 import { middleware } from './middleware';
 
 function request(path: string): NextRequest {
-  return new NextRequest(new URL(path, 'https://pokestudio.app'));
+  return new NextRequest(new URL(path, 'https://pokestudio.pro'));
 }
 
 describe('middleware — case-insensitive canonical entity routes (Phase 1C.3 §13)', () => {
   it('redirects an uppercase Pokémon slug to lowercase, permanently', () => {
     const response = middleware(request('/es/pokemon/MEW'));
     expect(response.status).toBe(308);
-    expect(response.headers.get('location')).toBe('https://pokestudio.app/es/pokemon/mew');
+    expect(response.headers.get('location')).toBe('https://pokestudio.pro/es/pokemon/mew');
   });
 
   it('redirects a mixed-case Pokémon slug to lowercase', () => {
     const response = middleware(request('/es/pokemon/Mew'));
-    expect(response.headers.get('location')).toBe('https://pokestudio.app/es/pokemon/mew');
+    expect(response.headers.get('location')).toBe('https://pokestudio.pro/es/pokemon/mew');
   });
 
   it('redirects an uppercase move slug to lowercase', () => {
     const response = middleware(request('/es/moves/TACKLE'));
     expect(response.status).toBe(308);
-    expect(response.headers.get('location')).toBe('https://pokestudio.app/es/moves/tackle');
+    expect(response.headers.get('location')).toBe('https://pokestudio.pro/es/moves/tackle');
   });
 
   it('redirects an uppercase ability slug to lowercase', () => {
     const response = middleware(request('/es/abilities/OVERGROW'));
     expect(response.status).toBe(308);
-    expect(response.headers.get('location')).toBe('https://pokestudio.app/es/abilities/overgrow');
+    expect(response.headers.get('location')).toBe('https://pokestudio.pro/es/abilities/overgrow');
   });
 
   it('preserves the locale and query string across the redirect', () => {
     const response = middleware(request('/en/moves/TACKLE?learnersPage=2'));
     expect(response.headers.get('location')).toBe(
-      'https://pokestudio.app/en/moves/tackle?learnersPage=2',
+      'https://pokestudio.pro/en/moves/tackle?learnersPage=2',
     );
   });
 
@@ -52,7 +52,7 @@ describe('middleware — case-insensitive canonical entity routes (Phase 1C.3 §
   it('still redirects a locale-less path to a locale-prefixed one (existing behavior, unaffected)', () => {
     const response = middleware(request('/pokemon/mew'));
     expect(response.headers.get('location')).toMatch(
-      /^https:\/\/pokestudio\.app\/(en|es)\/pokemon\/mew$/,
+      /^https:\/\/pokestudio\.pro\/(en|es)\/pokemon\/mew$/,
     );
   });
 });

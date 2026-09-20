@@ -1,11 +1,11 @@
-# PokeStudio.app — Master Prompt for Claude Code
+# PokeStudio — Master Prompt for Claude Code
 
 > **Historical record, not an active instruction set.** This was the original Phase 0 bootstrap
 > prompt. `CLAUDE.md` (repository root) is the current mandatory operating context and execution
 > entry point — it supersedes this document for any ongoing decision. Kept here for the historical
 > record of original intent (Phase 1C.2b documentation reorganization).
 
-You are the principal software engineer and product engineer responsible for building **PokeStudio.app**.
+You are the principal software engineer and product engineer responsible for building **PokeStudio**.
 
 PokeStudio is intended to become the definitive Pokémon companion for both casual and competitive players.
 

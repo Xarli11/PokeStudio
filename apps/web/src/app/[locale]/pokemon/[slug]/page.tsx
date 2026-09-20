@@ -15,6 +15,7 @@ import {
   locales,
 } from '@pokestudio/i18n';
 
+import { SITE_URL } from '@/lib/site-url';
 import { PokemonEvolutionSection } from '@/components/pokemon/evolution-section';
 import { PokemonFormSection } from '@/components/pokemon/form-section';
 import { PokemonMovesSection, type MovesExplorerMove } from '@/components/pokemon/moves-section';
@@ -105,7 +106,7 @@ export async function generateMetadata({
       : '';
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
     title: `${species.name[locale]} — ${dictionary.pokedex.title}`,
     description: formatMessage(dictionary.pokedex.detailDescription, {
       name: species.name[locale],
@@ -121,6 +122,7 @@ export async function generateMetadata({
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/pokemon/${slug}`])),
     },
     openGraph: {
+      url: `/${locale}/pokemon/${slug}`,
       title: species.name[locale],
       description: dictionary.pokedex.tagline,
       locale,

@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { getSpeciesSearchIndex, listSpeciesPage } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
+import { SITE_URL } from '@/lib/site-url';
 import { PokemonExplorer } from '@/components/pokemon/pokemon-explorer';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { eyebrowClass } from '@/lib/ui-classes';
@@ -37,7 +38,7 @@ export async function generateMetadata({
   const firstPage = await listSpeciesPage(getPokemonDatabaseClient(), { page: 1, pageSize: 1 });
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
     title: dictionary.pokedex.title,
     description: formatMessage(dictionary.pokedex.indexDescription, {
       count: firstPage.totalCount,
@@ -47,6 +48,7 @@ export async function generateMetadata({
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/pokemon`])),
     },
     openGraph: {
+      url: `/${locale}/pokemon`,
       title: dictionary.pokedex.title,
       description: dictionary.pokedex.tagline,
       locale,

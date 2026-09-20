@@ -1,4 +1,4 @@
-# PokeStudio.app — Brand Brief v1
+# PokeStudio — Brand Brief v1
 
 > The visual identity is final: Figma is the source of truth, its exported SVGs live under
 > `apps/web/public/brand/`, and palette/typography/token mapping/logo usage are documented
@@ -14,9 +14,11 @@ concise rather than restate it on every page.
 
 ## Current name
 
-**PokeStudio.app**
+**PokeStudio**
 
-Treat this as the working official product name unless the owner changes it.
+Final owner decision (2026-09-20): **PokeStudio**, with **https://pokestudio.pro** as the primary
+public domain. The TLD is the address, not part of the brand. Product tagline:
+**Explore. Build. Battle.** Domain activation is tracked in `docs/engineering/DOMAIN.md`.
 
 ## Positioning
 

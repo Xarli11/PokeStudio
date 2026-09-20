@@ -127,3 +127,10 @@ The isolated Supabase Docker job must pass in the first real PR run. It was not 
 - [Cloudflare deployment records](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/deployments/methods/list/)
 - [Supabase environment management](https://supabase.com/docs/guides/deployment/managing-environments)
 - [Supabase public API exposure change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically)
+
+## Public domain and delivery target
+
+The selected public SEO origin is `https://pokestudio.pro`; see [DOMAIN.md](DOMAIN.md).
+Cloud DEV delivery and smoke still use `pokestudio` at
+`https://pokestudio.carlosgt2001.workers.dev`. The public domain is not a release target.
+Production remains unconfigured, and only the main pipeline may deliver to Cloud DEV.

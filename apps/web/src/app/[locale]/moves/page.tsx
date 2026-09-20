@@ -6,6 +6,7 @@ import type { DamageClass, PokemonType } from '@pokestudio/pokemon-data';
 import { listMovesPage, type MoveListFilters } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
+import { SITE_URL } from '@/lib/site-url';
 import { PokemonTypeBadge } from '@/components/pokemon/type-badge';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { buttonClass, eyebrowClass, interactiveCardClass, tagClass } from '@/lib/ui-classes';
@@ -115,7 +116,7 @@ export async function generateMetadata({
   const firstPage = await listMovesPage(getPokemonDatabaseClient(), { page: 1, pageSize: 1 });
 
   return {
-    metadataBase: new URL('https://pokestudio.app'),
+    metadataBase: new URL(SITE_URL),
     title: dictionary.moves.title,
     description: formatMessage(dictionary.moves.indexDescription, { count: firstPage.totalCount }),
     alternates: {
@@ -128,6 +129,7 @@ export async function generateMetadata({
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}/moves`])),
     },
     openGraph: {
+      url: `/${locale}/moves`,
       title: dictionary.moves.title,
       description: dictionary.moves.tagline,
       locale,
