@@ -19,6 +19,25 @@ import { Client } from 'pg';
  */
 const INGEST_LOCK_KEY = 'pokestudio:pokemon-data:ingest';
 
+/**
+ * pg-connection-string 2.x still diverges from libpq's own `sslmode`
+ * semantics: without `uselibpqcompat=true`, node-postgres treats
+ * `sslmode=require` as needing full certificate-chain verification, where
+ * libpq (psql, the Supabase CLI — both already used elsewhere against this
+ * same URL) only requires the connection to be encrypted. Against Supabase
+ * Cloud's certificate chain that mismatch surfaces as
+ * `SELF_SIGNED_CERT_IN_CHAIN` from node-postgres alone. `uselibpqcompat=true`
+ * aligns node-postgres with libpq for `require` only; `verify-full` (already
+ * strict, already libpq-equivalent) is never touched.
+ */
+export function normalizePgConnectionStringForNodePg(connectionString: string): string {
+  const url = new URL(connectionString);
+  if (url.searchParams.get('sslmode') === 'require' && !url.searchParams.has('uselibpqcompat')) {
+    url.searchParams.set('uselibpqcompat', 'true');
+  }
+  return url.toString();
+}
+
 export class IngestLockedError extends Error {
   constructor() {
     super(
@@ -48,7 +67,7 @@ export async function withIngestLock<T>(
     return fn();
   }
 
-  const client = new Client({ connectionString: dbUrl });
+  const client = new Client({ connectionString: normalizePgConnectionStringForNodePg(dbUrl) });
   await client.connect();
   try {
     const { rows } = await client.query<{ acquired: boolean }>(
