@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createPublicDatabaseClient } from '../src/client';
+import { createPublicDatabaseClient, createServiceDatabaseClient } from '../src/client';
 import {
   getAbilityBySlug,
   getDefaultVersionGroup,
@@ -511,6 +511,225 @@ describe.skipIf(!hasLocalSupabase)(
       expect(leftovers?.nameEn).toBe('Leftovers');
       // A key item (never holdable) must not have been ingested.
       expect(items.some((i) => i.slug === 'bike-voucher')).toBe(false);
+    });
+  },
+);
+
+const secretKey = process.env.SUPABASE_SECRET_KEY;
+const hasServiceRole = Boolean(supabaseUrl && publishableKey && secretKey);
+
+/**
+ * Deterministic, environment-agnostic proof of the three cases
+ * `version_group_with_learnset_data` (migration 20260920213419) must tell
+ * apart — unlike the "full ingested dataset" tests above (which rely on
+ * "champions"/"scarlet-violet" real PokéAPI slugs that a future ingestion
+ * could rename or reshape), this seeds its own disposable fixtures under a
+ * dedicated `source_id` and cleans them up itself, so it holds regardless
+ * of what's currently ingested. Runs against either the isolated CI
+ * database (the job's disposable Supabase instance, empty until seeded —
+ * see scripts/ci/integration-env.mjs) or the Raspberry Pi, using the same
+ * service-role client the codebase already has for exactly this purpose
+ * (`createServiceDatabaseClient`, packages/database/src/client.ts) — no
+ * service-role usage was added to the app itself, and no dependency on
+ * `@pokestudio/pokemon-data`'s ingestion pipeline was introduced (that
+ * package's Node-only ingestion pieces are deliberately not part of its
+ * public barrel — see that package's src/index.ts).
+ */
+describe.skipIf(!hasServiceRole)(
+  'listVersionGroups against deterministic, self-contained fixtures',
+  () => {
+    const TEST_SOURCE_ID = 'pokestudio-test-list-version-groups';
+    const VG_WITH_LEVEL_UP = 'pokestudio-test-vg-with-level-up';
+    const VG_OTHER_METHOD_ONLY = 'pokestudio-test-vg-other-method-only';
+    const VG_NO_ROWS = 'pokestudio-test-vg-no-rows';
+
+    const serviceClient = () =>
+      createServiceDatabaseClient({
+        url: supabaseUrl!,
+        publishableKey: publishableKey!,
+        secretKey: secretKey!,
+      });
+    const publicClient = () =>
+      createPublicDatabaseClient({ url: supabaseUrl!, publishableKey: publishableKey! });
+
+    async function cleanUp() {
+      const db = serviceClient();
+      await db.from('pokemon_form_move').delete().eq('source_id', TEST_SOURCE_ID);
+      await db.from('move').delete().eq('source_id', TEST_SOURCE_ID);
+      await db.from('pokemon_form').delete().eq('source_id', TEST_SOURCE_ID);
+      await db.from('species').delete().eq('source_id', TEST_SOURCE_ID);
+      await db.from('version_group').delete().eq('source_id', TEST_SOURCE_ID);
+      // 'level-up'/'machine' are shared reference rows a real ingestion may
+      // already own (source_id "pokeapi") — only ever deleted here if this
+      // suite itself created them (see the ignoreDuplicates upsert below).
+      await db.from('move_learn_method').delete().eq('source_id', TEST_SOURCE_ID);
+      await db.from('data_sources').delete().eq('source_id', TEST_SOURCE_ID);
+    }
+
+    beforeAll(async () => {
+      await cleanUp();
+      const db = serviceClient();
+
+      const { error: sourceError } = await db.from('data_sources').insert({
+        source_id: TEST_SOURCE_ID,
+        source_url: 'https://example.invalid',
+        license: 'test-fixture',
+        fetched_at: new Date(0).toISOString(),
+        importer_version: 'test',
+      });
+      if (sourceError) throw new Error(`seed data_sources failed: ${sourceError.message}`);
+
+      // Upsert-ignore: 'level-up'/'machine' already exist wherever a real
+      // ingestion has run (e.g. the Pi) — never overwrite that row's
+      // ownership, only create it when the target DB is genuinely empty
+      // (the isolated CI database, before any ingestion).
+      const { error: methodError } = await db.from('move_learn_method').upsert(
+        [
+          { slug: 'level-up', source_id: TEST_SOURCE_ID, external_id: 'method-level-up' },
+          { slug: 'machine', source_id: TEST_SOURCE_ID, external_id: 'method-machine' },
+        ],
+        { onConflict: 'slug', ignoreDuplicates: true },
+      );
+      if (methodError) throw new Error(`seed move_learn_method failed: ${methodError.message}`);
+
+      const { data: species, error: speciesError } = await db
+        .from('species')
+        .insert({
+          slug: 'pokestudio-test-species',
+          national_dex_number: 90099,
+          name_en: 'Testmon',
+          name_es: 'Testmon',
+          source_id: TEST_SOURCE_ID,
+          external_id: 'species-90099',
+        })
+        .select('id')
+        .single();
+      if (speciesError || !species) {
+        throw new Error(`seed species failed: ${speciesError?.message}`);
+      }
+
+      const { data: form, error: formError } = await db
+        .from('pokemon_form')
+        .insert({
+          species_id: species.id,
+          slug: 'pokestudio-test-form',
+          name_en: 'Testmon',
+          name_es: 'Testmon',
+          is_default: true,
+          form_category: 'default',
+          types: ['normal'],
+          base_stats: {
+            hp: 1,
+            attack: 1,
+            defense: 1,
+            specialAttack: 1,
+            specialDefense: 1,
+            speed: 1,
+          },
+          source_id: TEST_SOURCE_ID,
+          external_id: 'form-90099',
+        })
+        .select('id')
+        .single();
+      if (formError || !form) throw new Error(`seed pokemon_form failed: ${formError?.message}`);
+
+      const { data: move, error: moveError } = await db
+        .from('move')
+        .insert({
+          slug: 'pokestudio-test-move',
+          name_en: 'Test Move',
+          type: 'normal',
+          damage_class: 'physical',
+          pp: 10,
+          priority: 0,
+          target: 'selected-pokemon',
+          generation: 1,
+          ailment: 'none',
+          category: 'damage',
+          source_id: TEST_SOURCE_ID,
+          external_id: 'move-90099',
+        })
+        .select('id')
+        .single();
+      if (moveError || !move) throw new Error(`seed move failed: ${moveError?.message}`);
+
+      const { error: versionGroupError } = await db.from('version_group').insert([
+        {
+          slug: VG_WITH_LEVEL_UP,
+          generation: 1,
+          display_order: 991,
+          source_id: TEST_SOURCE_ID,
+          external_id: 'vg-with-level-up',
+        },
+        {
+          slug: VG_OTHER_METHOD_ONLY,
+          generation: 1,
+          display_order: 992,
+          source_id: TEST_SOURCE_ID,
+          external_id: 'vg-other-method-only',
+        },
+        {
+          slug: VG_NO_ROWS,
+          generation: 1,
+          display_order: 993,
+          source_id: TEST_SOURCE_ID,
+          external_id: 'vg-no-rows',
+        },
+      ]);
+      if (versionGroupError) {
+        throw new Error(`seed version_group failed: ${versionGroupError.message}`);
+      }
+
+      const { data: versionGroups, error: fetchVgError } = await db
+        .from('version_group')
+        .select('id, slug')
+        .in('slug', [VG_WITH_LEVEL_UP, VG_OTHER_METHOD_ONLY]);
+      if (fetchVgError || !versionGroups) {
+        throw new Error(`refetch version_group failed: ${fetchVgError?.message}`);
+      }
+      const vgIdBySlug = new Map(versionGroups.map((vg) => [vg.slug, vg.id]));
+
+      // VG_NO_ROWS deliberately gets no pokemon_form_move row at all (case C).
+      const { error: learnsetError } = await db.from('pokemon_form_move').insert([
+        {
+          pokemon_form_id: form.id,
+          move_id: move.id,
+          version_group_id: vgIdBySlug.get(VG_WITH_LEVEL_UP)!,
+          learn_method: 'level-up',
+          level: 1,
+          source_id: TEST_SOURCE_ID,
+        },
+        {
+          pokemon_form_id: form.id,
+          move_id: move.id,
+          version_group_id: vgIdBySlug.get(VG_OTHER_METHOD_ONLY)!,
+          learn_method: 'machine',
+          level: 0,
+          source_id: TEST_SOURCE_ID,
+        },
+      ]);
+      if (learnsetError) {
+        throw new Error(`seed pokemon_form_move failed: ${learnsetError.message}`);
+      }
+    });
+
+    afterAll(async () => {
+      await cleanUp();
+    });
+
+    it('A: includes a version group with at least one level-up row', async () => {
+      const slugs = (await listVersionGroups(publicClient())).map((vg) => vg.slug);
+      expect(slugs).toContain(VG_WITH_LEVEL_UP);
+    });
+
+    it('B: excludes a version group whose rows exist but are never level-up', async () => {
+      const slugs = (await listVersionGroups(publicClient())).map((vg) => vg.slug);
+      expect(slugs).not.toContain(VG_OTHER_METHOD_ONLY);
+    });
+
+    it('C: excludes a version group with zero pokemon_form_move rows at all', async () => {
+      const slugs = (await listVersionGroups(publicClient())).map((vg) => vg.slug);
+      expect(slugs).not.toContain(VG_NO_ROWS);
     });
   },
 );
