@@ -685,44 +685,34 @@ export async function getMoveBySlug(
  * learn method — no genuine per-species moveset coverage. Every real,
  * playable mainline game has level-up rows (every Pokémon learns something
  * at level 1), so requiring at least one is a much stronger signal than
- * mere row presence. One small count query per version group (a few dozen
- * total), run in parallel.
+ * mere row presence.
+ *
+ * One query against `version_group_with_learnset_data` (Fase 2A perf —
+ * replaces a prior N+1 of one `count(*) exact` per version_group, ~32 round
+ * trips, with the `EXISTS` semi-join done once in Postgres; see migration
+ * 20260920213419 and docs/engineering/CI_CD.md for the readiness floor this
+ * depends on).
  */
 export async function listVersionGroups(
   client: PokeStudioDatabaseClient,
 ): Promise<VersionGroupSummary[]> {
-  const versionGroupsResult = await client
-    .from('version_group')
-    .select('id, slug, generation, display_order')
+  const result = await client
+    .from('version_group_with_learnset_data')
+    .select('slug, generation, display_order')
     .order('generation', { ascending: false })
     .order('display_order', { ascending: false });
-  if (versionGroupsResult.error) {
-    throw new Error(
-      `listVersionGroups (version groups) failed: ${versionGroupsResult.error.message}`,
-    );
+  if (result.error) {
+    throw new Error(`listVersionGroups failed: ${result.error.message}`);
   }
 
-  const withCounts = await Promise.all(
-    versionGroupsResult.data.map(async (versionGroup) => {
-      const countResult = await client
-        .from('pokemon_form_move')
-        .select('id', { count: 'exact', head: true })
-        .eq('version_group_id', versionGroup.id)
-        .eq('learn_method', 'level-up');
-      if (countResult.error) {
-        throw new Error(`listVersionGroups (count) failed: ${countResult.error.message}`);
-      }
-      return { versionGroup, hasData: (countResult.count ?? 0) > 0 };
-    }),
-  );
-
-  return withCounts
-    .filter((entry) => entry.hasData)
-    .map(({ versionGroup }) => ({
-      slug: versionGroup.slug,
-      generation: versionGroup.generation,
-      displayOrder: versionGroup.display_order,
-    }));
+  return result.data.map((row) => {
+    if (row.slug === null || row.generation === null || row.display_order === null) {
+      throw new Error(
+        'version_group_with_learnset_data returned a null column — data integrity issue.',
+      );
+    }
+    return { slug: row.slug, generation: row.generation, displayOrder: row.display_order };
+  });
 }
 
 /** The version group to default the UI to when none is explicitly selected — the newest one with real data. */
