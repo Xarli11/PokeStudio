@@ -199,6 +199,13 @@ export type Database = {
             referencedRelation: "version_group"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "machine_version_group_id_fkey"
+            columns: ["version_group_id"]
+            isOneToOne: false
+            referencedRelation: "version_group_with_learnset_data"
+            referencedColumns: ["id"]
+          },
         ]
       }
       move: {
@@ -608,6 +615,13 @@ export type Database = {
             referencedRelation: "version_group"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pokemon_form_move_version_group_id_fkey"
+            columns: ["version_group_id"]
+            isOneToOne: false
+            referencedRelation: "version_group_with_learnset_data"
+            referencedColumns: ["id"]
+          },
         ]
       }
       species: {
@@ -797,7 +811,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      version_group_with_learnset_data: {
+        Row: {
+          display_order: number | null
+          generation: number | null
+          id: string | null
+          slug: string | null
+        }
+        Insert: {
+          display_order?: number | null
+          generation?: number | null
+          id?: string | null
+          slug?: string | null
+        }
+        Update: {
+          display_order?: number | null
+          generation?: number | null
+          id?: string | null
+          slug?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
