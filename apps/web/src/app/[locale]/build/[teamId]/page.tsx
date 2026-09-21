@@ -1,16 +1,15 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import {
-  getSpeciesSearchIndex,
-  listItems,
-  listNatures,
-  listVersionGroups,
-} from '@pokestudio/database';
 import { getDictionary, isLocale } from '@pokestudio/i18n';
 
 import { TeamEditor } from '@/components/build/team-editor';
-import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
+import {
+  getCachedItems,
+  getCachedNatures,
+  getCachedSpeciesSearchIndex,
+  getCachedVersionGroups,
+} from '@/lib/reference-data-cache';
 
 // Reads live reference data per request, and the team roster itself lives
 // only in the requesting browser's localStorage — never prerender/cache
@@ -41,12 +40,11 @@ export default async function TeamEditorPage({ params }: { params: Promise<PageP
   if (!isLocale(locale)) notFound();
 
   const dictionary = getDictionary(locale);
-  const client = getPokemonDatabaseClient();
   const [searchIndex, natures, items, versionGroups] = await Promise.all([
-    getSpeciesSearchIndex(client),
-    listNatures(client),
-    listItems(client),
-    listVersionGroups(client),
+    getCachedSpeciesSearchIndex(),
+    getCachedNatures(),
+    getCachedItems(),
+    getCachedVersionGroups(),
   ]);
 
   return (

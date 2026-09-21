@@ -2,12 +2,13 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getSpeciesSearchIndex, listSpeciesPage } from '@pokestudio/database';
+import { listSpeciesPage } from '@pokestudio/database';
 import { formatMessage, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
 import { SITE_URL } from '@/lib/site-url';
 import { PokemonExplorer } from '@/components/pokemon/pokemon-explorer';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
+import { getCachedSpeciesSearchIndex } from '@/lib/reference-data-cache';
 import { eyebrowClass } from '@/lib/ui-classes';
 
 // Reads live reference data per request — do not attempt to statically
@@ -69,10 +70,9 @@ export default async function PokemonIndexPage({
 
   const dictionary = getDictionary(locale);
   const page = parsePage(await searchParams);
-  const client = getPokemonDatabaseClient();
   const [result, searchIndex] = await Promise.all([
-    listSpeciesPage(client, { page, pageSize: PAGE_SIZE }),
-    getSpeciesSearchIndex(client),
+    listSpeciesPage(getPokemonDatabaseClient(), { page, pageSize: PAGE_SIZE }),
+    getCachedSpeciesSearchIndex(),
   ]);
 
   return (
