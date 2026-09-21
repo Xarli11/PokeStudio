@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getFormsBySlugs } from '@pokestudio/database';
+import { getFormsBySlugs, getSpeciesSearchIndex, listVersionGroups } from '@pokestudio/database';
 import { getDictionary, isLocale } from '@pokestudio/i18n';
 
 import { SpriteLab } from '@/components/dev/sprite-lab';
 import { GAME_ERA_SUPPORTED_VERSION_GROUPS } from '@/lib/pokemon-sprite';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
-import { getCachedSpeciesSearchIndex, getCachedVersionGroups } from '@/lib/reference-data-cache';
 import {
   POKESPRITE_AUDIT_SNAPSHOT,
   SHOWDOWN_AUDIT_SNAPSHOT,
@@ -64,10 +63,11 @@ export default async function SpriteLabPage({ params }: { params: Promise<{ loca
   if (!isLocale(locale)) notFound();
 
   const dictionary = getDictionary(locale);
+  const client = getPokemonDatabaseClient();
   const [forms, versionGroups, searchIndex] = await Promise.all([
-    getFormsBySlugs(getPokemonDatabaseClient(), REPRESENTATIVE_FORM_SLUGS),
-    getCachedVersionGroups(),
-    getCachedSpeciesSearchIndex(),
+    getFormsBySlugs(client, REPRESENTATIVE_FORM_SLUGS),
+    listVersionGroups(client),
+    getSpeciesSearchIndex(client),
   ]);
 
   const gameEraVersionGroups = versionGroups.filter((vg) =>

@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { getFormsBySlugs } from '@pokestudio/database';
+import { getFormsBySlugs, getSpeciesSearchIndex } from '@pokestudio/database';
 import { getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
 import { SITE_URL } from '@/lib/site-url';
 import { CompareView } from '@/components/pokemon/compare-view';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
-import { getCachedSpeciesSearchIndex } from '@/lib/reference-data-cache';
 import { eyebrowClass } from '@/lib/ui-classes';
 
 // Reads live reference data per request — do not attempt to statically
@@ -70,9 +69,10 @@ export default async function ComparePage({
 
   const dictionary = getDictionary(locale);
   const requestedSlugs = parseFormSlugs((await searchParams).pokemon);
+  const client = getPokemonDatabaseClient();
   const [forms, searchIndex] = await Promise.all([
-    getFormsBySlugs(getPokemonDatabaseClient(), requestedSlugs),
-    getCachedSpeciesSearchIndex(),
+    getFormsBySlugs(client, requestedSlugs),
+    getSpeciesSearchIndex(client),
   ]);
 
   // Preserve the URL's own order (the user's own add order), not whatever

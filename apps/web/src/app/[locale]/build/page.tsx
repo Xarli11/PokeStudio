@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { listVersionGroups } from '@pokestudio/database';
 import { getDictionary, isLocale, locales } from '@pokestudio/i18n';
 
 import { SITE_URL } from '@/lib/site-url';
 import { BuildHome } from '@/components/build/build-home';
 import { DEFAULT_BUILD_VERSION_GROUP_SLUG } from '@/lib/build-game-capabilities';
-import { getCachedVersionGroups } from '@/lib/reference-data-cache';
+import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { eyebrowClass } from '@/lib/ui-classes';
 
 // Now reads live reference data per request (task §25's version-group
@@ -51,7 +52,7 @@ export default async function BuildIndexPage({ params }: { params: Promise<{ loc
   // §25: never show a misleading "Valid" for a partially-supported
   // historical ruleset) — the same small version-group table Build's own
   // editor already reads.
-  const versionGroups = await getCachedVersionGroups();
+  const versionGroups = await listVersionGroups(getPokemonDatabaseClient());
 
   return (
     <div className="mx-auto flex max-w-wide flex-col gap-10">
