@@ -1,19 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
-import type {
-  FormLearnsetAllVersionGroups,
-  Item,
-  Nature,
-  SpeciesSearchAlias,
-  SpeciesSearchItem,
-  VersionGroupSummary,
-} from '@pokestudio/database';
+import type { FormLearnsetAllVersionGroups, VersionGroupSummary } from '@pokestudio/database';
 import { formatMessage, type Locale } from '@pokestudio/i18n';
 import type { DamageClass, PokemonType } from '@pokestudio/pokemon-data';
 
+import type { BuildReferenceDataState } from '@/lib/build-reference-data';
 import { resolveBuildGameCapabilities } from '@/lib/build-game-capabilities';
 import {
   buildMemberValidationContexts,
@@ -66,6 +60,11 @@ export interface TeamEditorLabels {
   closeEditorLabel: string;
   /** "Close {name}'s configuration" — its accessible name. */
   closeEditorTemplate: string;
+  /** Shown in place of RosterPicker/SetEditor while `/api/build-reference-data` is still loading — same "Loading…" copy `SetEditor`'s own member-data loading state already uses. */
+  loadingReferenceDataLabel: string;
+  /** Shown if that fetch fails — the roster/editor stay usable regardless. */
+  referenceDataErrorMessage: string;
+  retryReferenceDataLabel: string;
   teamSlot: TeamSlotLabels;
   rosterPicker: RosterPickerLabels;
   setEditor: SetEditorLabels;
@@ -76,10 +75,9 @@ export interface TeamEditorLabels {
 export interface TeamEditorProps {
   locale: Locale;
   teamId: string;
-  searchIndex: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] };
-  natures: Nature[];
-  items: Item[];
   versionGroups: VersionGroupSummary[];
+  /** Non-secret — the same SHA `/api/health` already exposes. Null in local dev (`POKESTUDIO_RELEASE_SHA` unset) or if it's genuinely absent. */
+  releaseSha: string | null;
   typeLabels: Record<PokemonType, string>;
   labels: TeamEditorLabels;
 }
@@ -113,10 +111,8 @@ function memberDisplayName(
 export function TeamEditor({
   locale,
   teamId,
-  searchIndex,
-  natures,
-  items,
   versionGroups,
+  releaseSha,
   typeLabels,
   labels,
 }: TeamEditorProps) {
@@ -124,6 +120,15 @@ export function TeamEditor({
   const [referenceData, setReferenceData] = useState<TeamMemberReferenceData>({
     forms: [],
     learnsets: {},
+  });
+  // Deferred, interaction-gated data (searchIndex/natures/items — Fase
+  // 2B.2): never part of this route's SSR, fetched client-side after first
+  // paint so "New team" → editor never waits on it. Distinct from
+  // `referenceData` above (per-member forms/learnsets, driven by the
+  // roster's own contents) — this is the shared, roster-independent data
+  // RosterPicker/SetEditor need.
+  const [sharedReferenceData, setSharedReferenceData] = useState<BuildReferenceDataState>({
+    status: 'loading',
   });
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [pickerTarget, setPickerTarget] = useState<RosterPickerTarget | null>(null);
@@ -137,6 +142,34 @@ export function TeamEditor({
   useEffect(() => {
     setDraft(loadTeamDraft(teamId) ?? 'not-found');
   }, [teamId]);
+
+  const fetchSharedReferenceData = useCallback(() => {
+    setSharedReferenceData({ status: 'loading' });
+    const url = releaseSha
+      ? `/api/build-reference-data?v=${encodeURIComponent(releaseSha)}`
+      : '/api/build-reference-data';
+    let cancelled = false;
+    fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error(`build-reference-data responded ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (!cancelled) setSharedReferenceData({ status: 'ready', data });
+      })
+      .catch(() => {
+        if (!cancelled) setSharedReferenceData({ status: 'error' });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [releaseSha]);
+
+  // Fires once after first paint — never blocks SSR/first render. A brand
+  // new team (0 members) never needs this until the user actually opens
+  // "Add Pokémon"/"Configure" (RosterPicker/SetEditor below handle the
+  // loading/error window with `sharedReferenceData.status`).
+  useEffect(() => fetchSharedReferenceData(), [fetchSharedReferenceData]);
 
   const formSlugsKey =
     draft && draft !== 'not-found' ? draft.members.map((member) => member.formSlug).join(',') : '';
@@ -474,15 +507,50 @@ export function TeamEditor({
       </div>
 
       {pickerTarget ? (
-        <RosterPicker
-          locale={locale}
-          target={pickerTarget}
-          searchIndex={searchIndex}
-          typeLabels={typeLabels}
-          labels={labels.rosterPicker}
-          onSelect={handlePickerSelect}
-          onClose={() => setPickerTarget(null)}
-        />
+        sharedReferenceData.status === 'ready' ? (
+          <RosterPicker
+            locale={locale}
+            target={pickerTarget}
+            searchIndex={sharedReferenceData.data.searchIndex}
+            typeLabels={typeLabels}
+            labels={labels.rosterPicker}
+            onSelect={handlePickerSelect}
+            onClose={() => setPickerTarget(null)}
+          />
+        ) : (
+          // Opens the same shell immediately (manual review §9: never ignore
+          // the tap) — the search box itself appears as soon as
+          // /api/build-reference-data resolves, which normally finishes
+          // well before the user reaches this tap at all.
+          <div className="flex w-full flex-col gap-3 rounded-lg border border-dashed border-brand p-3 sm:max-w-2xl">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-muted">
+                {sharedReferenceData.status === 'error'
+                  ? labels.referenceDataErrorMessage
+                  : labels.loadingReferenceDataLabel}
+              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                {sharedReferenceData.status === 'error' ? (
+                  <button
+                    type="button"
+                    onClick={fetchSharedReferenceData}
+                    className="rounded-full border border-border-subtle bg-surface px-2 py-1 text-xs font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                  >
+                    {labels.retryReferenceDataLabel}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setPickerTarget(null)}
+                  aria-label={labels.rosterPicker.cancelChangeForm}
+                  className="shrink-0 rounded-full border border-border-subtle bg-surface px-2 py-1 text-xs font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                >
+                  {labels.rosterPicker.cancelChangeForm} ×
+                </button>
+              </div>
+            </div>
+          </div>
+        )
       ) : null}
 
       {selectedMember ? (
@@ -513,21 +581,45 @@ export function TeamEditor({
               {labels.closeEditorLabel} ×
             </button>
           </div>
-          <SetEditor
-            key={selectedMember.id}
-            locale={locale}
-            member={selectedMember}
-            form={selectedForm}
-            learnset={selectedLearnset}
-            versionGroupSlug={draft.versionGroupSlug}
-            capabilities={capabilities}
-            natures={natures}
-            items={items}
-            labels={labels.setEditor}
-            onChange={(patch) =>
-              updateDraft((current) => updateTeamMember(current, selectedMember.id, patch))
-            }
-          />
+          {sharedReferenceData.status === 'ready' ? (
+            <SetEditor
+              key={selectedMember.id}
+              locale={locale}
+              member={selectedMember}
+              form={selectedForm}
+              learnset={selectedLearnset}
+              versionGroupSlug={draft.versionGroupSlug}
+              capabilities={capabilities}
+              natures={sharedReferenceData.data.natures}
+              items={sharedReferenceData.data.items}
+              labels={labels.setEditor}
+              onChange={(patch) =>
+                updateDraft((current) => updateTeamMember(current, selectedMember.id, patch))
+              }
+            />
+          ) : (
+            // Configure only exists once a member has been added, which
+            // itself required RosterPicker's fetch to have already
+            // resolved — this branch is the rare case of a very fast tap,
+            // not the common path. Same "Loading…" copy SetEditor's own
+            // member-data loading state already uses.
+            <div className="flex items-center justify-between gap-2">
+              <p className="m-0 text-sm text-muted">
+                {sharedReferenceData.status === 'error'
+                  ? labels.referenceDataErrorMessage
+                  : labels.loadingReferenceDataLabel}
+              </p>
+              {sharedReferenceData.status === 'error' ? (
+                <button
+                  type="button"
+                  onClick={fetchSharedReferenceData}
+                  className="shrink-0 rounded-full border border-border-subtle bg-surface px-2 py-1 text-xs font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                >
+                  {labels.retryReferenceDataLabel}
+                </button>
+              ) : null}
+            </div>
+          )}
         </div>
       ) : null}
 

@@ -1,12 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import {
-  getSpeciesSearchIndex,
-  listItems,
-  listNatures,
-  listVersionGroups,
-} from '@pokestudio/database';
+import { listVersionGroups } from '@pokestudio/database';
 import { getDictionary, isLocale } from '@pokestudio/i18n';
 
 import { TeamEditor } from '@/components/build/team-editor';
@@ -14,7 +9,12 @@ import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 
 // Reads live reference data per request, and the team roster itself lives
 // only in the requesting browser's localStorage — never prerender/cache
-// this route.
+// this route. Only `versionGroups` is fetched here (Fase 2B.2) — the
+// version-group selector is the only thing this route's first paint
+// actually needs. `searchIndex`/`natures`/`items` are interaction-gated
+// (RosterPicker/SetEditor) and fetched client-side by TeamEditor itself
+// from `/api/build-reference-data` after mount — see
+// `@/lib/build-reference-data`.
 export const dynamic = 'force-dynamic';
 
 type PageParams = { locale: string; teamId: string };
@@ -41,29 +41,25 @@ export default async function TeamEditorPage({ params }: { params: Promise<PageP
   if (!isLocale(locale)) notFound();
 
   const dictionary = getDictionary(locale);
-  const client = getPokemonDatabaseClient();
-  const [searchIndex, natures, items, versionGroups] = await Promise.all([
-    getSpeciesSearchIndex(client),
-    listNatures(client),
-    listItems(client),
-    listVersionGroups(client),
-  ]);
+  const versionGroups = await listVersionGroups(getPokemonDatabaseClient());
+  const releaseSha = process.env.POKESTUDIO_RELEASE_SHA ?? null;
 
   return (
     <div className="mx-auto flex max-w-wide flex-col gap-8">
       <TeamEditor
         locale={locale}
         teamId={teamId}
-        searchIndex={searchIndex}
-        natures={natures}
-        items={items}
         versionGroups={versionGroups}
+        releaseSha={releaseSha}
         typeLabels={dictionary.types}
         labels={{
           backToTeams: dictionary.build.backToTeams,
           teamNameLabel: dictionary.build.teamNameLabel,
           versionGroupLabel: dictionary.build.versionGroupLabel,
           generationOptionTemplate: dictionary.moves.generation,
+          referenceDataErrorMessage: dictionary.build.referenceDataErrorMessage,
+          retryReferenceDataLabel: dictionary.build.retryReferenceDataLabel,
+          loadingReferenceDataLabel: dictionary.build.loadingReferenceData,
           statusHeader: {
             savingIndicator: dictionary.build.savingIndicator,
             saveFailed: dictionary.build.saveFailed,
