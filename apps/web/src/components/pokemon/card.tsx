@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 
 import type { PokemonType } from '@pokestudio/pokemon-data';
@@ -26,6 +29,15 @@ export interface PokemonCardProps {
    * form that wasn't uniquely identified.
    */
   matchContext?: { label: string; types?: { type: PokemonType; label: string }[] } | undefined;
+  /**
+   * The species' default-form sprite (task §3 — always the default form,
+   * even for a card shown because a non-default form alias matched: the
+   * `modern` sprite strategy only resolves default forms, and this is a
+   * species card navigating to `/pokemon/[speciesSlug]`, not a form page).
+   * Undefined skips the image entirely (e.g. an invalid Dex number) — same
+   * fallback path as a failed image request.
+   */
+  spriteUrl?: string | undefined;
 }
 
 /**
@@ -37,7 +49,19 @@ export interface PokemonCardProps {
  * artwork zone into the data zone below it, instead of the two zones
  * reading as unrelated blocks.
  */
-export function PokemonCard({ href, name, dexNumberLabel, types, matchContext }: PokemonCardProps) {
+export function PokemonCard({
+  href,
+  name,
+  dexNumberLabel,
+  types,
+  matchContext,
+  spriteUrl,
+}: PokemonCardProps) {
+  // Only needed for the onError fallback — this card is already exclusively
+  // rendered inside PokemonExplorer's client tree (search/filter state), so
+  // this isn't a new server/client boundary, just a couple of bytes of
+  // state in one that already exists.
+  const [spriteFailed, setSpriteFailed] = useState(false);
   const displayTypes = matchContext?.types ?? types;
   const primaryVar = pokemonTypeColorVar[displayTypes[0]!.type];
 
@@ -47,6 +71,8 @@ export function PokemonCard({ href, name, dexNumberLabel, types, matchContext }:
         initial={name.charAt(0)}
         types={displayTypes.map((t) => t.type)}
         variant="tile"
+        spriteUrl={spriteFailed ? undefined : spriteUrl}
+        onSpriteError={() => setSpriteFailed(true)}
       />
       <div
         className="flex min-w-0 flex-col gap-1.5 pt-3 px-4 pb-4"

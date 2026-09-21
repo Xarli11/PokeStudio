@@ -12,6 +12,17 @@ export interface PokemonArtSlotProps {
    * it reads as an illustration frame, not an avatar.
    */
   variant: 'tile' | 'hero' | 'detailHero';
+  /**
+   * Real sprite (Pokédex grid sprites, task §4) — when present, replaces
+   * only the monogram (see the doc comment below: this was the intended
+   * "forward-compatible" swap point all along). `onSpriteError` lets a
+   * caller with its own `useState` fall back to the monogram if the image
+   * request itself fails; this component stays hook-free/server-safe
+   * either way (a plain prop, not local state) since it's also rendered
+   * from the still-monogram-only detail page.
+   */
+  spriteUrl?: string | undefined;
+  onSpriteError?: (() => void) | undefined;
 }
 
 /**
@@ -37,7 +48,13 @@ export interface PokemonArtSlotProps {
  * gradient, corner brackets, radius and every call site stay exactly as
  * they are.
  */
-export function PokemonArtSlot({ initial, types, variant }: PokemonArtSlotProps) {
+export function PokemonArtSlot({
+  initial,
+  types,
+  variant,
+  spriteUrl,
+  onSpriteError,
+}: PokemonArtSlotProps) {
   const primaryVar = pokemonTypeColorVar[types[0]!];
   const secondaryVar = pokemonTypeColorVar[types[1] ?? types[0]!];
   // A touch more presence than the wash/monogram — the brackets are the one
@@ -109,12 +126,27 @@ export function PokemonArtSlot({ initial, types, variant }: PokemonArtSlotProps)
           borderRight: `1.5px solid ${bracketColor}`,
         }}
       />
-      <span
-        className="leading-none font-bold tracking-tight text-foreground select-none"
-        style={{ fontSize: monogramSize, opacity: monogramOpacity }}
-      >
-        {initial}
-      </span>
+      {spriteUrl ? (
+        // Fills the frame at a modest inset (not full-bleed) — object-contain
+        // then lets each species' own intrinsic size scale within that box,
+        // so a tall/narrow sprite (Wailord) and a small/square one (Pikachu)
+        // both read clearly without any per-species value here.
+        // eslint-disable-next-line @next/next/no-img-element -- see pokemon-sprite.ts's doc comment (same provisional external host Team Builder's roster tile already uses).
+        <img
+          src={spriteUrl}
+          alt=""
+          loading="lazy"
+          onError={onSpriteError}
+          className="absolute inset-[6%] object-contain [image-rendering:pixelated]"
+        />
+      ) : (
+        <span
+          className="leading-none font-bold tracking-tight text-foreground select-none"
+          style={{ fontSize: monogramSize, opacity: monogramOpacity }}
+        >
+          {initial}
+        </span>
+      )}
     </div>
   );
 }

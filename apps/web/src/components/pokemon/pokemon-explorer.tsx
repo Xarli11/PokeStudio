@@ -10,6 +10,7 @@ import { ALL_POKEMON_TYPES, LATEST_KNOWN_GENERATION } from '@pokestudio/pokemon-
 import type { PokemonType } from '@pokestudio/pokemon-data';
 
 import { ClearIcon, SearchIcon } from '@/components/search-field-icons';
+import { getPokemonSprite } from '@/lib/pokemon-sprite';
 import { buttonClass, searchInputClass } from '@/lib/ui-classes';
 import {
   applyPokemonIndexFilters,
@@ -109,6 +110,15 @@ function toCardProps(
     dexNumberLabel: dexNumberLabel(item.nationalDexNumber),
     types: item.types.map((type) => ({ type, label: typeLabels[type] })),
     matchContext,
+    // Always the species' own default form (task §3), regardless of which
+    // form matched the search — `SpeciesSearchItem` already carries
+    // everything getPokemonSprite() needs, no extra DB round trip.
+    spriteUrl: getPokemonSprite({
+      formSlug: item.formSlug,
+      speciesSlug: item.slug,
+      nationalDexNumber: item.nationalDexNumber,
+      isDefaultForm: true,
+    }),
   };
 }
 
