@@ -319,3 +319,42 @@ describe('PokemonExplorer search combobox', () => {
     expect(input.getAttribute('aria-expanded')).toBe('false');
   });
 });
+
+describe('PokemonExplorer grid card sprites', () => {
+  function cardSpriteSrc(name: RegExp): string | null {
+    const card = screen.getByRole('link', { name });
+    return card.querySelector('img')?.getAttribute('src') ?? null;
+  }
+
+  it("generates the default-form species' modern sprite URL from its own national Dex number in the default (unfiltered) grid", () => {
+    renderExplorer();
+    // Bulbasaur, dex #1, from the `defaultView` fixture (no search query).
+    expect(cardSpriteSrc(/Bulbasaur/)).toContain('/1.png');
+  });
+
+  it('an alternate-form search match still shows the species’ own default-form sprite (task decision: modern strategy only resolves default forms) while context/types stay the matched form’s', () => {
+    renderExplorer();
+    fireEvent.change(getInput(), { target: { value: 'alola' } });
+    const card = screen.getByRole('link', { name: /Meowth/ });
+    // Meowth's own dex number (52) — never anything alias-specific (a
+    // SpeciesSearchAlias carries no national Dex number of its own).
+    expect(card.querySelector('img')?.getAttribute('src')).toContain('/52.png');
+    // The alternate form's own name/types are unaffected by this — same
+    // assertions as the non-sprite test above, kept here for the pairing.
+    expect(card.textContent).toContain('Alolan Meowth');
+    expect(card.textContent).toContain('Dark');
+    expect(card.getAttribute('href')).toBe('/en/pokemon/meowth'); // species page, not a form page
+  });
+
+  it('an ambiguous alias match (several tied forms) still shows the species’ own default sprite', () => {
+    renderExplorer();
+    fireEvent.change(getInput(), { target: { value: 'an meowth' } });
+    expect(cardSpriteSrc(/Meowth/)).toContain('/52.png');
+  });
+
+  it('decorative sprite <img> is present with alt="" — the card text already states the name', () => {
+    renderExplorer();
+    const card = screen.getByRole('link', { name: /Bulbasaur/ });
+    expect(card.querySelector('img')?.getAttribute('alt')).toBe('');
+  });
+});
