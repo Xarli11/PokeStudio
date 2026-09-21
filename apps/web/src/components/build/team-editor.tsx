@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
 import type { FormLearnsetAllVersionGroups, VersionGroupSummary } from '@pokestudio/database';
@@ -43,7 +43,7 @@ import {
 import { BuildStatusHeader, type BuildStatusHeaderLabels } from './build-status-header';
 import { ProblemsPanel, type ProblemsPanelLabels } from './problems-panel';
 import { RosterPicker, type RosterPickerLabels, type RosterPickerTarget } from './roster-picker';
-import { SetEditor, type SetEditorLabels } from './set-editor';
+import type { SetEditorLabels } from './set-editor';
 import {
   TeamAnalysisPanel,
   buildWarningRows,
@@ -51,6 +51,28 @@ import {
   type WarningRow,
 } from './team-analysis-panel';
 import { EmptyTeamTile, FilledTeamTile, type TeamSlotLabels } from './team-slot';
+
+/**
+ * Code-split out of the initial bundle (Fase 2B.3): `SetEditor` only mounts
+ * once a member is selected (never on first paint), and transitively pulls
+ * in `@pokestudio/damage` — whose barrel `index.ts` statically imports
+ * `@smogon/calc` for `calculateDamage`, even though `SetEditor` only uses
+ * `calculateStats`. That drags `@smogon/calc`'s mechanics engine *and* its
+ * embedded species/moves/items data tables along too — together the largest
+ * chunk this route was shipping on first load.
+ *
+ * `React.lazy` + `<Suspense>` rather than `next/dynamic`: this Next version's
+ * `next/dynamic` renders its own `loading` option directly (a
+ * `useSyncExternalStore`-driven `Loadable`, not real Suspense) — a fallback
+ * passed there is defined at module scope with no access to this file's
+ * `labels`/locale, so it can't be translated. `React.lazy` genuinely
+ * suspends, so the fallback below can be written inline in `TeamEditor`'s
+ * own render, with normal closure access to `labels`. Must stay at module
+ * scope (not inside `TeamEditor`'s body): calling `lazy()` per-render would
+ * hand React a new component identity every render, forcing SetEditor to
+ * unmount/remount (and its chunk to re-fetch) constantly.
+ */
+const SetEditor = lazy(() => import('./set-editor').then((mod) => ({ default: mod.SetEditor })));
 
 export interface TeamEditorLabels {
   backToTeams: string;
@@ -602,21 +624,29 @@ export function TeamEditor({
             </button>
           </div>
           {sharedReferenceData.status === 'ready' ? (
-            <SetEditor
-              key={selectedMember.id}
-              locale={locale}
-              member={selectedMember}
-              form={selectedForm}
-              learnset={selectedLearnset}
-              versionGroupSlug={draft.versionGroupSlug}
-              capabilities={capabilities}
-              natures={sharedReferenceData.data.natures}
-              items={sharedReferenceData.data.items}
-              labels={labels.setEditor}
-              onChange={(patch) =>
-                updateDraft((current) => updateTeamMember(current, selectedMember.id, patch))
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-between gap-2">
+                  <p className="m-0 text-sm text-muted">{labels.loadingReferenceDataLabel}</p>
+                </div>
               }
-            />
+            >
+              <SetEditor
+                key={selectedMember.id}
+                locale={locale}
+                member={selectedMember}
+                form={selectedForm}
+                learnset={selectedLearnset}
+                versionGroupSlug={draft.versionGroupSlug}
+                capabilities={capabilities}
+                natures={sharedReferenceData.data.natures}
+                items={sharedReferenceData.data.items}
+                labels={labels.setEditor}
+                onChange={(patch) =>
+                  updateDraft((current) => updateTeamMember(current, selectedMember.id, patch))
+                }
+              />
+            </Suspense>
           ) : (
             // Configure only exists once a member has been added, which
             // itself required RosterPicker's fetch to have already

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ComparablePokemonForm,
   FormLearnsetAllVersionGroups,
+  Nature,
   SpeciesSearchAlias,
   SpeciesSearchItem,
 } from '@pokestudio/database';
@@ -14,6 +15,7 @@ import { loadTeamDraft, saveTeamDraft } from '@/lib/team-storage';
 
 import type { TeamMemberReferenceData } from '@/app/[locale]/build/actions';
 
+import { SetEditor as RealSetEditor } from './set-editor';
 import { TeamEditor, type TeamEditorLabels } from './team-editor';
 
 const fetchTeamMemberReferenceData =
@@ -698,6 +700,139 @@ describe('Set Editor open/close (manual review: Configure discoverability + coll
     fireEvent.click(screen.getByRole('button', { name: 'Configure Second' }));
     expect(await screen.findByText('Configure Second')).not.toBeNull();
     expect(screen.queryByText('Configure First')).toBeNull();
+  });
+});
+
+describe('lazy-loaded SetEditor (Fase 2B.3 — code-split out of the initial bundle)', () => {
+  it('is not part of the initial render — its fields never mount before Configure is tapped', async () => {
+    fetchTeamMemberReferenceData.mockResolvedValue({ forms: [GARCHOMP_FORM], learnsets: {} });
+    let draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    draft = addTeamMember(draft, 'garchomp');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    await screen.findByRole('button', { name: 'Configure Garchomp' });
+    expect(screen.queryByText('Nickname')).toBeNull();
+    expect(screen.queryByText('Ability')).toBeNull();
+  });
+
+  it('Configure opens the editor panel immediately, shows accessible loading feedback while the chunk loads, then the real editor', async () => {
+    // A fresh module graph — not the file's shared, already-imported
+    // `TeamEditor` — and a `./set-editor` mock whose promise this test
+    // controls directly, so the pending window is deterministic instead of
+    // depending on how fast a real dynamic import happens to settle (React's
+    // `act()` drains already-queued microtasks, which made a real import
+    // resolve before the very next line could observe the fallback).
+    vi.resetModules();
+    let resolveSetEditorModule!: () => void;
+    const deferredSetEditorModule = new Promise<{ SetEditor: typeof RealSetEditor }>((resolve) => {
+      resolveSetEditorModule = () => resolve({ SetEditor: RealSetEditor });
+    });
+    vi.doMock('./set-editor', () => deferredSetEditorModule);
+
+    const { TeamEditor: FreshTeamEditor } = await import('./team-editor');
+    fetchTeamMemberReferenceData.mockResolvedValue({ forms: [GARCHOMP_FORM], learnsets: {} });
+    let draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    draft = addTeamMember(draft, 'garchomp');
+    saveTeamDraft(draft);
+
+    render(
+      <FreshTeamEditor
+        locale="en"
+        teamId={draft.id}
+        versionGroups={[{ slug: 'scarlet-violet', generation: 9, displayOrder: 1 }]}
+        releaseSha="test-sha"
+        typeLabels={TYPE_LABELS as never}
+        labels={LABELS}
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Configure Garchomp' }));
+    // The panel itself (header, close button) is TeamEditor's own JSX, so
+    // it mounts synchronously — only SetEditor's own content is deferred.
+    expect(screen.getByText('Configure Garchomp')).not.toBeNull();
+    expect(screen.queryByText('Nickname')).toBeNull();
+    expect(screen.getByText('Loading…')).not.toBeNull();
+
+    resolveSetEditorModule();
+    expect(await screen.findByText('Nickname')).not.toBeNull();
+    expect(screen.queryByText('Loading…')).toBeNull();
+
+    vi.doUnmock('./set-editor');
+  });
+
+  it('closing and reopening does not get stuck on the loading state once the chunk has already loaded', async () => {
+    fetchTeamMemberReferenceData.mockResolvedValue({ forms: [GARCHOMP_FORM], learnsets: {} });
+    let draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    draft = addTeamMember(draft, 'garchomp');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click(await screen.findByRole('button', { name: 'Configure Garchomp' }));
+    await screen.findByText('Nickname');
+    fireEvent.click(screen.getByRole('button', { name: "Close Garchomp's configuration" }));
+    expect(screen.queryByText('Nickname')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Configure Garchomp' }));
+    // Synchronous — the chunk is already cached, so no lingering fallback.
+    expect(screen.getByText('Nickname')).not.toBeNull();
+  });
+
+  it('selected member and its optimistic visual identity are unaffected by the lazy SetEditor boundary', async () => {
+    fetchTeamMemberReferenceData.mockReturnValue(new Promise(() => {})); // never resolves
+    const draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Pokémon' }))[0]!);
+    const input = await screen.findByRole('combobox', { name: 'Add Pokémon' });
+    fireEvent.change(input, { target: { value: 'garchomp' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Garchomp/ }));
+
+    await screen.findByRole('button', { name: 'Configure Garchomp' });
+    const tile = screen
+      .getByRole('button', { name: 'Configure Garchomp' })
+      .closest('.rounded-lg') as HTMLElement;
+    expect(within(tile).getByText('Garchomp')).not.toBeNull();
+    expect(within(tile).getByText('Dragon')).not.toBeNull();
+
+    // Tapping Configure before the real form has resolved still shows the
+    // (now-lazy) editor's own loading state — the optimistic identity was
+    // never wired into SetEditor/validation, unaffected by this change.
+    fireEvent.click(screen.getByRole('button', { name: 'Configure Garchomp' }));
+    expect(await screen.findByText('Loading…')).not.toBeNull();
+    expect(screen.queryByText('Ability')).toBeNull();
+  });
+
+  it('natures and items still reach the editor from shared reference data once the chunk loads', async () => {
+    const CAUTIOUS_NATURE: Nature = { slug: 'cautious', nameEn: 'Cautious', nameEs: 'Cauto' };
+    resolveBuildReferenceData({
+      searchIndex: SEARCH_INDEX,
+      natures: [CAUTIOUS_NATURE],
+      items: [],
+    });
+    fetchTeamMemberReferenceData.mockResolvedValue({ forms: [GARCHOMP_FORM], learnsets: {} });
+    let draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    draft = addTeamMember(draft, 'garchomp');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click(await screen.findByRole('button', { name: 'Configure Garchomp' }));
+    expect(await screen.findByRole('option', { name: /Cautious/ })).not.toBeNull();
+  });
+
+  it('autosave still persists edits made once the lazy editor has loaded', async () => {
+    fetchTeamMemberReferenceData.mockResolvedValue({ forms: [GARCHOMP_FORM], learnsets: {} });
+    let draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    draft = addTeamMember(draft, 'garchomp');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click(await screen.findByRole('button', { name: 'Configure Garchomp' }));
+    const levelField = await screen.findByLabelText('Level');
+    fireEvent.change(levelField, { target: { value: '55' } });
+
+    await waitFor(() => expect(loadTeamDraft(draft.id)?.members[0]?.level).toBe(55));
   });
 });
 
