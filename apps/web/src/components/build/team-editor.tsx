@@ -10,6 +10,10 @@ import type { DamageClass, PokemonType } from '@pokestudio/pokemon-data';
 import type { BuildReferenceDataState } from '@/lib/build-reference-data';
 import { resolveBuildGameCapabilities } from '@/lib/build-game-capabilities';
 import {
+  resolveRosterVisualIdentity,
+  type RosterVisualIdentity,
+} from '@/lib/roster-visual-identity';
+import {
   buildMemberValidationContexts,
   computeOffensiveCoverage,
   computeTeamDefensiveProfile,
@@ -237,6 +241,21 @@ export function TeamEditor({
     () => new Map(referenceData.forms.map((form) => [form.formSlug, form])),
     [referenceData],
   );
+
+  // Optimistic roster identity: `sharedReferenceData.searchIndex` is already
+  // on the client the moment a member can even be selected (RosterPicker
+  // needs it too), so a tile can show name/types/sprite immediately, without
+  // waiting on the `formsBySlug` fetch above. Recomputed only when the
+  // roster's form slugs actually change, not on every render.
+  const visualIdentityByFormSlug = useMemo(() => {
+    const map = new Map<string, RosterVisualIdentity>();
+    if (sharedReferenceData.status !== 'ready' || !formSlugsKey) return map;
+    for (const formSlug of formSlugsKey.split(',')) {
+      const identity = resolveRosterVisualIdentity(sharedReferenceData.data.searchIndex, formSlug);
+      if (identity) map.set(formSlug, identity);
+    }
+    return map;
+  }, [sharedReferenceData, formSlugsKey]);
 
   function updateDraft(updater: (current: TeamDraft) => TeamDraft): void {
     setDraft((current) => (current && current !== 'not-found' ? updater(current) : current));
@@ -486,6 +505,7 @@ export function TeamEditor({
               locale={locale}
               member={member}
               form={form}
+              visualIdentity={visualIdentityByFormSlug.get(member.formSlug)}
               typeLabels={typeLabels}
               labels={labels.teamSlot}
               selected={selectedMemberId === member.id}

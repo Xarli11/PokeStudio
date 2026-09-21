@@ -8,6 +8,7 @@ import { pokemonTypeColorVar } from '@pokestudio/ui';
 import { PokemonArtSlot } from '@/components/pokemon/art-slot';
 import { buttonClass } from '@/lib/ui-classes';
 import { getPokemonSprite } from '@/lib/pokemon-sprite';
+import type { RosterVisualIdentity } from '@/lib/roster-visual-identity';
 import type { TeamMemberDraft } from '@/lib/team-draft';
 
 export interface TeamSlotLabels {
@@ -132,6 +133,7 @@ export function FilledTeamTile({
   locale,
   member,
   form,
+  visualIdentity,
   typeLabels,
   labels,
   selected,
@@ -142,6 +144,14 @@ export function FilledTeamTile({
   locale: Locale;
   member: TeamMemberDraft;
   form: ComparablePokemonForm | undefined;
+  /**
+   * Fallback identity derived from the already-loaded search index, shown
+   * while `form` (the real `ComparablePokemonForm`, from a background
+   * fetch keyed on the roster's form slugs) hasn't resolved yet — never
+   * used once `form` is present. Visual only: abilities/stats/learnset
+   * always come from `form`, never from this.
+   */
+  visualIdentity: RosterVisualIdentity | undefined;
   typeLabels: Record<PokemonType, string>;
   labels: TeamSlotLabels;
   selected: boolean;
@@ -149,23 +159,36 @@ export function FilledTeamTile({
   onRemove: () => void;
   onStartChangeForm: () => void;
 }) {
+  const resolvedName = form
+    ? form.isDefaultForm
+      ? form.speciesName
+      : form.formName
+    : visualIdentity?.displayName;
+
   const displayName =
     member.nickname.trim().length > 0
       ? member.nickname
-      : form
-        ? form.isDefaultForm
-          ? form.speciesName[locale]
-          : form.formName[locale]
-        : member.formSlug;
+      : (resolvedName?.[locale] ?? member.formSlug);
 
-  const spriteUrl = form
-    ? getPokemonSprite({
+  const types = form?.types ?? visualIdentity?.types;
+
+  const spriteRequest = form
+    ? {
         formSlug: form.formSlug,
         speciesSlug: form.speciesSlug,
         nationalDexNumber: form.nationalDexNumber,
         isDefaultForm: form.isDefaultForm,
-      })
-    : undefined;
+      }
+    : visualIdentity
+      ? {
+          formSlug: visualIdentity.formSlug,
+          speciesSlug: visualIdentity.speciesSlug,
+          nationalDexNumber: visualIdentity.nationalDexNumber,
+          isDefaultForm: visualIdentity.isDefaultForm,
+        }
+      : undefined;
+
+  const spriteUrl = spriteRequest ? getPokemonSprite(spriteRequest) : undefined;
 
   return (
     <div
@@ -174,10 +197,10 @@ export function FilledTeamTile({
       }`}
     >
       <div className="flex items-start gap-3">
-        {form && spriteUrl ? (
-          <PokemonSpriteFrame spriteUrl={spriteUrl} types={form.types} />
-        ) : form ? (
-          <PokemonArtSlot initial={displayName.charAt(0)} types={form.types} variant="hero" />
+        {types && spriteUrl ? (
+          <PokemonSpriteFrame spriteUrl={spriteUrl} types={types} />
+        ) : types ? (
+          <PokemonArtSlot initial={displayName.charAt(0)} types={types} variant="hero" />
         ) : (
           <div
             className="h-16 w-16 shrink-0 animate-pulse rounded-md bg-surface-raised"
@@ -188,9 +211,9 @@ export function FilledTeamTile({
           <span className="block truncate text-sm font-semibold text-foreground">
             {displayName}
           </span>
-          {form ? (
+          {types ? (
             <span className="mt-1 flex flex-wrap gap-1">
-              {form.types.map((type) => (
+              {types.map((type) => (
                 <span
                   key={type}
                   className="rounded-full px-1.5 py-px text-[0.625rem] font-bold text-muted"
@@ -290,7 +313,11 @@ function PokemonSpriteFrame({
       <img
         src={spriteUrl}
         alt=""
-        loading="lazy"
+        // The roster caps at 6 tiles (never an off-screen list to defer), and
+        // this is exactly the sprite the player just picked — `lazy` would
+        // wait for an IntersectionObserver tick that's already true, adding
+        // a visible delay to the one image the flash-visual fix cares about.
+        loading="eager"
         className="h-full w-full object-contain p-1 transition-transform duration-200 ease-ps motion-reduce:transition-none [image-rendering:pixelated] hover:-translate-y-0.5 motion-reduce:hover:translate-y-0"
       />
     </div>

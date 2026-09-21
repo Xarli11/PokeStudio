@@ -60,6 +60,7 @@ const TYPE_LABELS: Record<string, string> = {
   fire: 'Fire',
   ground: 'Ground',
   dragon: 'Dragon',
+  dark: 'Dark',
 };
 
 const LABELS: TeamEditorLabels = {
@@ -231,6 +232,16 @@ const SEARCH_INDEX: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] 
     },
   ],
   aliases: [],
+};
+
+// Real Pokédex form: Alolan Meowth is Dark-type, not Normal like the
+// species' default form — used by the optimistic-identity tests below to
+// prove a non-default form's own types/name are shown, never the species'.
+const MEOWTH_ALOLA_ALIAS: SpeciesSearchAlias = {
+  name: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
+  speciesSlug: 'meowth',
+  types: ['dark'],
+  formSlug: 'meowth-alola',
 };
 
 const GARCHOMP_FORM: ComparablePokemonForm = {
@@ -904,6 +915,162 @@ describe('roster sprite visual scale (manual review, final correction pass §2)'
     expect(sprite?.className).toMatch(/\bh-full\b/);
     expect(sprite?.className).toMatch(/\bw-full\b/);
     expect(sprite?.className).toMatch(/\bobject-contain\b/);
+  });
+});
+
+describe('optimistic roster identity (fix/team-builder-optimistic-roster-identity)', () => {
+  /**
+   * Type-badge text (e.g. "Dragon") also appears outside the roster tile —
+   * in the team analysis defensive/offensive coverage panel, for the same
+   * team composition — so every assertion below is scoped to the tile
+   * itself via its "Configure {name}" button's card ancestor.
+   */
+  function tileFor(configureName: string): HTMLElement {
+    return screen
+      .getByRole('button', { name: configureName })
+      .closest('.rounded-lg') as HTMLElement;
+  }
+
+  it('shows the selected default-form Pokémon’s real name, types and sprite request immediately, before member reference data resolves', async () => {
+    // Never resolves — proves the tile renders real identity from the
+    // search index alone, without waiting on this fetch at all.
+    fetchTeamMemberReferenceData.mockReturnValue(new Promise(() => {}));
+    const draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Pokémon' }))[0]!);
+    const input = await screen.findByRole('combobox', { name: 'Add Pokémon' });
+    fireEvent.change(input, { target: { value: 'garchomp' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Garchomp/ }));
+
+    await screen.findByRole('button', { name: 'Configure Garchomp' });
+    const tile = tileFor('Configure Garchomp');
+    expect(within(tile).getByText('Garchomp')).not.toBeNull();
+    expect(within(tile).getByText('Dragon')).not.toBeNull();
+    expect(within(tile).getByText('Ground')).not.toBeNull();
+    expect(within(tile).queryByText('garchomp')).toBeNull(); // never the raw formSlug
+    expect(tile.querySelector('.animate-pulse')).toBeNull(); // no empty skeleton
+
+    // The sprite frame (and its `<img src>` request) is already present —
+    // getPokemonSprite() only needs the optimistic identity's fields.
+    const sprite = tile.querySelector('img[alt=""]');
+    expect(sprite?.getAttribute('src')).toContain('/445.png');
+  });
+
+  it('shows a non-default form’s own name and types, not the species’ default form’s', async () => {
+    resolveBuildReferenceData({
+      searchIndex: { items: SEARCH_INDEX.items, aliases: [MEOWTH_ALOLA_ALIAS] },
+      natures: [],
+      items: [],
+    });
+    fetchTeamMemberReferenceData.mockReturnValue(new Promise(() => {}));
+    const draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Pokémon' }))[0]!);
+    const input = await screen.findByRole('combobox', { name: 'Add Pokémon' });
+    fireEvent.change(input, { target: { value: 'alolan meowth' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Alolan Meowth/ }));
+
+    await screen.findByRole('button', { name: 'Configure Alolan Meowth' });
+    const tile = tileFor('Configure Alolan Meowth');
+    expect(within(tile).getByText('Alolan Meowth')).not.toBeNull();
+    expect(within(tile).getByText('Dark')).not.toBeNull();
+    expect(within(tile).queryByText('Normal')).toBeNull(); // not the species' default-form type
+  });
+
+  it('a nickname still takes priority over the optimistic identity', async () => {
+    fetchTeamMemberReferenceData.mockReturnValue(new Promise(() => {}));
+    let draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    draft = addTeamMember(draft, 'garchomp');
+    draft = updateTeamMember(draft, draft.members[0]!.id, { nickname: 'Landy' });
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    await screen.findByRole('button', { name: 'Configure Landy' });
+    const tile = tileFor('Configure Landy');
+    expect(within(tile).getByText('Landy')).not.toBeNull();
+    expect(within(tile).queryByText('Garchomp')).toBeNull();
+  });
+
+  it('the optimistic identity is naturally replaced once the full form arrives, with no flash back to a skeleton', async () => {
+    let resolveFetch!: (data: TeamMemberReferenceData) => void;
+    fetchTeamMemberReferenceData.mockReturnValue(
+      new Promise((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+    const draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Pokémon' }))[0]!);
+    const input = await screen.findByRole('combobox', { name: 'Add Pokémon' });
+    fireEvent.change(input, { target: { value: 'garchomp' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Garchomp/ }));
+
+    await screen.findByRole('button', { name: 'Configure Garchomp' });
+    const tile = tileFor('Configure Garchomp');
+    expect(within(tile).getByText('Dragon')).not.toBeNull(); // optimistic
+
+    resolveFetch!({ forms: [GARCHOMP_FORM], learnsets: {} });
+
+    // The type badge never disappears — no reflow back to a skeleton —
+    // and Configure now proves the tile is backed by the REAL form (its
+    // abilities only exist once `fetchTeamMemberReferenceData` resolves).
+    await waitFor(() => expect(within(tile).getByText('Dragon')).not.toBeNull());
+    expect(tile.querySelector('.animate-pulse')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Configure Garchomp' }));
+    expect(await screen.findByRole('option', { name: 'Sand Veil' })).not.toBeNull();
+  });
+
+  it('never uses the optimistic identity for validation/abilities/learnset — Configure still waits on the real form', async () => {
+    fetchTeamMemberReferenceData.mockReturnValue(new Promise(() => {}));
+    const draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Pokémon' }))[0]!);
+    const input = await screen.findByRole('combobox', { name: 'Add Pokémon' });
+    fireEvent.change(input, { target: { value: 'garchomp' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Garchomp/ }));
+
+    await screen.findByRole('button', { name: 'Configure Garchomp' });
+    expect(within(tileFor('Configure Garchomp')).getByText('Dragon')).not.toBeNull(); // tile already optimistic
+
+    fireEvent.click(screen.getByRole('button', { name: 'Configure Garchomp' }));
+    expect(await screen.findByText('Loading…')).not.toBeNull();
+    expect(screen.queryByText('Ability')).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Sand Veil' })).toBeNull();
+  });
+
+  it('changing form shows the new form’s identity immediately too, and remove/change-form still work while optimistic', async () => {
+    fetchTeamMemberReferenceData.mockReturnValue(new Promise(() => {}));
+    const draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Pokémon' }))[0]!);
+    let input = await screen.findByRole('combobox', { name: 'Add Pokémon' });
+    fireEvent.change(input, { target: { value: 'garchomp' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Garchomp/ }));
+    await screen.findByRole('button', { name: 'Configure Garchomp' });
+    expect(within(tileFor('Configure Garchomp')).getByText('Dragon')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: "Change Garchomp's Pokémon or form" }));
+    input = await screen.findByRole('combobox', { name: 'Add Pokémon' });
+    fireEvent.change(input, { target: { value: 'meowth' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Meowth/ }));
+
+    await screen.findByRole('button', { name: 'Configure Meowth' });
+    const swappedTile = tileFor('Configure Meowth');
+    expect(within(swappedTile).getByText('Normal')).not.toBeNull(); // new optimistic identity
+    expect(within(swappedTile).queryByText('Dragon')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Meowth from team' }));
+    expect(await screen.findAllByRole('button', { name: 'Add Pokémon' })).toHaveLength(6);
   });
 });
 

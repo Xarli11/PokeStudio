@@ -290,6 +290,7 @@ export function SpriteLab({
                     locale={locale}
                     member={member}
                     form={form}
+                    visualIdentity={undefined}
                     typeLabels={typeLabels}
                     labels={DEV_TEAM_SLOT_LABELS}
                     selected={false}
