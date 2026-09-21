@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { calculateStats } from '@pokestudio/damage';
+import { calculateStats } from '@pokestudio/damage/stats';
 import type {
   ComparablePokemonForm,
   FormLearnsetAllVersionGroups,
