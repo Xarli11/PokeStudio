@@ -435,6 +435,8 @@
       "unsupportedRuleset": "PokeStudio aún no ha validado por completo las reglas de {game} — algunas comprobaciones pueden estar incompletas.",
       "speciesUnavailableInGeneration": "{member} no está disponible en {game}."
     },
-    "loadingReferenceData": "Cargando…"
+    "loadingReferenceData": "Cargando…",
+    "referenceDataErrorMessage": "No se pudieron cargar los datos de Pokémon.",
+    "retryReferenceDataLabel": "Reintentar"
   }
 }

@@ -8,6 +8,7 @@ import type {
   SpeciesSearchItem,
 } from '@pokestudio/database';
 
+import type { BuildReferenceData } from '@/lib/build-reference-data';
 import { addTeamMember, createEmptyTeamDraft, updateTeamMember } from '@/lib/team-draft';
 import { loadTeamDraft, saveTeamDraft } from '@/lib/team-storage';
 
@@ -22,11 +23,36 @@ vi.mock('@/app/[locale]/build/actions', () => ({
   fetchTeamMemberReferenceData: (formSlugs: string[]) => fetchTeamMemberReferenceData(formSlugs),
 }));
 
+/**
+ * `TeamEditor` fetches `/api/build-reference-data` itself (Fase 2B.2) —
+ * this stubs `window.fetch` rather than mocking a module, since that's the
+ * real integration point. Defaults to an immediately-resolved response
+ * (same shape/values `searchIndex`/`natures`/`items` had as static props
+ * before this fase) so every existing interaction test keeps working
+ * unchanged; tests that specifically exercise the loading/error window
+ * override this per-test.
+ */
+const fetchBuildReferenceData = vi.fn<typeof fetch>();
+
+function resolveBuildReferenceData(data: BuildReferenceData): void {
+  fetchBuildReferenceData.mockResolvedValue(new Response(JSON.stringify(data), { status: 200 }));
+}
+
+function rejectBuildReferenceData(): void {
+  fetchBuildReferenceData.mockRejectedValue(new Error('network error'));
+}
+
 afterEach(cleanup);
 beforeEach(() => {
   window.localStorage.clear();
   fetchTeamMemberReferenceData.mockReset();
   fetchTeamMemberReferenceData.mockResolvedValue({ forms: [], learnsets: {} });
+  fetchBuildReferenceData.mockReset();
+  resolveBuildReferenceData({ searchIndex: SEARCH_INDEX, natures: [], items: [] });
+  vi.stubGlobal('fetch', fetchBuildReferenceData);
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 const TYPE_LABELS: Record<string, string> = {
@@ -53,6 +79,9 @@ const LABELS: TeamEditorLabels = {
   },
   closeEditorLabel: 'Close',
   closeEditorTemplate: "Close {name}'s configuration",
+  loadingReferenceDataLabel: 'Loading…',
+  referenceDataErrorMessage: "Couldn't load Pokémon data.",
+  retryReferenceDataLabel: 'Retry',
   teamSlot: {
     addPokemonSlot: 'Add Pokémon',
     removeFromTeamTemplate: 'Remove {name} from team',
@@ -275,10 +304,8 @@ function renderEditor(
     <TeamEditor
       locale={locale}
       teamId={teamId}
-      searchIndex={SEARCH_INDEX}
-      natures={[]}
-      items={[]}
       versionGroups={versionGroups}
+      releaseSha="test-sha"
       typeLabels={TYPE_LABELS as never}
       labels={LABELS}
     />,
@@ -1058,5 +1085,74 @@ describe('historical Team Analysis honesty (manual review, final correction pass
     // unavailable — that is a separate axis from legality (task §4).
     expect(await screen.findByText('Draft saved · Incomplete')).not.toBeNull();
     expect(screen.queryByText(/error/)).toBeNull();
+  });
+});
+
+describe('deferred reference data (Fase 2B.2 — Team Editor critical path)', () => {
+  function deferredResponse(): {
+    promise: Promise<Response>;
+    resolve: (data: BuildReferenceData) => void;
+  } {
+    let resolve!: (data: BuildReferenceData) => void;
+    const promise = new Promise<Response>((res) => {
+      resolve = (data) => res(new Response(JSON.stringify(data), { status: 200 }));
+    });
+    return { promise, resolve };
+  }
+
+  it('renders the roster immediately, without waiting for /api/build-reference-data', async () => {
+    const { promise } = deferredResponse();
+    fetchBuildReferenceData.mockReturnValue(promise);
+    const draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    expect(await screen.findByDisplayValue('Sand Team')).not.toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Add Pokémon' })).toHaveLength(6);
+  });
+
+  it('shows a loading state — not a blank/broken picker — if "Add Pokémon" is tapped before the fetch resolves, then the real picker once it does', async () => {
+    const { promise, resolve } = deferredResponse();
+    fetchBuildReferenceData.mockReturnValue(promise);
+    const draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Pokémon' }))[0]!);
+    expect(await screen.findByText('Loading…')).not.toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Add Pokémon' })).toBeNull();
+
+    resolve({ searchIndex: SEARCH_INDEX, natures: [], items: [] });
+    expect(await screen.findByRole('combobox', { name: 'Add Pokémon' })).not.toBeNull();
+  });
+
+  it('a failed fetch shows an error with a retry control, without touching the roster/draft', async () => {
+    rejectBuildReferenceData();
+    const draft = createEmptyTeamDraft('scarlet-violet', 'Sand Team');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Add Pokémon' }))[0]!);
+    expect(await screen.findByText("Couldn't load Pokémon data.")).not.toBeNull();
+    // The rest of the editor is unaffected — no 500, no lost draft.
+    expect(screen.getByDisplayValue('Sand Team')).not.toBeNull();
+    expect(loadTeamDraft(draft.id)?.members).toHaveLength(0);
+
+    resolveBuildReferenceData({ searchIndex: SEARCH_INDEX, natures: [], items: [] });
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByRole('combobox', { name: 'Add Pokémon' })).not.toBeNull();
+  });
+
+  it('Configure shows the same loading state if opened before the fetch resolves', async () => {
+    fetchTeamMemberReferenceData.mockResolvedValue({ forms: [GARCHOMP_FORM], learnsets: {} });
+    const { promise } = deferredResponse();
+    fetchBuildReferenceData.mockReturnValue(promise);
+    const draft = addTeamMember(createEmptyTeamDraft('scarlet-violet', 'Sand Team'), 'garchomp');
+    saveTeamDraft(draft);
+
+    renderEditor(draft.id);
+    fireEvent.click(await screen.findByRole('button', { name: 'Configure Garchomp' }));
+    expect(await screen.findByText('Loading…')).not.toBeNull();
+    expect(screen.queryByText('Nickname')).toBeNull();
   });
 });
