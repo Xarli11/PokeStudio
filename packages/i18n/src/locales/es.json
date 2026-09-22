@@ -362,6 +362,8 @@
     "configureTemplate": "Configurar a {name}",
     "closeEditorLabel": "Cerrar",
     "closeEditorTemplate": "Cerrar la configuración de {name}",
+    "testDamageLabel": "Probar daño",
+    "testDamageTemplate": "Probar el daño de {name} en Damage Lab",
     "addPokemonHeader": "Agregar Pokémon",
     "nicknameLabel": "Apodo",
     "nicknamePlaceholder": "(nombre de la especie)",

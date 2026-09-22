@@ -82,6 +82,8 @@ const LABELS: TeamEditorLabels = {
   },
   closeEditorLabel: 'Close',
   closeEditorTemplate: "Close {name}'s configuration",
+  testDamageLabel: 'Test damage',
+  testDamageTemplate: "Test {name}'s damage in Damage Lab",
   loadingReferenceDataLabel: 'Loading…',
   referenceDataErrorMessage: "Couldn't load Pokémon data.",
   retryReferenceDataLabel: 'Retry',

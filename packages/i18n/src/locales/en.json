@@ -362,6 +362,8 @@
     "configureTemplate": "Configure {name}",
     "closeEditorLabel": "Close",
     "closeEditorTemplate": "Close {name}'s configuration",
+    "testDamageLabel": "Test damage",
+    "testDamageTemplate": "Test {name}'s damage in Damage Lab",
     "addPokemonHeader": "Add Pokémon",
     "nicknameLabel": "Nickname",
     "nicknamePlaceholder": "(species name)",

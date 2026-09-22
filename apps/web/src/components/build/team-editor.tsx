@@ -86,6 +86,10 @@ export interface TeamEditorLabels {
   closeEditorLabel: string;
   /** "Close {name}'s configuration" — its accessible name. */
   closeEditorTemplate: string;
+  /** "Test damage" — visible text on the Set Editor header's link to Damage Lab (Fase M3.2). */
+  testDamageLabel: string;
+  /** "Test {name}'s damage in Damage Lab" — its accessible name. */
+  testDamageTemplate: string;
   /** Shown in place of RosterPicker/SetEditor while `/api/build-reference-data` is still loading — same "Loading…" copy `SetEditor`'s own member-data loading state already uses. */
   loadingReferenceDataLabel: string;
   /** Shown if that fetch fails — the roster/editor stay usable regardless. */
@@ -606,22 +610,38 @@ export function TeamEditor({
             }
           }}
         >
-          <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-3">
-            <h2 className="m-0 text-base font-semibold text-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
+            <h2 className="m-0 min-w-0 flex-1 truncate text-base font-semibold text-foreground">
               {formatMessage(labels.teamSlot.configureTemplate, {
                 name: memberDisplayName(selectedMember, selectedForm, locale),
               })}
             </h2>
-            <button
-              type="button"
-              onClick={() => setSelectedMemberId(null)}
-              aria-label={formatMessage(labels.closeEditorTemplate, {
-                name: memberDisplayName(selectedMember, selectedForm, locale),
-              })}
-              className="shrink-0 rounded-full border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-            >
-              {labels.closeEditorLabel} ×
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {/* Secondary, contextual — deliberately not styled to compete
+                  with Close (task §3): same size/weight, brand color the
+                  only differentiator. Build → Damage Lab, attacker only,
+                  one-way (task §26/§27) — this is purely a navigation link,
+                  no localStorage write of its own. */}
+              <Link
+                href={`/${locale}/battle/damage?team=${encodeURIComponent(draft.id)}&member=${encodeURIComponent(selectedMember.id)}`}
+                aria-label={formatMessage(labels.testDamageTemplate, {
+                  name: memberDisplayName(selectedMember, selectedForm, locale),
+                })}
+                className="rounded-full border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-brand no-underline transition-colors hover:bg-surface-hover"
+              >
+                {labels.testDamageLabel}
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSelectedMemberId(null)}
+                aria-label={formatMessage(labels.closeEditorTemplate, {
+                  name: memberDisplayName(selectedMember, selectedForm, locale),
+                })}
+                className="rounded-full border border-border-subtle bg-surface px-2.5 py-1 text-xs font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              >
+                {labels.closeEditorLabel} ×
+              </button>
+            </div>
           </div>
           {sharedReferenceData.status === 'ready' ? (
             <Suspense
