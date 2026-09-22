@@ -58,10 +58,18 @@ export async function generateMetadata({
  * Simple Mode never uses them (task §9: "no obligar a bajar natures/items
  * que Simple Mode todavía no necesita").
  */
-export default async function DamageLabPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function DamageLabPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  /** Build → Damage Lab import (Fase M3.2) — opaque local ids only, never metadata/canonical inputs (task §5). The server can't resolve localStorage; these are handed to the client component as-is. */
+  searchParams: Promise<{ team?: string; member?: string }>;
+}) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const dictionary = getDictionary(locale);
+  const { team: teamId, member: memberId } = await searchParams;
 
   const client = getPokemonDatabaseClient();
   const [searchIndex, versionGroups] = await Promise.all([
@@ -84,6 +92,8 @@ export default async function DamageLabPage({ params }: { params: Promise<{ loca
         defaultVersionGroupSlug={DEFAULT_BUILD_VERSION_GROUP_SLUG}
         typeLabels={dictionary.types}
         statLabels={dictionary.pokedex.stat}
+        teamId={teamId ?? null}
+        memberId={memberId ?? null}
         labels={{
           gameLabel: dictionary.battle.damageLab.gameLabel,
           generationOptionTemplate: dictionary.moves.generation,
@@ -102,6 +112,14 @@ export default async function DamageLabPage({ params }: { params: Promise<{ loca
           defenderReferenceError: dictionary.battle.damageLab.defenderReferenceError,
           retry: dictionary.build.retryReferenceDataLabel,
           resultHeading: dictionary.battle.damageLab.resultHeading,
+          importBanner: {
+            importedFromBuildLabel: dictionary.battle.damageLab.importedFromBuildLabel,
+            importedMemberTeamTemplate: dictionary.battle.damageLab.importedMemberTeamTemplate,
+            backToTeamLabel: dictionary.battle.damageLab.backToTeamLabel,
+            teamNotFoundWarning: dictionary.battle.damageLab.teamNotFoundWarning,
+            memberNotFoundWarning: dictionary.battle.damageLab.memberNotFoundWarning,
+            gameNotAvailableWarning: dictionary.battle.damageLab.gameNotAvailableWarning,
+          },
           advancedPanel: {
             advancedLabel: dictionary.battle.damageLab.advancedLabel,
             levelLabel: dictionary.build.levelLabel,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database';
 import { formatMessage, type Locale } from '@pokestudio/i18n';
@@ -49,8 +49,19 @@ export function DamagePokemonSlot({
   onSelect: (formSlug: string) => void;
   labels: DamagePokemonSlotLabels;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(true);
+  const [pickerOpen, setPickerOpen] = useState(!selectedFormSlug);
   const [spriteFailed, setSpriteFailed] = useState(false);
+
+  // `selectedFormSlug` can be set from outside this component's own picker
+  // (Fase M3.2's Build import sets `attackerFormSlug` directly, after this
+  // component has already mounted) — `handleAdd` below only closes the
+  // picker for a selection made *through* it, so an externally-driven
+  // selection needs its own path to the same result: whenever a real slug
+  // arrives, show the identity view rather than leaving the search box open
+  // under it.
+  useEffect(() => {
+    if (selectedFormSlug) setPickerOpen(false);
+  }, [selectedFormSlug]);
 
   const identity = selectedFormSlug
     ? resolveRosterVisualIdentity(searchIndex, selectedFormSlug)
