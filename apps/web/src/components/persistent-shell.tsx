@@ -26,6 +26,7 @@ function currentSectionFor(pathname: string, locale: Locale): NavSection {
   const exploreRoutes = ['/pokemon', '/moves', '/abilities', '/compare'];
   if (exploreRoutes.some((route) => path.startsWith(route))) return 'explore';
   if (path.startsWith('/build')) return 'build';
+  if (path.startsWith('/battle')) return 'battleLab';
   return undefined;
 }
 
@@ -74,7 +75,7 @@ export function PersistentShell({ locale, dictionary, children }: PersistentShel
   const navItems: { key: NavSection; label: string; href: string | null }[] = [
     { key: 'explore', label: dictionary.nav.explore, href: `/${locale}/pokemon` },
     { key: 'build', label: dictionary.nav.build, href: `/${locale}/build` },
-    { key: 'battleLab', label: dictionary.nav.battleLab, href: null },
+    { key: 'battleLab', label: dictionary.nav.battleLab, href: `/${locale}/battle` },
   ];
 
   return (

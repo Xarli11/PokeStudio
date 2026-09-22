@@ -10,6 +10,7 @@ export {
   getDefaultVersionGroup,
   getEvolutionFamily,
   getFormLearnsetAllVersionGroups,
+  getFormLearnsetForVersionGroup,
   getFormsBySlugs,
   getMoveBySlug,
   getMoveLearners,

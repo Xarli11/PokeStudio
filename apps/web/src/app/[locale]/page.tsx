@@ -108,9 +108,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             soonLabel={dictionary.nav.soon}
           />
           <PillarCard
+            href={`/${locale}/battle`}
             title={dictionary.nav.battleLab}
             description={dictionary.home.pillars.battleLab}
-            soonLabel={dictionary.nav.soon}
           />
         </div>
       </section>

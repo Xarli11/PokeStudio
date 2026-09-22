@@ -438,5 +438,100 @@
     "loadingReferenceData": "Cargando…",
     "referenceDataErrorMessage": "No se pudieron cargar los datos de Pokémon.",
     "retryReferenceDataLabel": "Reintentar"
+  },
+  "battle": {
+    "title": "Battle Lab",
+    "tagline": "Calcula el daño real entre dos Pokémon, con el motor de mecánicas propio de PokeStudio — matchups, trazas y simulación completa llegarán después.",
+    "indexDescription": "Calcula el daño de cualquier enfrentamiento, movimiento y juego con el Battle Lab de PokeStudio.",
+    "damageLabCardTitle": "Damage Lab",
+    "damageLabCardDescription": "Elige un atacante, un movimiento y un defensor — obtén un rango de daño real, probabilidad de KO y efectividad de tipo.",
+    "openDamageLab": "Abrir Damage Lab",
+    "moreComingSoon": "La comparación de matchups, las trazas de batalla estructuradas y la simulación completa están planificadas para fases posteriores.",
+    "damageLab": {
+      "title": "Damage Lab",
+      "tagline": "Calcula el daño real entre dos Pokémon con el motor de mecánicas propio de PokeStudio.",
+      "indexDescription": "Calcula el daño de cualquier enfrentamiento, movimiento y juego — con el motor de daño de PokeStudio.",
+      "gameLabel": "Juego",
+      "attackerLabel": "Atacante",
+      "defenderLabel": "Defensor",
+      "moveLabel": "Movimiento",
+      "selectPokemonLabel": "Elegir Pokémon",
+      "changeLabel": "Cambiar",
+      "changePokemonTemplate": "Cambiar {name}",
+      "selectMoveLabel": "Elegir movimiento",
+      "changeMoveTemplate": "Cambiar {name}",
+      "noMoveSelected": "Ningún movimiento seleccionado",
+      "noLegalMoves": "No hay movimientos de daño disponibles en este juego.",
+      "cancelLabel": "Cancelar",
+      "calculateLabel": "Calcular",
+      "calculatingLabel": "Calculando…",
+      "assumptionsTemplate": "Niv. {level} · {evs} EVs · {ivs} IVs · Naturaleza neutra · Sin habilidad · Sin objeto",
+      "resultHeading": "Resultado",
+      "hpRangeTemplate": "{min}–{max} PS",
+      "percentRangeTemplate": "{min}–{max}%",
+      "effectiveness": {
+        "immune": "Inmune",
+        "not-very-effective": "Poco eficaz",
+        "neutral": "Eficacia normal",
+        "super-effective": "Supereficaz"
+      },
+      "stabLabel": "STAB",
+      "criticalLabel": "Golpe crítico",
+      "koGuaranteedTemplate": "{hits}HKO garantizado",
+      "koChanceTemplate": "{chance}% de probabilidad de {hits}HKO",
+      "koPossibleTemplate": "Posible {hits}HKO",
+      "koNoDamage": "Sin daño en este cálculo.",
+      "detailsLabel": "Detalles",
+      "debugDescriptionLabel": "Traza de cálculo original (depuración)",
+      "modifiers": {
+        "hitsTemplate": "{count} golpes",
+        "burned": "Quemado",
+        "protected": "Protegido",
+        "defenderDynamaxed": "Defensor Dynamax",
+        "weather": {
+          "sand": "Tormenta de arena",
+          "sun": "Sol intenso",
+          "rain": "Lluvia",
+          "hail": "Granizo",
+          "snow": "Nieve",
+          "harsh-sunshine": "Sol extremadamente intenso",
+          "heavy-rain": "Lluvia torrencial",
+          "strong-winds": "Vientos fuertes"
+        },
+        "terrain": {
+          "electric": "Campo Eléctrico",
+          "grassy": "Campo de Hierba",
+          "psychic": "Campo Psíquico",
+          "misty": "Campo de Niebla"
+        },
+        "reflect": "Reflejo",
+        "lightScreen": "Pantalla de Luz",
+        "auroraVeil": "Velo Aurora",
+        "helpingHand": "Ayuda",
+        "friendGuard": "Amiguismo",
+        "battery": "Batería",
+        "powerSpot": "Zona de Poder",
+        "ruinAbility": {
+          "sword": "Espada de la Ruina",
+          "beads": "Cuentas de la Ruina",
+          "tablets": "Tablillas de la Ruina",
+          "vessel": "Vasija de la Ruina"
+        }
+      },
+      "errors": {
+        "unknownForm": "Ese Pokémon no está disponible para este cálculo.",
+        "unsupportedForm": "Esta forma todavía no está soportada para cálculos de daño.",
+        "unknownMove": "Ese movimiento no está disponible para este cálculo.",
+        "unknownAbility": "Esa habilidad no está disponible para este cálculo.",
+        "unknownItem": "Ese objeto no está disponible para este cálculo.",
+        "unknownNature": "Esa naturaleza no está disponible para este cálculo.",
+        "naturesNotAvailableInGeneration": "Este juego no tiene naturalezas.",
+        "levelOutOfRange": "El nivel debe estar entre 1 y 100.",
+        "evOutOfRange": "Los EVs deben estar entre 0 y 252.",
+        "ivOutOfRange": "Los IVs deben estar entre 0 y 31.",
+        "generationOutOfRange": "Este juego no está soportado.",
+        "generic": "Algo salió mal al calcular esto. Inténtalo de nuevo."
+      }
+    }
   }
 }
