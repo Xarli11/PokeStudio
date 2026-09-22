@@ -18,6 +18,8 @@ import {
   fetchAttackerReferenceData,
   fetchDefenderReferenceData,
 } from '@/app/[locale]/battle/damage/actions';
+import { loadTeamDraft } from '@/lib/team-storage';
+import type { TeamDraft } from '@/lib/team-draft';
 
 import { DamageLab, type DamageLabLabels } from './damage-lab';
 
@@ -28,10 +30,13 @@ vi.mock('@/app/[locale]/battle/damage/actions', () => ({
   calculateDamageAction: vi.fn(),
 }));
 
+vi.mock('@/lib/team-storage', () => ({ loadTeamDraft: vi.fn() }));
+
 const mockFetchAttacker = vi.mocked(fetchAttackerReferenceData);
 const mockFetchDefender = vi.mocked(fetchDefenderReferenceData);
 const mockFetchAdvancedReferenceData = vi.mocked(fetchAdvancedReferenceData);
 const mockCalculate = vi.mocked(calculateDamageAction);
+const mockLoadTeamDraft = vi.mocked(loadTeamDraft);
 
 const JOLLY: Nature = {
   slug: 'jolly',
@@ -48,6 +53,7 @@ beforeEach(() => {
   mockFetchAdvancedReferenceData.mockReset();
   mockFetchAdvancedReferenceData.mockResolvedValue({ natures: [JOLLY], items: [LIFE_ORB] });
   mockCalculate.mockReset();
+  mockLoadTeamDraft.mockReset();
 });
 
 const STATS = { hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 };
@@ -179,6 +185,16 @@ const LABELS: DamageLabLabels = {
   defenderReferenceError: "Couldn't load the defender's data.",
   retry: 'Retry',
   resultHeading: 'Result',
+  importBanner: {
+    importedFromBuildLabel: 'Imported from Team Builder',
+    importedMemberTeamTemplate: '{member} · {team}',
+    backToTeamLabel: 'Back to team',
+    teamNotFoundWarning:
+      "We couldn't find that saved team on this device. You can still use Damage Lab normally.",
+    memberNotFoundWarning: "We couldn't find that Pokémon on the team.",
+    gameNotAvailableWarning:
+      "This team's game isn't available here yet — showing the default game instead.",
+  },
   advancedPanel: {
     advancedLabel: 'Advanced',
     levelLabel: 'Level',
@@ -323,7 +339,10 @@ const STAT_LABELS = {
   speed: 'Speed',
 };
 
-function renderDamageLab(versionGroups: VersionGroupSummary[] = VERSION_GROUPS) {
+function renderDamageLab(
+  versionGroups: VersionGroupSummary[] = VERSION_GROUPS,
+  importParams?: { teamId: string; memberId: string },
+) {
   return render(
     <DamageLab
       locale="en"
@@ -332,6 +351,8 @@ function renderDamageLab(versionGroups: VersionGroupSummary[] = VERSION_GROUPS) 
       defaultVersionGroupSlug="scarlet-violet"
       typeLabels={TYPE_LABELS as never}
       statLabels={STAT_LABELS}
+      teamId={importParams?.teamId ?? null}
+      memberId={importParams?.memberId ?? null}
       labels={LABELS}
     />,
   );
@@ -1080,5 +1101,258 @@ describe('Attacker/defender reference-data resilience (task §11)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select move' }));
     expect(await screen.findByRole('option', { name: /Dig/ })).not.toBeNull();
     expect(screen.queryByRole('option', { name: /Earthquake/ })).toBeNull();
+  });
+});
+
+const IMPORTED_EVS = {
+  hp: 0,
+  attack: 252,
+  defense: 0,
+  specialAttack: 0,
+  specialDefense: 4,
+  speed: 252,
+};
+const IMPORTED_IVS = {
+  hp: 31,
+  attack: 31,
+  defense: 31,
+  specialAttack: 31,
+  specialDefense: 31,
+  speed: 31,
+};
+
+const GARCHOMP_TEAM_MEMBER = {
+  id: 'member-1',
+  formSlug: 'garchomp',
+  nickname: '',
+  level: 50,
+  abilitySlug: 'rough-skin',
+  itemSlug: 'life-orb',
+  teraType: 'ground' as const,
+  natureSlug: 'jolly',
+  evs: IMPORTED_EVS,
+  ivs: IMPORTED_IVS,
+  moveSlugs: ['protect', 'swords-dance', 'earthquake', 'dragon-claw'],
+};
+
+function makeTeamDraft(overrides: Partial<TeamDraft> = {}): TeamDraft {
+  return {
+    schemaVersion: 1,
+    id: 'team-1',
+    name: 'My Team',
+    versionGroupSlug: 'scarlet-violet',
+    members: [GARCHOMP_TEAM_MEMBER],
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+describe('Build → Damage Lab import (task §30)', () => {
+  it('with no team/member query params, Damage Lab behaves normally — no localStorage read at all (task §1/§23)', () => {
+    renderDamageLab();
+    expect(mockLoadTeamDraft).not.toHaveBeenCalled();
+    expect(screen.queryByText('Imported from Team Builder')).toBeNull();
+  });
+
+  it("imports the team's game, the attacker's identity, level, EVs, IVs, ability, nature and item (task §2-§9)", async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+
+    expect(await screen.findByText('Imported from Team Builder')).not.toBeNull();
+    expect(screen.getByText('Garchomp · My Team')).not.toBeNull();
+    expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+      'scarlet-violet',
+    );
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    expect((await screen.findByRole('spinbutton', { name: 'Level' })).getAttribute('value')).toBe(
+      '50',
+    );
+    expect((screen.getByRole('combobox', { name: 'Ability' }) as HTMLSelectElement).value).toBe(
+      'rough-skin',
+    );
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Nature' }) as HTMLSelectElement).value).toBe(
+        'jolly',
+      ),
+    );
+    expect(
+      (screen.getAllByRole('spinbutton', { name: 'Attack' })[0] as HTMLInputElement).value,
+    ).toBe('252');
+    expect(
+      (screen.getAllByRole('spinbutton', { name: 'Attack' })[1] as HTMLInputElement).value,
+    ).toBe('31');
+  });
+
+  it('imports the Tera Type but leaves Terastallize off (task §10)', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    const teraCheckbox = (await screen.findByRole('checkbox', {
+      name: 'Terastallize',
+    })) as HTMLInputElement;
+    expect(teraCheckbox.checked).toBe(false);
+
+    fireEvent.click(teraCheckbox);
+    expect((screen.getByRole('combobox', { name: 'Tera Type' }) as HTMLSelectElement).value).toBe(
+      'ground',
+    );
+  });
+
+  it('critical hit is false after import — TeamDraft has no such concept (task §11)', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    expect(
+      ((await screen.findByRole('checkbox', { name: 'Critical hit' })) as HTMLInputElement).checked,
+    ).toBe(false);
+  });
+
+  it("auto-selects the first set move that's a legal damaging move for this game (task §12)", async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    // Only Earthquake is a legal damaging move here — Protect/Swords Dance
+    // are status (never present in fetchAttackerReferenceData's own
+    // already-filtered list) and Dragon Claw isn't legal in this fixture.
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+
+    expect(await screen.findByRole('button', { name: 'Change Earthquake' })).not.toBeNull();
+  });
+
+  it('no move is selected when every set move is unavailable (all status, or illegal for this game) (task §12)', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [DIG] }); // none of the set's 4 moves
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+
+    await screen.findByText('Garchomp · My Team');
+    expect(await screen.findByRole('button', { name: 'Select move' })).not.toBeNull();
+  });
+
+  it('the imported move preference is applied only once — a later manual move change is never overwritten (task §13)', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockImplementation(async (_formSlug: string, versionGroupSlug: string) =>
+      versionGroupSlug === 'scarlet-violet'
+        ? { form: GARCHOMP_FORM, moves: [EARTHQUAKE, DIG] }
+        : { form: GARCHOMP_FORM, moves: [EARTHQUAKE, DIG] },
+    );
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+
+    expect(await screen.findByRole('button', { name: 'Change Earthquake' })).not.toBeNull();
+
+    // Manually change the move.
+    fireEvent.click(screen.getByRole('button', { name: 'Change Earthquake' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Dig/ }));
+    expect(await screen.findByRole('button', { name: 'Change Dig' })).not.toBeNull();
+
+    // Trigger another attacker-reference reload (a game switch) — the
+    // already-consumed import preference must not reassert Earthquake.
+    fireEvent.change(screen.getByRole('combobox', { name: 'Game' }), {
+      target: { value: 'sword-shield' },
+    });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Change Dig' })).not.toBeNull());
+  });
+
+  it("changing the attacker after import is never re-overwritten by the old team member's data (task §13)", async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockImplementation(async (formSlug: string) =>
+      formSlug === 'garchomp'
+        ? { form: GARCHOMP_FORM, moves: [EARTHQUAKE] }
+        : { form: HEATRAN_FORM, moves: [EARTHQUAKE] },
+    );
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+    await screen.findByRole('button', { name: 'Change Earthquake' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change Garchomp' }));
+    const inputs = await screen.findAllByRole('combobox', { name: 'Select Pokémon' });
+    fireEvent.change(inputs[0]!, { target: { value: 'heatran' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Heatran/ }));
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    const abilitySelect = await screen.findByRole('combobox', { name: 'Ability' });
+    // Heatran's own ability list — never Garchomp's imported "Rough Skin".
+    expect((abilitySelect as HTMLSelectElement).value).toBe('');
+    const optionValues = Array.from((abilitySelect as HTMLSelectElement).options).map(
+      (option) => option.value,
+    );
+    expect(optionValues).toContain('flash-fire');
+    expect(optionValues).not.toContain('rough-skin');
+  });
+
+  it('team not found: shows a discrete warning, Damage Lab stays fully usable (task §19)', async () => {
+    mockLoadTeamDraft.mockReturnValue(null);
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, { teamId: 'ghost-team', memberId: 'member-1' });
+
+    expect(
+      await screen.findByText(
+        "We couldn't find that saved team on this device. You can still use Damage Lab normally.",
+      ),
+    ).not.toBeNull();
+    await selectAttacker();
+    expect(await screen.findByText('Garchomp')).not.toBeNull();
+  });
+
+  it('member not found: shows a discrete warning naming the team, Damage Lab stays fully usable (task §19)', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'ghost-member' });
+
+    expect(await screen.findByText("We couldn't find that Pokémon on the team.")).not.toBeNull();
+    await selectAttacker();
+    expect(await screen.findByText('Garchomp')).not.toBeNull();
+  });
+
+  it('an imported nature/item slug auto-loads Advanced reference data and never shows a raw slug (task §16)', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+
+    await waitFor(() => expect(mockFetchAdvancedReferenceData).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    // The collapsed-panel summary (and the select's own resolved option)
+    // must show real names, never the raw slugs 'jolly'/'life-orb'. "Jolly"
+    // is a substring of both (the summary line, and the nature <select>'s
+    // composed "Jolly (+Speed / −Sp. Atk)" option label), never the exact
+    // text content of one node — a regex matcher, not an exact string.
+    await waitFor(() => expect(screen.getAllByText(/Jolly/).length).toBeGreaterThan(0));
+    expect(screen.getAllByText('Life Orb').length).toBeGreaterThan(0);
+    expect(screen.queryByText('jolly')).toBeNull();
+    expect(screen.queryByText('life-orb')).toBeNull();
+  });
+
+  it("capability revalidation still applies — an imported nature isn't forced into a game that has none (task §14/§15)", async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft({ versionGroupSlug: 'red-blue' }));
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab([...VERSION_GROUPS, RED_BLUE], { teamId: 'team-1', memberId: 'member-1' });
+
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+        'red-blue',
+      ),
+    );
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    await screen.findByRole('spinbutton', { name: 'Level' });
+    // Gen I has no natures at all — the field must not render, regardless
+    // of what the imported set had configured.
+    expect(screen.queryByRole('combobox', { name: 'Nature' })).toBeNull();
+  });
+
+  it('a remount (e.g. a hard refresh of the same URL) can import again (task §21)', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+
+    const first = renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+    expect(await screen.findByText('Garchomp · My Team')).not.toBeNull();
+    first.unmount();
+
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
+    expect(await screen.findByText('Garchomp · My Team')).not.toBeNull();
+    expect(mockLoadTeamDraft).toHaveBeenCalledTimes(2);
   });
 });
