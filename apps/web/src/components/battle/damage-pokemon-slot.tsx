@@ -5,13 +5,17 @@ import { useEffect, useState } from 'react';
 import type { SpeciesSearchAlias, SpeciesSearchItem } from '@pokestudio/database';
 import { formatMessage, type Locale } from '@pokestudio/i18n';
 import type { PokemonType } from '@pokestudio/pokemon-data';
+import { pokemonTypeColorVar } from '@pokestudio/ui';
 
 import { CompareAddInput } from '@/components/pokemon/compare-add-input';
 import { PokemonArtSlot } from '@/components/pokemon/art-slot';
 import { PokemonTypeBadge } from '@/components/pokemon/type-badge';
 import { getPokemonSprite } from '@/lib/pokemon-sprite';
 import { resolveRosterVisualIdentity } from '@/lib/roster-visual-identity';
-import { buttonClass } from '@/lib/ui-classes';
+import { buttonClass, cardClass } from '@/lib/ui-classes';
+
+/** ~128px at `lg`, ~144px at `xl`+ (visual review: "Pokémon as protagonist") — below `lg`, unchanged from the original fixed 6rem/96px. */
+const ART_SIZE_CLASS = 'h-24 w-24 lg:h-32 lg:w-32 xl:h-36 xl:w-36';
 
 export interface DamagePokemonSlotLabels {
   selectPokemonLabel: string;
@@ -40,6 +44,7 @@ export function DamagePokemonSlot({
   selectedFormSlug,
   onSelect,
   labels,
+  artworkTrailing = false,
 }: {
   locale: Locale;
   label: string;
@@ -48,6 +53,15 @@ export function DamagePokemonSlot({
   selectedFormSlug: string | null;
   onSelect: (formSlug: string) => void;
   labels: DamagePokemonSlotLabels;
+  /**
+   * Visually reverses the compact card's two children (text/info, then
+   * artwork last) at `lg:` and up, via `flex-row-reverse` — never a
+   * `transform`, never a DOM-order change (visual review: attacker on the
+   * stage's left should have its artwork facing the Move column on its
+   * right, "text/info | artwork"). Below `lg`, always the plain default
+   * order (artwork first), matching the stacked/mobile layout.
+   */
+  artworkTrailing?: boolean;
 }) {
   const [pickerOpen, setPickerOpen] = useState(!selectedFormSlug);
   const [spriteFailed, setSpriteFailed] = useState(false);
@@ -85,7 +99,7 @@ export function DamagePokemonSlot({
     : undefined;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2">
+    <div className="flex w-full min-w-0 flex-col gap-2">
       <span className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</span>
       {showPicker || !identity ? (
         <div className="flex items-center gap-2">
@@ -99,7 +113,7 @@ export function DamagePokemonSlot({
             multipleFormsMatchTemplate={labels.multipleFormsMatchTemplate}
             ambiguousHintLabel={labels.ambiguousHint}
             noResultsLabel={labels.noResultsLabel}
-            widthClassName="w-full max-w-xs"
+            widthClassName="w-full max-w-sm"
           />
           {identity ? (
             <button
@@ -112,19 +126,44 @@ export function DamagePokemonSlot({
           ) : null}
         </div>
       ) : (
-        <div className="flex items-center gap-3">
+        // Subtle visual grouping (visual review — the compact summary used
+        // to float in open space): `cardClass()` reuses the same
+        // surface/border/radius every other PokeStudio card already uses,
+        // plus a barely-there type-tinted border (never a saturated
+        // type-colored panel) so each side reads as its own distinct area.
+        //
+        // Explicit `w-full` here (visual review round 2 — attacker/
+        // defender cards rendered different widths): this card used to sit
+        // inside an external `max-w-*`-capped wrapper, shrink-to-fit under
+        // `items-end`/`items-start` on the column. `DamageAdvancedPanel`
+        // right below it is unconditionally `w-full` of that same column,
+        // so the two could only match by coincidence. This card is now
+        // `w-full` too — same parent, same explicit rule, byte-identical
+        // width to Advanced, on both sides, regardless of name length or
+        // badge count. The info column gets `flex-1` (fixed artwork area,
+        // flexible info area) so the pairing fills the card edge-to-edge
+        // instead of leaving dead space now that the card itself is wide.
+        <div
+          className={cardClass(
+            `flex w-full items-center gap-3 p-3 sm:p-4 ${artworkTrailing ? 'lg:flex-row-reverse' : ''}`,
+          )}
+          style={{
+            borderColor: `color-mix(in srgb, var(${pokemonTypeColorVar[identity.types[0]!]}) 20%, var(--ps-color-border-subtle))`,
+          }}
+        >
           <PokemonArtSlot
             initial={displayName.charAt(0)}
             types={identity.types}
             variant="hero"
+            sizeClassName={ART_SIZE_CLASS}
             spriteUrl={spriteFailed ? undefined : spriteUrl}
             onSpriteError={() => setSpriteFailed(true)}
           />
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <span className="truncate text-base font-bold text-foreground">{displayName}</span>
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span className="truncate text-lg font-bold text-foreground">{displayName}</span>
             <span className="flex flex-wrap gap-1">
               {identity.types.map((type) => (
-                <PokemonTypeBadge key={type} type={type} label={typeLabels[type]} size="sm" />
+                <PokemonTypeBadge key={type} type={type} label={typeLabels[type]} />
               ))}
             </span>
             <button

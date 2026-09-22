@@ -23,6 +23,14 @@ export interface PokemonArtSlotProps {
    */
   spriteUrl?: string | undefined;
   onSpriteError?: (() => void) | undefined;
+  /**
+   * Overrides the variant's fixed width/height with responsive Tailwind
+   * classes (e.g. `hero` growing at `lg:`/`xl:` for Damage Lab's larger
+   * "Pokémon as protagonist" treatment — visual review) instead of a single
+   * fixed rem size. Percentage-based inner sizing (brackets, sprite inset)
+   * already scales with the box, so no other prop needs to change.
+   */
+  sizeClassName?: string | undefined;
 }
 
 /**
@@ -54,6 +62,7 @@ export function PokemonArtSlot({
   variant,
   spriteUrl,
   onSpriteError,
+  sizeClassName,
 }: PokemonArtSlotProps) {
   const primaryVar = pokemonTypeColorVar[types[0]!];
   const secondaryVar = pokemonTypeColorVar[types[1] ?? types[0]!];
@@ -77,8 +86,10 @@ export function PokemonArtSlot({
             borderRadius: 'var(--ps-radius-xl)',
           }
         : {
-            width: '6rem',
-            height: '6rem',
+            // `sizeClassName` (width/height via Tailwind responsive
+            // classes) takes over sizing when given — leave width/height
+            // out here so it isn't fighting inline style specificity.
+            ...(sizeClassName ? null : { width: '6rem', height: '6rem' }),
             borderRadius: 'var(--ps-radius-xl)',
           };
 
@@ -98,7 +109,10 @@ export function PokemonArtSlot({
   return (
     <div
       aria-hidden="true"
-      className="relative flex shrink-0 items-center justify-center overflow-hidden"
+      className={
+        'relative flex shrink-0 items-center justify-center overflow-hidden' +
+        (sizeClassName ? ` ${sizeClassName}` : '')
+      }
       style={{
         background: [
           // Faint edge vignette for depth — never a diagonal shine.
@@ -150,10 +164,25 @@ export function PokemonArtSlot({
         // ambiguity — the box is always 88% of the frame on every axis,
         // then `object-contain` fits each species' own aspect ratio inside
         // it (unaffected either way: Wailord and Pikachu both still read
-        // clearly, no per-species value here). Scoped to `tile` only — the
-        // fixed-pixel `hero`/`detailHero` boxes don't exhibit this (no
-        // sprite call site passes them one yet either), and this PR doesn't
-        // touch their behavior.
+        // clearly, no per-species value here).
+        //
+        // Same fix now also applies to `hero`/`detailHero` (visual review,
+        // Damage Lab's compact card — the first caller to ever pass a real
+        // `spriteUrl` into a non-`tile` variant): they had exactly this
+        // bug, just previously undetected because nothing exercised the
+        // `<img>` branch for them (every other caller is monogram-only, no
+        // sprite/artwork source cleared yet — that's still true, so this is
+        // a no-op for them, not a behavior change). This is a confirmed
+        // rendering bug (the same over-constrained-inset mechanism already
+        // diagnosed and fixed for `tile` above), not a guess — it alone is
+        // enough to explain a sprite rendering intrinsic-sized and pinned
+        // toward one corner instead of centered/contained. Whether the
+        // remote sprite *assets themselves* additionally carry asymmetric
+        // transparent padding was not independently checked here (no tool
+        // access to inspect the actual pixels of an externally hosted
+        // image) — if a sprite still looks off-center after this fix, that
+        // would point at the asset, not this component, and still isn't a
+        // reason to add a per-species offset here.
         // eslint-disable-next-line @next/next/no-img-element -- see pokemon-sprite.ts's doc comment (same provisional external host Team Builder's roster tile already uses).
         <img
           src={spriteUrl}
@@ -163,7 +192,7 @@ export function PokemonArtSlot({
           className={
             variant === 'tile'
               ? 'absolute inset-[6%] h-[88%] w-[88%] object-contain [image-rendering:pixelated] transition-transform duration-200 ease-ps motion-reduce:transition-none group-hover:-translate-y-[2.5px] group-hover:scale-[1.06] group-focus-visible:-translate-y-[2.5px] group-focus-visible:scale-[1.06] motion-reduce:group-hover:translate-y-0 motion-reduce:group-hover:scale-100 motion-reduce:group-focus-visible:translate-y-0 motion-reduce:group-focus-visible:scale-100'
-              : 'absolute inset-[6%] object-contain [image-rendering:pixelated]'
+              : 'absolute inset-[6%] h-[88%] w-[88%] object-contain [image-rendering:pixelated]'
           }
         />
       ) : (

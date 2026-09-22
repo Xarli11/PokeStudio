@@ -46,7 +46,7 @@ describe('PokemonArtSlot', () => {
     expect(img.className).toContain('motion-reduce:group-hover:translate-y-0');
   });
 
-  it('hero variant is unaffected — same sprite box as before this fix, no tile-only sizing or hover classes', () => {
+  it('hero variant gets the same explicit-size fix as tile (visual review — sprite rendered intrinsic-sized and off-center, e.g. Pikachu), still no tile-only hover classes', () => {
     const { container } = render(
       <PokemonArtSlot
         initial="B"
@@ -58,10 +58,13 @@ describe('PokemonArtSlot', () => {
     const img = container.querySelector('img')!;
     expect(img.getAttribute('alt')).toBe('');
     expect(img.getAttribute('loading')).toBe('lazy');
-    expect(img.className).toBe('absolute inset-[6%] object-contain [image-rendering:pixelated]');
+    expect(img.className).toContain('h-[88%]');
+    expect(img.className).toContain('w-[88%]');
+    expect(img.className).toContain('object-contain');
+    expect(img.className).not.toContain('group-hover');
   });
 
-  it('detailHero variant is unaffected — same sprite box as before this fix, no tile-only sizing or hover classes', () => {
+  it('detailHero variant gets the same explicit-size fix as tile, still no tile-only hover classes', () => {
     const { container } = render(
       <PokemonArtSlot
         initial="B"
@@ -71,7 +74,10 @@ describe('PokemonArtSlot', () => {
       />,
     );
     const img = container.querySelector('img')!;
-    expect(img.className).toBe('absolute inset-[6%] object-contain [image-rendering:pixelated]');
+    expect(img.className).toContain('h-[88%]');
+    expect(img.className).toContain('w-[88%]');
+    expect(img.className).toContain('object-contain');
+    expect(img.className).not.toContain('group-hover');
   });
 
   it('image load failure still calls the caller-owned fallback, never a broken image left in place', () => {

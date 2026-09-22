@@ -271,6 +271,8 @@ const LABELS: DamageLabLabels = {
     koGuaranteedTemplate: 'Guaranteed {hits}HKO',
     koChanceTemplate: '{chance}% chance to {hits}HKO',
     koPossibleTemplate: 'Possible {hits}HKO',
+    koHitWordSingular: 'hit',
+    koHitWordPlural: 'hits',
     koNoDamage: 'No damage this calculation.',
     detailsLabel: 'Details',
     debugDescriptionLabel: 'Upstream calculation trace (debug)',

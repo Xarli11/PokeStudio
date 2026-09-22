@@ -15,6 +15,10 @@ import { PokemonTypeBadge } from '../pokemon/type-badge';
 
 const DAMAGE_CLASSES: readonly DamageClass[] = ['physical', 'special', 'status'];
 
+/** Build's own inline "you're now editing this in place" signal — a dashed brand border makes sense replacing content in a form, but reads as a stray oversized focus ring once this same component is hosted inside an overlay (Damage Lab, visual review). */
+const DEFAULT_SURFACE_CLASS =
+  'flex flex-col gap-2 rounded-lg border border-dashed border-brand p-3';
+
 export interface MovePickerLabels {
   /** Used as both the combobox's accessible label and its placeholder — same convention as `CompareAddInput`. */
   searchLabel: string;
@@ -42,6 +46,12 @@ export interface MovePickerLabels {
  * feature"), using the set editor's own full width rather than being
  * trapped inside one narrow grid cell — same reasoning `FilledTeamSlot`'s
  * form-swap panel already established for the team slot strip.
+ *
+ * A second host reuses this same combobox without being a modal either
+ * (Damage Lab's Move control, visual review): `PopoverDisclosure` renders
+ * it inside an anchored floating panel instead of inline form content —
+ * `surfaceClassName` swaps the root's frame for that context (see its own
+ * doc comment), everything else about this component is identical.
  */
 export function MovePicker({
   locale,
@@ -51,6 +61,7 @@ export function MovePicker({
   labels,
   onSelect,
   onClose,
+  surfaceClassName = DEFAULT_SURFACE_CLASS,
 }: {
   locale: Locale;
   moves: readonly MoveSummary[];
@@ -60,6 +71,8 @@ export function MovePicker({
   labels: MovePickerLabels;
   onSelect: (moveSlug: string) => void;
   onClose: () => void;
+  /** Overrides the root's frame — see `DEFAULT_SURFACE_CLASS`. Omit for Build's original inline look. */
+  surfaceClassName?: string;
 }) {
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<PokemonType | ''>('');
@@ -112,36 +125,41 @@ export function MovePicker({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-dashed border-brand p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-0 flex-1 basis-48">
-          <SearchIcon />
-          <input
-            ref={inputRef}
-            role="combobox"
-            aria-expanded={results.length > 0}
-            aria-controls={listboxId}
-            aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
-            aria-autocomplete="list"
-            aria-label={labels.searchLabel}
-            type="text"
-            autoComplete="off"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setActiveIndex(-1);
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder={labels.searchLabel}
-            className={searchInputClass}
-          />
-        </div>
+    <div className={surfaceClassName}>
+      {/* Search gets its own full-width row — it used to share one `flex-
+          wrap` row with both filters and the cancel control, which forced
+          an awkward wrap at any width narrower than "search + 2 selects +
+          a button" (visual review: this component now also hosts inside a
+          ~34rem overlay, not just a full-width form row). */}
+      <div className="relative w-full">
+        <SearchIcon />
+        <input
+          ref={inputRef}
+          role="combobox"
+          aria-expanded={results.length > 0}
+          aria-controls={listboxId}
+          aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
+          aria-autocomplete="list"
+          aria-label={labels.searchLabel}
+          type="text"
+          autoComplete="off"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setActiveIndex(-1);
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={labels.searchLabel}
+          className={searchInputClass}
+        />
+      </div>
 
+      <div className="flex flex-wrap items-center gap-2">
         <select
           value={typeFilter}
           onChange={(event) => setTypeFilter(event.target.value as PokemonType | '')}
           aria-label={labels.typeFilterLabel}
-          className="rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground"
+          className="min-w-0 flex-1 basis-32 rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground"
         >
           <option value="">{labels.allTypesLabel}</option>
           {ALL_POKEMON_TYPES.map((type) => (
@@ -155,7 +173,7 @@ export function MovePicker({
           value={damageClassFilter}
           onChange={(event) => setDamageClassFilter(event.target.value as DamageClass | '')}
           aria-label={labels.damageClassFilterLabel}
-          className="rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground"
+          className="min-w-0 flex-1 basis-32 rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground"
         >
           <option value="">{labels.allDamageClassesLabel}</option>
           {DAMAGE_CLASSES.map((damageClass) => (

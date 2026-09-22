@@ -6,6 +6,53 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Damage Lab result copy, Advanced panel and battle-stage UI fixes (2026-09-22)
+
+Corrective UI/UX patch from a manual visual review of the merged Damage Lab — not new Phase 3
+roadmap scope (Explore → Damage Lab, an explanation trace for modifiers, and matchup comparison
+primitives remain not-yet-started).
+
+- Spanish results no longer expose unexplained `OHKO`/`2HKO`/`3HKO` shorthand: "2HKO garantizado"
+  is now "KO garantizado en 2 golpes" (with correct singular/plural wording), and the
+  chance/possible variants read the same way. English keeps its established "Guaranteed 2HKO"
+  wording unchanged. The underlying KO calculation is untouched.
+- `Details`/`Detalles` no longer opens to an empty panel. The button used to show whenever
+  `debugDescription` (present on every result) existed, but its content only ever rendered outside
+  production — so in production, with no battle-state modifier active (the common case today,
+  since weather/terrain/screens/status/Dynamax have no control yet), clicking it revealed nothing.
+  It now only appears when there is real modifier content to show; the dev-only calculation trace
+  is unaffected.
+- Fixed a severe Advanced panel (level/nature/ability/item/Tera/EVs/IVs) layout regression: opening
+  it on a normal desktop viewport clipped EV/IV values and collided labels. Root cause was the
+  compact-summary width cap (`lg:max-w-72`, from the PR #25 layout fix) also constraining the _open_
+  Advanced panel, combined with viewport-based `sm:` breakpoints firing inside that narrow box
+  regardless of its actual rendered width. The cap now applies only to the compact summary; the
+  open panel uses Tailwind's container queries (`@container`/`@sm:`) to respond to its own width,
+  and EVs/IVs always stack vertically instead of splitting the already-tight space in half.
+- Reworked the desktop battle-stage composition: Pokémon artwork grows to ~128px (`lg`)/~144px
+  (`xl`+), each side's compact summary sits in its own subtle card (a barely-there type-tinted
+  border, never a saturated panel), and the card is always the exact same rendered width as its
+  own Advanced panel and as the opposite side's card — both are explicit `w-full` of an identical
+  `minmax(0,1fr)` grid track, replacing an earlier `items-end`/`items-start` alignment trick that
+  turned out to make the two sides drift to different widths. Attacker and defender now visually
+  face the Move column (`text/info | artwork` on the attacker, mirrored via `flex-row-reverse`,
+  never a transform or DOM reorder) instead of anchoring outward to the viewport edge.
+- Fixed `PokemonArtSlot` rendering a sprite at its intrinsic pixel size, pinned toward one corner,
+  instead of centered/contained inside its frame — the same CSS 2.1 §10.3.8 absolutely-positioned-
+  replaced-element issue already fixed for the Pokédex grid's `tile` variant, now also applied to
+  `hero`/`detailHero` (previously unaffected only because nothing had ever passed a real sprite
+  into those variants before Damage Lab did).
+- The Pokémon search picker (`CompareAddInput`, shared with Compare) no longer truncates ordinary
+  names down to a couple of characters to make room for type badges on the same line — the name
+  gets its own full-width row; badges wrap onto a second row below it.
+- The Move picker now opens as a proper anchored overlay (reusing `PopoverDisclosure`, extended
+  with a custom-trigger and controlled-open mode) instead of inline grid content that used to
+  visibly break the narrow center column's layout. Its own internal search/filter rows were
+  restructured (search full-width, then type/category/clear together) for its new ~34rem popover
+  width, and its Build-original dashed-brand "editing in place" border — which read as a stray
+  oversized focus ring once floating — no longer applies in the overlay context (Build's set
+  editor keeps that exact look unchanged).
+
 ### Damage Lab desktop layout and locale-switch state preservation (2026-09-22)
 
 - Fixed a desktop layout asymmetry: the defender column sat visibly closer to the Move selector than
