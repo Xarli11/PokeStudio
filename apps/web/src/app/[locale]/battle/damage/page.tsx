@@ -83,6 +83,7 @@ export default async function DamageLabPage({ params }: { params: Promise<{ loca
         versionGroups={versionGroups}
         defaultVersionGroupSlug={DEFAULT_BUILD_VERSION_GROUP_SLUG}
         typeLabels={dictionary.types}
+        statLabels={dictionary.pokedex.stat}
         labels={{
           gameLabel: dictionary.battle.damageLab.gameLabel,
           generationOptionTemplate: dictionary.moves.generation,
@@ -95,8 +96,38 @@ export default async function DamageLabPage({ params }: { params: Promise<{ loca
           noLegalMoves: dictionary.battle.damageLab.noLegalMoves,
           calculateLabel: dictionary.battle.damageLab.calculateLabel,
           calculatingLabel: dictionary.battle.damageLab.calculatingLabel,
-          assumptionsTemplate: dictionary.battle.damageLab.assumptionsTemplate,
+          inputsChangedLabel: dictionary.battle.damageLab.inputsChangedLabel,
+          recalculateLabel: dictionary.battle.damageLab.recalculateLabel,
           resultHeading: dictionary.battle.damageLab.resultHeading,
+          advancedPanel: {
+            advancedLabel: dictionary.battle.damageLab.advancedLabel,
+            levelLabel: dictionary.build.levelLabel,
+            natureLabel: dictionary.build.natureLabel,
+            natureNeutralOption: dictionary.battle.damageLab.natureNeutralOption,
+            natureModifierTemplate: dictionary.build.natureModifierTemplate,
+            abilityLabel: dictionary.build.abilityLabel,
+            noAbilitySelected: dictionary.build.noAbilitySelected,
+            hiddenAbilityMarker: dictionary.build.hiddenAbilityMarker,
+            itemLabel: dictionary.build.itemLabel,
+            noItemSelected: dictionary.build.noItemSelected,
+            itemSearchLabel: dictionary.build.itemSearchPlaceholder,
+            itemSearchNoResults: dictionary.build.itemSearchNoResults,
+            cancelLabel: dictionary.battle.damageLab.cancelLabel,
+            evsLabel: dictionary.build.evsLabel,
+            evsRemainingTemplate: dictionary.build.evsRemaining,
+            evsMaxTemplate: dictionary.build.evsMax,
+            evsOverLimitTemplate: dictionary.build.evsOverLimit,
+            ivsLabel: dictionary.build.ivsLabel,
+            legacyStatsUnavailableTemplate: dictionary.build.legacyStatsUnavailableTemplate,
+            historicalMechanicsNoteTemplate: dictionary.build.historicalMechanicsNoteTemplate,
+            teraTypeLabel: dictionary.build.teraTypeLabel,
+            noTeraType: dictionary.build.noTeraType,
+            terastallizeLabel: dictionary.battle.damageLab.terastallizeLabel,
+            teraSummaryTemplate: dictionary.battle.damageLab.teraSummaryTemplate,
+            criticalLabel: dictionary.battle.damageLab.criticalLabel,
+            loadingReferenceData: dictionary.build.loadingReferenceData,
+            statAbbr: dictionary.battle.damageLab.statAbbr,
+          },
           pokemonSlot: {
             selectPokemonLabel: dictionary.battle.damageLab.selectPokemonLabel,
             changeLabel: dictionary.battle.damageLab.changeLabel,

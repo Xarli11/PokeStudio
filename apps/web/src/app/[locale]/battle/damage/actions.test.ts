@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type * as PokestudioDatabase from '@pokestudio/database';
-import type { ComparablePokemonForm, MoveSummary } from '@pokestudio/database';
+import type { ComparablePokemonForm, Item, MoveSummary, Nature } from '@pokestudio/database';
 
 const getFormsBySlugs =
   vi.fn<(client: unknown, slugs: string[]) => Promise<ComparablePokemonForm[]>>();
 const getFormLearnsetForVersionGroup =
   vi.fn<(client: unknown, formSlug: string, versionGroupSlug: string) => Promise<MoveSummary[]>>();
+const listNatures = vi.fn<(client: unknown) => Promise<Nature[]>>();
+const listItems = vi.fn<(client: unknown) => Promise<Item[]>>();
 
 vi.mock('@pokestudio/database', async (importOriginal) => {
   const actual = await importOriginal<typeof PokestudioDatabase>();
@@ -15,6 +17,8 @@ vi.mock('@pokestudio/database', async (importOriginal) => {
     getFormsBySlugs: (client: unknown, slugs: string[]) => getFormsBySlugs(client, slugs),
     getFormLearnsetForVersionGroup: (client: unknown, formSlug: string, versionGroupSlug: string) =>
       getFormLearnsetForVersionGroup(client, formSlug, versionGroupSlug),
+    listNatures: (client: unknown) => listNatures(client),
+    listItems: (client: unknown) => listItems(client),
   };
 });
 
@@ -22,8 +26,12 @@ vi.mock('@/lib/pokemon-database', () => ({
   getPokemonDatabaseClient: () => ({}),
 }));
 
-const { fetchAttackerReferenceData, fetchDefenderReferenceData, calculateDamageAction } =
-  await import('./actions');
+const {
+  fetchAttackerReferenceData,
+  fetchDefenderReferenceData,
+  fetchAdvancedReferenceData,
+  calculateDamageAction,
+} = await import('./actions');
 
 const GARCHOMP_FORM: ComparablePokemonForm = {
   formSlug: 'garchomp',
@@ -120,15 +128,63 @@ describe('fetchDefenderReferenceData', () => {
   });
 });
 
+describe('fetchAdvancedReferenceData', () => {
+  it('fetches natures and items only — never the species search index (task §16)', async () => {
+    const jolly: Nature = {
+      slug: 'jolly',
+      nameEn: 'Jolly',
+      increasedStat: 'speed',
+      decreasedStat: 'special-attack',
+    };
+    const lifeOrb: Item = { slug: 'life-orb', nameEn: 'Life Orb', category: 'held' };
+    listNatures.mockResolvedValue([jolly]);
+    listItems.mockResolvedValue([lifeOrb]);
+
+    const data = await fetchAdvancedReferenceData();
+
+    expect(data).toEqual({ natures: [jolly], items: [lifeOrb] });
+  });
+});
+
+const SIMPLE_MODE_STATS = {
+  hp: 0,
+  attack: 0,
+  defense: 0,
+  specialAttack: 0,
+  specialDefense: 0,
+  speed: 0,
+};
+const SIMPLE_MODE_IVS = {
+  hp: 31,
+  attack: 31,
+  defense: 31,
+  specialAttack: 31,
+  specialDefense: 31,
+  speed: 31,
+};
+
+function combatant(formSlug: string, speciesSlug: string) {
+  return {
+    formSlug,
+    speciesSlug,
+    level: 100,
+    abilitySlug: null,
+    itemSlug: null,
+    natureSlug: null,
+    evs: SIMPLE_MODE_STATS,
+    ivs: SIMPLE_MODE_IVS,
+    teraType: null,
+  };
+}
+
 describe('calculateDamageAction', () => {
   it("builds Simple Mode's fixed-assumption input and returns the real calculateDamage result", async () => {
     const response = await calculateDamageAction({
       generation: 9,
-      attackerFormSlug: 'garchomp',
-      attackerSpeciesSlug: 'garchomp',
-      defenderFormSlug: 'ferrothorn',
-      defenderSpeciesSlug: 'ferrothorn',
+      attacker: combatant('garchomp', 'garchomp'),
+      defender: combatant('ferrothorn', 'ferrothorn'),
       moveSlug: 'earthquake',
+      isCritical: false,
     });
 
     expect(response.ok).toBe(true);
@@ -142,11 +198,10 @@ describe('calculateDamageAction', () => {
   it('maps an unknown form to a structured error with the correct side — never a raw exception', async () => {
     const response = await calculateDamageAction({
       generation: 9,
-      attackerFormSlug: 'not-a-real-pokemon-xyz',
-      attackerSpeciesSlug: 'not-a-real-pokemon-xyz',
-      defenderFormSlug: 'ferrothorn',
-      defenderSpeciesSlug: 'ferrothorn',
+      attacker: combatant('not-a-real-pokemon-xyz', 'not-a-real-pokemon-xyz'),
+      defender: combatant('ferrothorn', 'ferrothorn'),
       moveSlug: 'earthquake',
+      isCritical: false,
     });
 
     expect(response).toEqual({ ok: false, code: 'unknown-form', side: 'attacker' });
@@ -157,13 +212,36 @@ describe('calculateDamageAction', () => {
   it('maps an unknown move to a structured error', async () => {
     const response = await calculateDamageAction({
       generation: 9,
-      attackerFormSlug: 'garchomp',
-      attackerSpeciesSlug: 'garchomp',
-      defenderFormSlug: 'ferrothorn',
-      defenderSpeciesSlug: 'ferrothorn',
+      attacker: combatant('garchomp', 'garchomp'),
+      defender: combatant('ferrothorn', 'ferrothorn'),
       moveSlug: 'not-a-real-move-xyz',
+      isCritical: false,
     });
 
     expect(response).toEqual({ ok: false, code: 'unknown-move', side: undefined });
+  });
+
+  it('carries a full Advanced configuration through to the damage domain (task §17)', async () => {
+    const response = await calculateDamageAction({
+      generation: 9,
+      attacker: {
+        formSlug: 'garchomp',
+        speciesSlug: 'garchomp',
+        level: 50,
+        abilitySlug: 'rough-skin',
+        itemSlug: null,
+        natureSlug: null,
+        evs: { hp: 0, attack: 252, defense: 0, specialAttack: 0, specialDefense: 4, speed: 252 },
+        ivs: SIMPLE_MODE_IVS,
+        teraType: null,
+      },
+      defender: combatant('ferrothorn', 'ferrothorn'),
+      moveSlug: 'earthquake',
+      isCritical: true,
+    });
+
+    expect(response.ok).toBe(true);
+    if (!response.ok) throw new Error('unreachable');
+    expect(response.result.modifiers.isCritical).toBe(true);
   });
 });
