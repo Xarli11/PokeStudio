@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   ComparablePokemonForm,
+  Item,
   MoveSummary,
+  Nature,
   SpeciesSearchAlias,
   SpeciesSearchItem,
   VersionGroupSummary,
@@ -12,6 +14,7 @@ import type { DamageCalculationResult } from '@pokestudio/damage';
 
 import {
   calculateDamageAction,
+  fetchAdvancedReferenceData,
   fetchAttackerReferenceData,
   fetchDefenderReferenceData,
 } from '@/app/[locale]/battle/damage/actions';
@@ -21,17 +24,29 @@ import { DamageLab, type DamageLabLabels } from './damage-lab';
 vi.mock('@/app/[locale]/battle/damage/actions', () => ({
   fetchAttackerReferenceData: vi.fn(),
   fetchDefenderReferenceData: vi.fn(),
+  fetchAdvancedReferenceData: vi.fn(),
   calculateDamageAction: vi.fn(),
 }));
 
 const mockFetchAttacker = vi.mocked(fetchAttackerReferenceData);
 const mockFetchDefender = vi.mocked(fetchDefenderReferenceData);
+const mockFetchAdvancedReferenceData = vi.mocked(fetchAdvancedReferenceData);
 const mockCalculate = vi.mocked(calculateDamageAction);
+
+const JOLLY: Nature = {
+  slug: 'jolly',
+  nameEn: 'Jolly',
+  increasedStat: 'speed',
+  decreasedStat: 'special-attack',
+};
+const LIFE_ORB: Item = { slug: 'life-orb', nameEn: 'Life Orb', category: 'held-item' };
 
 afterEach(cleanup);
 beforeEach(() => {
   mockFetchAttacker.mockReset();
   mockFetchDefender.mockReset();
+  mockFetchAdvancedReferenceData.mockReset();
+  mockFetchAdvancedReferenceData.mockResolvedValue({ natures: [JOLLY], items: [LIFE_ORB] });
   mockCalculate.mockReset();
 });
 
@@ -73,7 +88,10 @@ const GARCHOMP_FORM: ComparablePokemonForm = {
   isDefaultForm: true,
   types: ['dragon', 'ground'],
   baseStats: STATS,
-  abilities: [],
+  abilities: [
+    { slug: 'sand-veil', nameEn: 'Sand Veil', isHidden: false, slot: 1 },
+    { slug: 'rough-skin', nameEn: 'Rough Skin', isHidden: false, slot: 2 },
+  ],
 };
 
 const HEATRAN_FORM: ComparablePokemonForm = {
@@ -85,7 +103,7 @@ const HEATRAN_FORM: ComparablePokemonForm = {
   isDefaultForm: true,
   types: ['fire', 'steel'],
   baseStats: STATS,
-  abilities: [],
+  abilities: [{ slug: 'flash-fire', nameEn: 'Flash Fire', isHidden: false, slot: 1 }],
 };
 
 const EARTHQUAKE: MoveSummary = {
@@ -155,9 +173,45 @@ const LABELS: DamageLabLabels = {
   noLegalMoves: 'No damaging moves are learnable in this game.',
   calculateLabel: 'Calculate',
   calculatingLabel: 'Calculating…',
-  assumptionsTemplate:
-    'Lv. {level} · {evs} EVs · {ivs} IVs · Neutral nature · No ability · No item',
+  inputsChangedLabel: 'Inputs changed',
+  recalculateLabel: 'Recalculate',
   resultHeading: 'Result',
+  advancedPanel: {
+    advancedLabel: 'Advanced',
+    levelLabel: 'Level',
+    natureLabel: 'Nature',
+    natureNeutralOption: 'Neutral',
+    natureModifierTemplate: '+{increased} / −{decreased}',
+    abilityLabel: 'Ability',
+    noAbilitySelected: 'Choose an ability',
+    hiddenAbilityMarker: '(Hidden)',
+    itemLabel: 'Held item',
+    noItemSelected: 'No item',
+    itemSearchLabel: 'Search items…',
+    itemSearchNoResults: 'No items match your search.',
+    cancelLabel: 'Cancel',
+    evsLabel: 'EVs',
+    evsRemainingTemplate: '{count} EVs remaining',
+    evsMaxTemplate: '{total} / {max}',
+    evsOverLimitTemplate: '{count} EVs over the limit',
+    ivsLabel: 'IVs',
+    legacyStatsUnavailableTemplate: "Stat calculation for {game} isn't implemented yet.",
+    historicalMechanicsNoteTemplate: "PokeStudio hasn't fully validated {game}'s mechanics yet.",
+    teraTypeLabel: 'Tera Type',
+    noTeraType: 'None',
+    terastallizeLabel: 'Terastallize',
+    teraSummaryTemplate: 'Tera {type}',
+    criticalLabel: 'Critical hit',
+    loadingReferenceData: 'Loading…',
+    statAbbr: {
+      hp: 'HP',
+      attack: 'Atk',
+      defense: 'Def',
+      specialAttack: 'SpA',
+      specialDefense: 'SpD',
+      speed: 'Spe',
+    },
+  },
   pokemonSlot: {
     selectPokemonLabel: 'Select Pokémon',
     changeLabel: 'Change',
@@ -255,14 +309,24 @@ const TYPE_LABELS: Record<string, string> = {
   steel: 'Steel',
 };
 
-function renderDamageLab() {
+const STAT_LABELS = {
+  hp: 'HP',
+  attack: 'Attack',
+  defense: 'Defense',
+  specialAttack: 'Sp. Atk',
+  specialDefense: 'Sp. Def',
+  speed: 'Speed',
+};
+
+function renderDamageLab(versionGroups: VersionGroupSummary[] = VERSION_GROUPS) {
   return render(
     <DamageLab
       locale="en"
       searchIndex={SEARCH_INDEX}
-      versionGroups={VERSION_GROUPS}
+      versionGroups={versionGroups}
       defaultVersionGroupSlug="scarlet-violet"
       typeLabels={TYPE_LABELS as never}
+      statLabels={STAT_LABELS}
       labels={LABELS}
     />,
   );
@@ -401,11 +465,12 @@ describe('DamageLab', () => {
     expect(screen.getByText('Heatran')).not.toBeNull();
   });
 
-  it('shows the fixed Simple Mode assumptions line', () => {
+  it("shows each side's own compact summary, defaulting to just the level (task §22)", () => {
     renderDamageLab();
-    expect(
-      screen.getByText('Lv. 100 · 0 EVs · 31 IVs · Neutral nature · No ability · No item'),
-    ).not.toBeNull();
+    // Both attacker and defender start at Simple Mode's defaults — the
+    // summary omits every field that's still at its default (task: "no
+    // quiero un párrafo enorme"), so each shows only "Lv. 100".
+    expect(screen.getAllByText('Lv. 100')).toHaveLength(2);
   });
 
   it('shows a pending state while calculating, without a native alert, and disables the button', async () => {
@@ -514,5 +579,285 @@ describe('DamageLab', () => {
     ).not.toBeNull();
     expect(screen.queryByText('unknown-form')).toBeNull();
     expect(screen.queryByText(/unknown/i)).toBeNull();
+  });
+});
+
+async function selectAttackerMoveAndDefender() {
+  await selectAttacker();
+  fireEvent.click(await screen.findByRole('button', { name: 'Select move' }));
+  fireEvent.click(await screen.findByRole('option', { name: /Earthquake/ }));
+  await selectDefender();
+}
+
+const RED_BLUE: VersionGroupSummary = { slug: 'red-blue', generation: 1, displayOrder: 0 };
+
+describe('DamageLab Advanced', () => {
+  it('is collapsed by default and opens independently per side (task §2/§29)', async () => {
+    renderDamageLab();
+    expect(screen.queryByRole('spinbutton', { name: 'Level' })).toBeNull();
+    const advancedButtons = screen.getAllByRole('button', { name: /Advanced/ });
+    expect(advancedButtons).toHaveLength(2);
+
+    fireEvent.click(advancedButtons[0]!);
+    expect(await screen.findByRole('spinbutton', { name: 'Level' })).not.toBeNull();
+    expect(screen.getAllByRole('spinbutton', { name: 'Level' })).toHaveLength(1);
+
+    fireEvent.click(advancedButtons[1]!);
+    await waitFor(() =>
+      expect(screen.getAllByRole('spinbutton', { name: 'Level' })).toHaveLength(2),
+    );
+  });
+
+  it('Level is editable, clamps to 1-100, and only affects that combatant (task §5/§29)', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockCalculate.mockResolvedValue({ ok: true, result: RESULT });
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    const levelInput = await screen.findByRole('spinbutton', { name: 'Level' });
+    fireEvent.change(levelInput, { target: { value: '999' } });
+    expect((levelInput as HTMLInputElement).value).toBe('100');
+    fireEvent.change(levelInput, { target: { value: '50' } });
+    expect((levelInput as HTMLInputElement).value).toBe('50');
+
+    await clickCalculate();
+    const request = mockCalculate.mock.calls[0]![0];
+    expect(request.attacker.level).toBe(50);
+    expect(request.defender.level).toBe(100); // untouched
+  });
+
+  it('Nature defaults to neutral, is selectable, and reaches the calculation (task §6/§29)', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockCalculate.mockResolvedValue({ ok: true, result: RESULT });
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    const natureSelect = await screen.findByRole('combobox', { name: 'Nature' });
+    expect((natureSelect as HTMLSelectElement).value).toBe('');
+    fireEvent.change(natureSelect, { target: { value: 'jolly' } });
+
+    await clickCalculate();
+    expect(mockCalculate.mock.calls[0]![0].attacker.natureSlug).toBe('jolly');
+  });
+
+  it('Nature is unavailable in a generation that has none (task §6/§18)', async () => {
+    renderDamageLab([...VERSION_GROUPS, RED_BLUE]);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Game' }), {
+      target: { value: 'red-blue' },
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    await waitFor(() => expect(screen.getByRole('spinbutton', { name: 'Level' })).not.toBeNull());
+    expect(screen.queryByRole('combobox', { name: 'Nature' })).toBeNull();
+  });
+
+  it("Ability defaults to none, offers only the selected form's abilities, and a Pokémon swap invalidates one that no longer applies (task §7/§14/§29)", async () => {
+    mockFetchAttacker.mockImplementation(async (formSlug) =>
+      formSlug === 'garchomp'
+        ? { form: GARCHOMP_FORM, moves: [EARTHQUAKE] }
+        : { form: HEATRAN_FORM, moves: [EARTHQUAKE] },
+    );
+    renderDamageLab();
+    await selectAttacker();
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+
+    const abilitySelect = await screen.findByRole('combobox', { name: 'Ability' });
+    expect((abilitySelect as HTMLSelectElement).value).toBe('');
+    expect(screen.getByRole('option', { name: 'Sand Veil' })).not.toBeNull();
+    expect(screen.getByRole('option', { name: 'Rough Skin' })).not.toBeNull();
+    fireEvent.change(abilitySelect, { target: { value: 'sand-veil' } });
+    expect((abilitySelect as HTMLSelectElement).value).toBe('sand-veil');
+
+    // Swap the attacker to a Pokémon without a "Sand Veil" ability.
+    fireEvent.click(screen.getByRole('button', { name: 'Change Garchomp' }));
+    const swapInput = (await screen.findAllByRole('combobox', { name: 'Select Pokémon' }))[0]!;
+    fireEvent.change(swapInput, { target: { value: 'heatran' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Heatran/ }));
+
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Ability' }) as HTMLSelectElement).value).toBe(
+        '',
+      ),
+    );
+  });
+
+  it('Item defaults to none, is selectable through search, and reaches the calculation — no bare hundreds-of-items select (task §8/§29)', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockCalculate.mockResolvedValue({ ok: true, result: RESULT });
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    expect(await screen.findByRole('button', { name: 'Held item No item' })).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Held item No item' }));
+
+    const searchInput = await screen.findByRole('combobox', { name: 'Search items…' });
+    fireEvent.change(searchInput, { target: { value: 'life' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'Life Orb' }));
+    expect(await screen.findByRole('button', { name: 'Held item Life Orb' })).not.toBeNull();
+
+    await clickCalculate();
+    expect(mockCalculate.mock.calls[0]![0].attacker.itemSlug).toBe('life-orb');
+  });
+
+  it('EVs are editable per stat, capped by the 510 total, and reach the calculation (task §9/§29)', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockCalculate.mockResolvedValue({ ok: true, result: RESULT });
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    const attackEv = (await screen.findAllByRole('spinbutton', { name: 'Attack' }))[0]!;
+    fireEvent.change(attackEv, { target: { value: '999' } });
+    expect((attackEv as HTMLInputElement).value).toBe('252'); // per-stat cap
+
+    fireEvent.change(attackEv, { target: { value: '252' } });
+    const speedEv = screen.getAllByRole('spinbutton', { name: 'Speed' })[0]!;
+    fireEvent.change(speedEv, { target: { value: '252' } });
+    const specialDefenseEv = screen.getAllByRole('spinbutton', { name: 'Sp. Def' })[0]!;
+    fireEvent.change(specialDefenseEv, { target: { value: '10' } });
+    // 252 + 252 = 504 already spent — only 6 of the requested 10 fit the 510
+    // team-wide budget (task: prevent the invalid total, never redistribute
+    // the other fields).
+    expect((specialDefenseEv as HTMLInputElement).value).toBe('6');
+
+    await clickCalculate();
+    expect(mockCalculate.mock.calls[0]![0].attacker.evs).toEqual({
+      hp: 0,
+      attack: 252,
+      defense: 0,
+      specialAttack: 0,
+      specialDefense: 6,
+      speed: 252,
+    });
+  });
+
+  it('IVs are editable per stat within 0-31 (task §10/§29)', async () => {
+    renderDamageLab();
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    const attackIv = (await screen.findAllByRole('spinbutton', { name: 'Attack' }))[1]!;
+    expect((attackIv as HTMLInputElement).value).toBe('31');
+    fireEvent.change(attackIv, { target: { value: '99' } });
+    expect((attackIv as HTMLInputElement).value).toBe('31'); // clamped to the max
+    fireEvent.change(attackIv, { target: { value: '0' } });
+    expect((attackIv as HTMLInputElement).value).toBe('0');
+  });
+
+  it('Tera is absent for a game without it, and off by default where it exists (task §11/§29)', async () => {
+    renderDamageLab();
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    expect(await screen.findByRole('checkbox', { name: 'Terastallize' })).not.toBeNull();
+    expect(
+      (screen.getByRole('checkbox', { name: 'Terastallize' }) as HTMLInputElement).checked,
+    ).toBe(false);
+    expect(screen.queryByRole('combobox', { name: 'Tera Type' })).toBeNull();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Game' }), {
+      target: { value: 'sword-shield' },
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole('checkbox', { name: 'Terastallize' })).toBeNull(),
+    );
+  });
+
+  it('enabling Terastallize reveals the type picker and sends the chosen type; disabling sends null even though a type was picked (task §11/§29)', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockCalculate.mockResolvedValue({ ok: true, result: RESULT });
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Terastallize' }));
+    const teraTypeSelect = await screen.findByRole('combobox', { name: 'Tera Type' });
+    fireEvent.change(teraTypeSelect, { target: { value: 'ground' } });
+
+    await clickCalculate();
+    expect(mockCalculate.mock.calls[0]![0].attacker.teraType).toBe('ground');
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Terastallize' }));
+    await clickCalculate();
+    expect(mockCalculate.mock.calls[1]![0].attacker.teraType).toBeNull();
+  });
+
+  it('Critical hit defaults to false, only the attacker offers it, and true reaches the calculation (task §12/§29)', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockCalculate.mockResolvedValue({ ok: true, result: RESULT });
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+
+    const advancedButtons = screen.getAllByRole('button', { name: /Advanced/ });
+    fireEvent.click(advancedButtons[0]!);
+    const criticalCheckbox = await screen.findByRole('checkbox', { name: 'Critical hit' });
+    expect((criticalCheckbox as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(criticalCheckbox);
+
+    fireEvent.click(advancedButtons[1]!);
+    await waitFor(() =>
+      expect(screen.getAllByRole('checkbox', { name: 'Critical hit' })).toHaveLength(1),
+    );
+
+    await clickCalculate();
+    expect(mockCalculate.mock.calls[0]![0].isCritical).toBe(true);
+  });
+
+  it('switching to a game without a mechanic clears that field, and switching back preserves EV investment (task §15/§29)', async () => {
+    mockFetchAttacker.mockImplementation(async () => ({
+      form: GARCHOMP_FORM,
+      moves: [EARTHQUAKE],
+    }));
+    renderDamageLab([...VERSION_GROUPS, RED_BLUE]);
+    await selectAttacker();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    const abilitySelect = await screen.findByRole('combobox', { name: 'Ability' });
+    fireEvent.change(abilitySelect, { target: { value: 'sand-veil' } });
+    const attackEv = (await screen.findAllByRole('spinbutton', { name: 'Attack' }))[0]!;
+    fireEvent.change(attackEv, { target: { value: '200' } });
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Game' }), {
+      target: { value: 'red-blue' },
+    });
+    await waitFor(() => expect(screen.queryByRole('combobox', { name: 'Ability' })).toBeNull());
+    expect(screen.getByText(/isn't implemented yet/)).not.toBeNull();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Game' }), {
+      target: { value: 'scarlet-violet' },
+    });
+    await waitFor(() =>
+      expect(
+        (screen.getAllByRole('spinbutton', { name: 'Attack' })[0] as HTMLInputElement).value,
+      ).toBe('200'),
+    );
+    // Ability was explicitly nulled by the game switch (task §15) — unlike
+    // EVs, never silently restored just because the mechanic exists again.
+    expect((screen.getByRole('combobox', { name: 'Ability' }) as HTMLSelectElement).value).toBe('');
+  });
+
+  it('editing an Advanced field after a result marks it stale and offers Recalculate without discarding the visible result (task §20)', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockCalculate.mockResolvedValue({ ok: true, result: RESULT });
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+    await clickCalculate();
+    expect(await screen.findByText('184–228 HP')).not.toBeNull();
+    expect(screen.queryByText('Inputs changed')).toBeNull();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    const levelInput = await screen.findByRole('spinbutton', { name: 'Level' });
+    fireEvent.change(levelInput, { target: { value: '50' } });
+
+    expect(await screen.findByText('Inputs changed')).not.toBeNull();
+    expect(screen.getByText('184–228 HP')).not.toBeNull(); // still visible, not cleared
+
+    fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
+    await waitFor(() => expect(screen.queryByText('Inputs changed')).toBeNull());
   });
 });

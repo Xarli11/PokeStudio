@@ -3,8 +3,12 @@
 import {
   getFormLearnsetForVersionGroup,
   getFormsBySlugs,
+  listItems,
+  listNatures,
   type ComparablePokemonForm,
+  type Item,
   type MoveSummary,
+  type Nature,
 } from '@pokestudio/database';
 
 import {
@@ -12,7 +16,9 @@ import {
   DamageInputError,
   type DamageCalculationResult,
   type DamageInputErrorCode,
+  type StatSpread,
 } from '@pokestudio/damage';
+import type { PokemonType } from '@pokestudio/pokemon-data';
 
 import { DEFAULT_IVS, MAX_LEVEL, ZERO_EVS } from '@/lib/team-draft';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
@@ -70,13 +76,52 @@ export async function fetchDefenderReferenceData(
   return forms[0] ?? null;
 }
 
+export interface AdvancedReferenceData {
+  natures: Nature[];
+  items: Item[];
+}
+
+/**
+ * Advanced's own reference data — natures + items only, never the species
+ * search index Damage Lab's page already loaded (task §16: "NO quiero
+ * volver a descargar el searchIndex solo para conseguir natures/items").
+ * A Server Action rather than a new `/api/*` route or reusing
+ * `/api/build-reference-data`: that endpoint bundles the whole ~95KB/19KB
+ * gzip search index in with natures/items specifically because Team
+ * Editor needs all three behind one deferred fetch — Damage Lab needs
+ * neither the search index (already has its own) nor that endpoint's
+ * release-SHA cache-versioning (this is interaction-gated, fetched at most
+ * once per page load, not worth a new cacheable route for). `listNatures`/
+ * `listItems` are the exact same `@pokestudio/database` queries that
+ * endpoint calls — reused directly, no new query, no new route file
+ * (Ponytail: smallest correct solution). Called once, the first time either
+ * side's Advanced panel is opened — never on initial page load (task §16).
+ */
+export async function fetchAdvancedReferenceData(): Promise<AdvancedReferenceData> {
+  const client = getPokemonDatabaseClient();
+  const [natures, items] = await Promise.all([listNatures(client), listItems(client)]);
+  return { natures, items };
+}
+
+export interface DamageLabCombatantRequest {
+  formSlug: string;
+  speciesSlug: string;
+  level: number;
+  abilitySlug: string | null;
+  itemSlug: string | null;
+  natureSlug: string | null;
+  evs: StatSpread;
+  ivs: StatSpread;
+  /** Already resolved to the effective value — `null` whenever Terastallize is off (task §11), never a raw UI `teraEnabled` flag. */
+  teraType: PokemonType | null;
+}
+
 export interface DamageLabCalculationRequest {
   generation: number;
-  attackerFormSlug: string;
-  attackerSpeciesSlug: string;
-  defenderFormSlug: string;
-  defenderSpeciesSlug: string;
+  attacker: DamageLabCombatantRequest;
+  defender: DamageLabCombatantRequest;
   moveSlug: string;
+  isCritical: boolean;
 }
 
 export type DamageLabCalculationResponse =
@@ -87,14 +132,32 @@ export type DamageLabCalculationResponse =
       side: 'attacker' | 'defender' | undefined;
     };
 
+function toDamageCombatant(combatant: DamageLabCombatantRequest) {
+  return {
+    formSlug: combatant.formSlug,
+    speciesSlug: combatant.speciesSlug,
+    level: combatant.level,
+    abilitySlug: combatant.abilitySlug,
+    itemSlug: combatant.itemSlug,
+    natureSlug: combatant.natureSlug,
+    evs: combatant.evs,
+    ivs: combatant.ivs,
+    teraType: combatant.teraType,
+  };
+}
+
 /**
- * Simple Mode's calculation — builds the full slug-native
- * `DamageCalculationInput` from just the two forms + move (everything else
- * is Simple Mode's fixed assumption set, task §7), calls
- * `@pokestudio/damage` directly (never `@smogon/calc`), and returns a
- * plain serializable result. `DamageInputError` maps to its own `code`
- * (+ `side` when present); anything else is logged server-side and
- * collapsed to a generic `'unknown'` code — no stack trace or internal
+ * Damage Lab's calculation — builds the full slug-native
+ * `DamageCalculationInput` from the two combatants' complete configuration
+ * (task §17), calls `@pokestudio/damage` directly (never `@smogon/calc`),
+ * and returns a plain serializable result. Simple Mode and Advanced share
+ * this one path: Simple Mode's fixed assumptions (task §7) are just
+ * `DamageAdvancedConfig`'s own default values (`DAMAGE_LAB_SIMPLE_LEVEL`/
+ * `_EVS`/`_IVS` below, plus `null` ability/item/nature/tera) — the client
+ * builds the same request shape either way, so there is no separate
+ * "simple" code path here to keep in sync. `DamageInputError` maps to its
+ * own `code` (+ `side` when present); anything else is logged server-side
+ * and collapsed to a generic `'unknown'` code — no stack trace or internal
  * error string ever reaches the client (task §13).
  */
 export async function calculateDamageAction(
@@ -103,28 +166,10 @@ export async function calculateDamageAction(
   try {
     const result = calculateDamage({
       generation: request.generation,
-      attacker: {
-        formSlug: request.attackerFormSlug,
-        speciesSlug: request.attackerSpeciesSlug,
-        level: DAMAGE_LAB_SIMPLE_LEVEL,
-        abilitySlug: null,
-        itemSlug: null,
-        natureSlug: null,
-        evs: DAMAGE_LAB_SIMPLE_EVS,
-        ivs: DAMAGE_LAB_SIMPLE_IVS,
-      },
-      defender: {
-        formSlug: request.defenderFormSlug,
-        speciesSlug: request.defenderSpeciesSlug,
-        level: DAMAGE_LAB_SIMPLE_LEVEL,
-        abilitySlug: null,
-        itemSlug: null,
-        natureSlug: null,
-        evs: DAMAGE_LAB_SIMPLE_EVS,
-        ivs: DAMAGE_LAB_SIMPLE_IVS,
-      },
+      attacker: toDamageCombatant(request.attacker),
+      defender: toDamageCombatant(request.defender),
       moveSlug: request.moveSlug,
-      isCritical: false,
+      isCritical: request.isCritical,
     });
     return { ok: true, result };
   } catch (error) {

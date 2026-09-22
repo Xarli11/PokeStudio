@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useActionState, useEffect, useState } from 'react';
+import { startTransition, useActionState, useEffect, useMemo, useState } from 'react';
 
 import type {
   ComparablePokemonForm,
@@ -11,20 +11,35 @@ import type {
 } from '@pokestudio/database';
 import type { DamageInputErrorCode } from '@pokestudio/damage';
 import { formatMessage, type Locale } from '@pokestudio/i18n';
-import type { PokemonType } from '@pokestudio/pokemon-data';
+import type { BaseStats, PokemonType } from '@pokestudio/pokemon-data';
 
 import {
   calculateDamageAction,
+  fetchAdvancedReferenceData,
   fetchAttackerReferenceData,
   fetchDefenderReferenceData,
+  type AdvancedReferenceData,
+  type DamageLabCalculationRequest,
   type DamageLabCalculationResponse,
 } from '@/app/[locale]/battle/damage/actions';
 import { MovePicker, type MovePickerLabels } from '@/components/build/move-picker';
+import {
+  resolveBuildGameCapabilities,
+  type BuildGameCapabilities,
+} from '@/lib/build-game-capabilities';
+import {
+  createDefaultAdvancedConfig,
+  effectiveTeraType,
+  isAdvancedConfigValid,
+  revalidateAdvancedConfigForCapabilities,
+  revalidateAdvancedConfigForForm,
+  type DamageAdvancedConfig,
+} from '@/lib/damage-advanced';
 import { moveDisplayName } from '@/lib/move-search';
-import { DEFAULT_IVS, MAX_LEVEL, ZERO_EVS } from '@/lib/team-draft';
 import { buttonClass } from '@/lib/ui-classes';
 import { groupVersionGroupsByGeneration, versionGroupDisplayName } from '@/lib/version-group-label';
 
+import { DamageAdvancedPanel, type DamageAdvancedPanelLabels } from './damage-advanced-panel';
 import { DamagePokemonSlot, type DamagePokemonSlotLabels } from './damage-pokemon-slot';
 import { DamageResult, type DamageResultLabels } from './damage-result';
 
@@ -40,11 +55,14 @@ export interface DamageLabLabels {
   noLegalMoves: string;
   calculateLabel: string;
   calculatingLabel: string;
-  assumptionsTemplate: string;
+  inputsChangedLabel: string;
+  recalculateLabel: string;
   resultHeading: string;
   pokemonSlot: DamagePokemonSlotLabels;
   movePicker: MovePickerLabels;
   result: DamageResultLabels;
+  /** `statLabels`/`typeLabels` are supplied separately (`DamageLab`'s own props, shared with the rest of the page) rather than duplicated in here. */
+  advancedPanel: Omit<DamageAdvancedPanelLabels, 'statLabels' | 'typeLabels'>;
   errors: Record<
     | Exclude<DamageInputErrorCode, 'natures-not-available-in-generation'>
     | 'naturesNotAvailableInGeneration'
@@ -86,12 +104,27 @@ function errorMessageFor(
   }
 }
 
+function toCombatantRequest(form: ComparablePokemonForm, config: DamageAdvancedConfig) {
+  return {
+    formSlug: form.formSlug,
+    speciesSlug: form.speciesSlug,
+    level: config.level,
+    abilitySlug: config.abilitySlug,
+    itemSlug: config.itemSlug,
+    natureSlug: config.natureSlug,
+    evs: config.evs,
+    ivs: config.ivs,
+    teraType: effectiveTeraType(config),
+  };
+}
+
 export function DamageLab({
   locale,
   searchIndex,
   versionGroups,
   defaultVersionGroupSlug,
   typeLabels,
+  statLabels,
   labels,
 }: {
   locale: Locale;
@@ -99,6 +132,7 @@ export function DamageLab({
   versionGroups: VersionGroupSummary[];
   defaultVersionGroupSlug: string;
   typeLabels: Record<PokemonType, string>;
+  statLabels: Record<keyof BaseStats, string>;
   labels: DamageLabLabels;
 }) {
   const initialVersionGroupSlug =
@@ -107,23 +141,59 @@ export function DamageLab({
     defaultVersionGroupSlug;
   const [versionGroupSlug, setVersionGroupSlug] = useState(initialVersionGroupSlug);
   const versionGroupsByGeneration = groupVersionGroupsByGeneration(versionGroups);
+  const selectedVersionGroup = versionGroups.find((vg) => vg.slug === versionGroupSlug);
+
+  const capabilities: BuildGameCapabilities | null = useMemo(
+    () => (selectedVersionGroup ? resolveBuildGameCapabilities(selectedVersionGroup) : null),
+    [selectedVersionGroup],
+  );
 
   const [attackerFormSlug, setAttackerFormSlug] = useState<string | null>(null);
   const [attackerForm, setAttackerForm] = useState<ComparablePokemonForm | null>(null);
   const [attackerMoves, setAttackerMoves] = useState<MoveSummary[]>([]);
   const [attackerLoading, setAttackerLoading] = useState(false);
+  const [attackerConfig, setAttackerConfig] = useState<DamageAdvancedConfig>(
+    createDefaultAdvancedConfig(),
+  );
+  const [attackerAdvancedOpen, setAttackerAdvancedOpen] = useState(false);
+  const [isCritical, setIsCritical] = useState(false);
 
   const [defenderFormSlug, setDefenderFormSlug] = useState<string | null>(null);
   const [defenderForm, setDefenderForm] = useState<ComparablePokemonForm | null>(null);
   const [defenderLoading, setDefenderLoading] = useState(false);
+  const [defenderConfig, setDefenderConfig] = useState<DamageAdvancedConfig>(
+    createDefaultAdvancedConfig(),
+  );
+  const [defenderAdvancedOpen, setDefenderAdvancedOpen] = useState(false);
 
   const [selectedMoveSlug, setSelectedMoveSlug] = useState<string | null>(null);
   const [movePickerOpen, setMovePickerOpen] = useState(false);
 
+  // Advanced's own reference data (natures/items) — interaction-gated
+  // (task §16), fetched at most once, the first time either side's
+  // Advanced panel opens. Shared between attacker/defender: natures/items
+  // are global, not per-Pokémon.
+  const [advancedReferenceData, setAdvancedReferenceData] = useState<
+    AdvancedReferenceData | undefined
+  >(undefined);
+  const [advancedReferenceDataLoading, setAdvancedReferenceDataLoading] = useState(false);
+
+  function ensureAdvancedReferenceData(): void {
+    if (advancedReferenceData || advancedReferenceDataLoading) return;
+    setAdvancedReferenceDataLoading(true);
+    fetchAdvancedReferenceData().then((data) => {
+      setAdvancedReferenceData(data);
+      setAdvancedReferenceDataLoading(false);
+    });
+  }
+
   // Attacker reference data: only fetched once a form is selected (never
   // before), and re-fetched (for this same form) whenever the game changes
   // — task §10/§12. An invalid move for the new game is dropped, not the
-  // Pokémon selections themselves.
+  // Pokémon selections themselves. A form swap also revalidates the
+  // Advanced ability, mirroring Build's own `changeTeamMemberForm` (task
+  // §14) — only ability is form-scoped, everything else in the Advanced
+  // config survives untouched.
   useEffect(() => {
     if (!attackerFormSlug) {
       setAttackerForm(null);
@@ -140,6 +210,7 @@ export function DamageLab({
       setSelectedMoveSlug((current) =>
         current && data.moves.some((move) => move.slug === current) ? current : null,
       );
+      setAttackerConfig((config) => revalidateAdvancedConfigForForm(config, data.form));
       setAttackerLoading(false);
     });
     return () => {
@@ -158,6 +229,7 @@ export function DamageLab({
     fetchDefenderReferenceData(defenderFormSlug).then((form) => {
       if (cancelled) return;
       setDefenderForm(form);
+      setDefenderConfig((config) => revalidateAdvancedConfigForForm(config, form));
       setDefenderLoading(false);
     });
     return () => {
@@ -165,31 +237,54 @@ export function DamageLab({
     };
   }, [defenderFormSlug]);
 
-  const selectedMove = attackerMoves.find((move) => move.slug === selectedMoveSlug);
-  const selectedVersionGroup = versionGroups.find((vg) => vg.slug === versionGroupSlug);
+  // Game-switch revalidation (task §15) — re-runs only when the version
+  // group actually changes (`capabilities` is memoized on its slug/
+  // generation above, so this effect doesn't fire on every render).
+  useEffect(() => {
+    if (!capabilities) return;
+    setAttackerConfig((config) => revalidateAdvancedConfigForCapabilities(config, capabilities));
+    setDefenderConfig((config) => revalidateAdvancedConfigForCapabilities(config, capabilities));
+  }, [capabilities]);
 
-  const canCalculate = Boolean(attackerForm && defenderForm && selectedMoveSlug);
+  const selectedMove = attackerMoves.find((move) => move.slug === selectedMoveSlug);
+
+  function buildRequest(): DamageLabCalculationRequest | null {
+    if (!attackerForm || !defenderForm || !selectedMoveSlug || !capabilities) return null;
+    return {
+      generation: capabilities.generation,
+      attacker: toCombatantRequest(attackerForm, attackerConfig),
+      defender: toCombatantRequest(defenderForm, defenderConfig),
+      moveSlug: selectedMoveSlug,
+      isCritical,
+    };
+  }
+
+  const currentRequest = buildRequest();
+  const configsValid =
+    capabilities !== null &&
+    isAdvancedConfigValid(attackerConfig, capabilities, attackerForm) &&
+    isAdvancedConfigValid(defenderConfig, capabilities, defenderForm);
+  const canCalculate = Boolean(currentRequest) && configsValid;
+
+  const [lastCalculatedKey, setLastCalculatedKey] = useState<string | null>(null);
 
   const [calcState, submitCalculate, isCalculating] = useActionState<
     DamageLabCalculationResponse | null,
     void
   >(async () => {
-    if (!attackerForm || !defenderForm || !selectedMoveSlug || !selectedVersionGroup) return null;
-    return calculateDamageAction({
-      generation: selectedVersionGroup.generation,
-      attackerFormSlug: attackerForm.formSlug,
-      attackerSpeciesSlug: attackerForm.speciesSlug,
-      defenderFormSlug: defenderForm.formSlug,
-      defenderSpeciesSlug: defenderForm.speciesSlug,
-      moveSlug: selectedMoveSlug,
-    });
+    const request = buildRequest();
+    if (!request) return null;
+    const response = await calculateDamageAction(request);
+    setLastCalculatedKey(JSON.stringify(request));
+    return response;
   }, null);
 
-  const assumptions = formatMessage(labels.assumptionsTemplate, {
-    level: MAX_LEVEL,
-    evs: ZERO_EVS.hp,
-    ivs: DEFAULT_IVS.hp,
-  });
+  // Stale-result detection (task §20): a visible result stays visible, but
+  // is clearly marked outdated the instant any input it depended on changes
+  // — never a silently-wrong number left looking current.
+  const currentRequestKey = currentRequest ? JSON.stringify(currentRequest) : null;
+  const isStale =
+    calcState?.ok === true && lastCalculatedKey !== null && currentRequestKey !== lastCalculatedKey;
 
   return (
     <div className="flex flex-col gap-8">
@@ -216,15 +311,39 @@ export function DamageLab({
       </label>
 
       <div className="flex flex-col items-stretch gap-6 sm:flex-row sm:items-start">
-        <DamagePokemonSlot
-          locale={locale}
-          label={labels.attackerLabel}
-          searchIndex={searchIndex}
-          typeLabels={typeLabels}
-          selectedFormSlug={attackerFormSlug}
-          onSelect={setAttackerFormSlug}
-          labels={labels.pokemonSlot}
-        />
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <DamagePokemonSlot
+            locale={locale}
+            label={labels.attackerLabel}
+            searchIndex={searchIndex}
+            typeLabels={typeLabels}
+            selectedFormSlug={attackerFormSlug}
+            onSelect={setAttackerFormSlug}
+            labels={labels.pokemonSlot}
+          />
+          {capabilities ? (
+            <DamageAdvancedPanel
+              locale={locale}
+              side="attacker"
+              form={attackerForm}
+              capabilities={capabilities}
+              config={attackerConfig}
+              onChange={(patch) => setAttackerConfig((config) => ({ ...config, ...patch }))}
+              isCritical={isCritical}
+              onCriticalChange={setIsCritical}
+              isOpen={attackerAdvancedOpen}
+              onToggleOpen={() =>
+                setAttackerAdvancedOpen((open) => {
+                  if (!open) ensureAdvancedReferenceData();
+                  return !open;
+                })
+              }
+              natures={advancedReferenceData?.natures}
+              items={advancedReferenceData?.items}
+              labels={{ ...labels.advancedPanel, statLabels, typeLabels }}
+            />
+          ) : null}
+        </div>
 
         <div className="flex flex-col items-center gap-2 self-center">
           <span aria-hidden="true" className="text-lg text-muted">
@@ -272,18 +391,40 @@ export function DamageLab({
           </div>
         </div>
 
-        <DamagePokemonSlot
-          locale={locale}
-          label={labels.defenderLabel}
-          searchIndex={searchIndex}
-          typeLabels={typeLabels}
-          selectedFormSlug={defenderFormSlug}
-          onSelect={setDefenderFormSlug}
-          labels={labels.pokemonSlot}
-        />
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <DamagePokemonSlot
+            locale={locale}
+            label={labels.defenderLabel}
+            searchIndex={searchIndex}
+            typeLabels={typeLabels}
+            selectedFormSlug={defenderFormSlug}
+            onSelect={setDefenderFormSlug}
+            labels={labels.pokemonSlot}
+          />
+          {capabilities ? (
+            <DamageAdvancedPanel
+              locale={locale}
+              side="defender"
+              form={defenderForm}
+              capabilities={capabilities}
+              config={defenderConfig}
+              onChange={(patch) => setDefenderConfig((config) => ({ ...config, ...patch }))}
+              isCritical={false}
+              onCriticalChange={() => {}}
+              isOpen={defenderAdvancedOpen}
+              onToggleOpen={() =>
+                setDefenderAdvancedOpen((open) => {
+                  if (!open) ensureAdvancedReferenceData();
+                  return !open;
+                })
+              }
+              natures={advancedReferenceData?.natures}
+              items={advancedReferenceData?.items}
+              labels={{ ...labels.advancedPanel, statLabels, typeLabels }}
+            />
+          ) : null}
+        </div>
       </div>
-
-      <p className="m-0 text-center text-xs text-muted">{assumptions}</p>
 
       <button
         type="button"
@@ -302,9 +443,24 @@ export function DamageLab({
           </p>
         ) : null}
         {calcState?.ok === true ? (
-          <div className={isCalculating ? 'opacity-60 transition-opacity' : undefined}>
-            <h2 className="sr-only">{labels.resultHeading}</h2>
-            <DamageResult result={calcState.result} locale={locale} labels={labels.result} />
+          <div className="flex flex-col items-center gap-3">
+            {isStale ? (
+              <div className="flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs font-semibold text-muted">
+                <span>{labels.inputsChangedLabel}</span>
+                <button
+                  type="button"
+                  onClick={() => startTransition(() => submitCalculate())}
+                  disabled={!canCalculate || isCalculating}
+                  className="text-brand hover:underline"
+                >
+                  {labels.recalculateLabel}
+                </button>
+              </div>
+            ) : null}
+            <div className={isCalculating || isStale ? 'opacity-60 transition-opacity' : undefined}>
+              <h2 className="sr-only">{labels.resultHeading}</h2>
+              <DamageResult result={calcState.result} locale={locale} labels={labels.result} />
+            </div>
           </div>
         ) : null}
       </div>
