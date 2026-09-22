@@ -30,6 +30,7 @@ import {
   type DamageLabCalculationRequest,
   type DamageLabCalculationResponse,
 } from '@/app/[locale]/battle/damage/actions';
+import { advancedConfigFromTeamMember, preferredDamageMoveSlug } from '@/lib/build-damage-import';
 import { MovePicker, type MovePickerLabels } from '@/components/build/move-picker';
 import {
   resolveBuildGameCapabilities,
@@ -44,10 +45,17 @@ import {
   type DamageAdvancedConfig,
 } from '@/lib/damage-advanced';
 import { moveDisplayName } from '@/lib/move-search';
+import { resolveRosterVisualIdentity } from '@/lib/roster-visual-identity';
+import { loadTeamDraft } from '@/lib/team-storage';
 import { buttonClass } from '@/lib/ui-classes';
 import { groupVersionGroupsByGeneration, versionGroupDisplayName } from '@/lib/version-group-label';
 
 import { DamageAdvancedPanel, type DamageAdvancedPanelLabels } from './damage-advanced-panel';
+import {
+  DamageLabImportBanner,
+  type DamageLabImportBannerLabels,
+  type DamageLabImportStatus,
+} from './damage-lab-import-banner';
 import { DamagePokemonSlot, type DamagePokemonSlotLabels } from './damage-pokemon-slot';
 import { DamageResult, type DamageResultLabels } from './damage-result';
 
@@ -74,6 +82,7 @@ export interface DamageLabLabels {
   result: DamageResultLabels;
   /** `statLabels`/`typeLabels` are supplied separately (`DamageLab`'s own props, shared with the rest of the page) rather than duplicated in here. */
   advancedPanel: Omit<DamageAdvancedPanelLabels, 'statLabels' | 'typeLabels'>;
+  importBanner: DamageLabImportBannerLabels;
   errors: Record<
     | Exclude<DamageInputErrorCode, 'natures-not-available-in-generation'>
     | 'naturesNotAvailableInGeneration'
@@ -137,6 +146,8 @@ export function DamageLab({
   typeLabels,
   statLabels,
   labels,
+  teamId = null,
+  memberId = null,
 }: {
   locale: Locale;
   searchIndex: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] };
@@ -145,6 +156,9 @@ export function DamageLab({
   typeLabels: Record<PokemonType, string>;
   statLabels: Record<keyof BaseStats, string>;
   labels: DamageLabLabels;
+  /** Build → Damage Lab one-way import (Fase M3.2) — both present, or the import is skipped entirely (task §5/§23: normal usage without these params must behave exactly as before). */
+  teamId?: string | null;
+  memberId?: string | null;
 }) {
   const initialVersionGroupSlug =
     versionGroups.find((vg) => vg.slug === defaultVersionGroupSlug)?.slug ??
@@ -199,6 +213,20 @@ export function DamageLab({
   const [selectedMoveSlug, setSelectedMoveSlug] = useState<string | null>(null);
   const [movePickerOpen, setMovePickerOpen] = useState(false);
 
+  // Build import (Fase M3.2) — `importStatus` drives the banner; the two
+  // refs below are the "apply exactly once" guards: `teamImportAppliedRef`
+  // for the whole import (level/EVs/ability/... are seeded directly into
+  // `attackerConfig`'s state, so there's nothing further to "consume" for
+  // them — only setting them once, ever, matters), and
+  // `pendingImportedMoveSlugsRef` specifically for the move preference,
+  // which can only be resolved once `fetchAttackerReferenceData` returns
+  // real legal moves to check the set's moves against (task §12/§13) —
+  // consumed the first time that happens, never reapplied after a manual
+  // move/attacker change.
+  const [importStatus, setImportStatus] = useState<DamageLabImportStatus>({ kind: 'none' });
+  const teamImportAppliedRef = useRef(false);
+  const pendingImportedMoveSlugsRef = useRef<(string | null)[] | null>(null);
+
   // Advanced's own reference data (natures/items) — interaction-gated
   // (task §16), fetched at most once, the first time either side's
   // Advanced panel opens. Shared between attacker/defender: natures/items
@@ -218,7 +246,10 @@ export function DamageLab({
   >({ status: 'idle' });
   const advancedReferenceFetchStartedRef = useRef(false);
 
-  function ensureAdvancedReferenceData(): void {
+  // `useCallback` (empty deps — every value it closes over is a stable ref
+  // or setter) so the Build-import effect below can name it in its own
+  // dependency array without re-running on every render.
+  const ensureAdvancedReferenceData = useCallback((): void => {
     if (advancedReferenceFetchStartedRef.current) return;
     advancedReferenceFetchStartedRef.current = true;
     setAdvancedReferenceStatus({ status: 'loading' });
@@ -233,7 +264,61 @@ export function DamageLab({
         advancedReferenceFetchStartedRef.current = false; // allow Retry to try again
         setAdvancedReferenceStatus({ status: 'error' });
       });
-  }
+  }, []);
+
+  // Build import (Fase M3.2) — runs once per mount, only when both
+  // `teamId`/`memberId` are present. `loadTeamDraft` is the one sanctioned
+  // read of local team storage (task §2: never a second parsing path).
+  // Seeding `attackerFormSlug`/`versionGroupSlug`/`attackerConfig` here —
+  // rather than fetching the attacker's reference data specially — means
+  // the existing attacker-fetch effect below picks it up exactly the same
+  // way any manual selection would (task §8: "reutiliza el flujo real
+  // existente"); the game-switch capability-revalidation effect further
+  // down does the same for `attackerConfig` (task §14 — "las reglas
+  // actuales siguen siendo autoridad", never duplicated here).
+  useEffect(() => {
+    if (teamImportAppliedRef.current) return;
+    teamImportAppliedRef.current = true;
+    if (!teamId || !memberId) return;
+
+    const team = loadTeamDraft(teamId);
+    if (!team) {
+      setImportStatus({ kind: 'team-not-found' });
+      return;
+    }
+    const member = team.members.find((candidate) => candidate.id === memberId);
+    if (!member) {
+      setImportStatus({ kind: 'member-not-found', teamName: team.name });
+      return;
+    }
+
+    const gameAvailable = versionGroups.some((vg) => vg.slug === team.versionGroupSlug);
+    if (gameAvailable) setVersionGroupSlug(team.versionGroupSlug);
+
+    setAttackerFormSlug(member.formSlug);
+    setAttackerConfig(advancedConfigFromTeamMember(member));
+    pendingImportedMoveSlugsRef.current = member.moveSlugs;
+
+    // The optimistic identity the search index already has, same source
+    // `DamagePokemonSlot` itself uses — never the raw `formSlug` (task
+    // §18), and available immediately rather than waiting on a fetch.
+    const identity = resolveRosterVisualIdentity(searchIndex, member.formSlug);
+    const memberDisplayName = member.nickname.trim() || identity?.displayName[locale] || null;
+
+    setImportStatus({
+      kind: 'imported',
+      teamId: team.id,
+      teamName: team.name,
+      memberDisplayName,
+      gameUnavailable: !gameAvailable,
+    });
+
+    // Only start Advanced's reference-data fetch if the imported set
+    // actually needs it to render honestly (task §16) — a nature/item slug
+    // with no name to show would otherwise render as a raw slug while
+    // still loading.
+    if (member.natureSlug || member.itemSlug) ensureAdvancedReferenceData();
+  }, [teamId, memberId, versionGroups, searchIndex, locale, ensureAdvancedReferenceData]);
 
   // Attacker reference data: only fetched once a form is selected (never
   // before), and re-fetched (for this same form) whenever the game changes
@@ -262,9 +347,19 @@ export function DamageLab({
           if (attackerRequestIdRef.current !== requestId) return; // superseded — task §5/§6
           setAttackerForm(data.form);
           setAttackerMoves(data.moves);
-          setSelectedMoveSlug((current) =>
-            current && data.moves.some((move) => move.slug === current) ? current : null,
-          );
+          setSelectedMoveSlug((current) => {
+            if (current && data.moves.some((move) => move.slug === current)) return current;
+            // Imported move preference (task §12/§13) — consumed exactly
+            // once, the first time real legal moves exist to check it
+            // against, win or lose. A later manual attacker/game change
+            // that re-runs this same effect must never re-apply it.
+            const pending = pendingImportedMoveSlugsRef.current;
+            if (pending) {
+              pendingImportedMoveSlugsRef.current = null;
+              return preferredDamageMoveSlug(pending, data.moves);
+            }
+            return null;
+          });
           setAttackerConfig((config) => revalidateAdvancedConfigForForm(config, data.form));
           setAttackerReferenceStatus('success');
         })
@@ -380,6 +475,8 @@ export function DamageLab({
 
   return (
     <div className="flex flex-col gap-8">
+      <DamageLabImportBanner locale={locale} status={importStatus} labels={labels.importBanner} />
+
       <label className="flex max-w-xs flex-col gap-1 text-xs font-semibold text-muted">
         {labels.gameLabel}
         <select

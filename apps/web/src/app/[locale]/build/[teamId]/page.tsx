@@ -72,6 +72,8 @@ export default async function TeamEditorPage({ params }: { params: Promise<PageP
           },
           closeEditorLabel: dictionary.build.closeEditorLabel,
           closeEditorTemplate: dictionary.build.closeEditorTemplate,
+          testDamageLabel: dictionary.build.testDamageLabel,
+          testDamageTemplate: dictionary.build.testDamageTemplate,
           teamSlot: {
             addPokemonSlot: dictionary.build.addPokemonSlot,
             removeFromTeamTemplate: dictionary.build.removeFromTeam,
