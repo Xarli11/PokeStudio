@@ -91,7 +91,8 @@ silently treated as complete.
 
 - PokeStudio damage UI,
 - reusable damage calculation domain,
-- “calculate against…” flows from Pokémon/team views,
+- “calculate against…” flows from Pokémon/team views — Build → Damage Lab (attacker import
+  from a configured team member) shipped; Explore → Damage Lab not yet,
 - explanation trace for modifiers,
 - matchup comparison primitives.
 

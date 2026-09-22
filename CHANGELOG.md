@@ -6,6 +6,20 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Build → Damage Lab integration (2026-09-22)
+
+A configured Team Builder set now feeds Damage Lab directly: "Test damage"/"Probar daño" on the
+open Set Editor links to `/battle/damage?team=<id>&member=<id>`, which imports that member's game,
+identity, level, EVs/IVs, ability, item, nature and Tera Type as the attacker (Terastallize itself
+stays off until the user opts in) and auto-selects the set's first legal damaging move. The import
+is one-way and one-time per visit — Damage Lab never writes back to the team, and a later manual
+edit is never overwritten. A discreet banner names the source team/Pokémon with a link back; an
+unreachable team or removed member degrades to a small inline note, Damage Lab staying fully
+usable either way. Team/member ids are opaque local references only, resolved entirely client-side
+through the existing `loadTeamDraft()` boundary — no server round trip, no new payload on normal
+Damage Lab visits. Also fixes a general bug where switching locale dropped the current page's query
+string (Compare's `?pokemon=`, and now this import link too).
+
 ### Battle Lab — Advanced Damage Lab (2026-09-22)
 
 Damage Lab grows from a fixed-assumption calculator into a genuinely competitive tool via
