@@ -98,6 +98,9 @@ export default async function DamageLabPage({ params }: { params: Promise<{ loca
           calculatingLabel: dictionary.battle.damageLab.calculatingLabel,
           inputsChangedLabel: dictionary.battle.damageLab.inputsChangedLabel,
           recalculateLabel: dictionary.battle.damageLab.recalculateLabel,
+          attackerReferenceError: dictionary.battle.damageLab.attackerReferenceError,
+          defenderReferenceError: dictionary.battle.damageLab.defenderReferenceError,
+          retry: dictionary.build.retryReferenceDataLabel,
           resultHeading: dictionary.battle.damageLab.resultHeading,
           advancedPanel: {
             advancedLabel: dictionary.battle.damageLab.advancedLabel,

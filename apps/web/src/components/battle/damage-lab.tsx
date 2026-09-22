@@ -1,6 +1,14 @@
 'use client';
 
-import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  startTransition,
+  useActionState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import type {
   ComparablePokemonForm,
@@ -57,6 +65,9 @@ export interface DamageLabLabels {
   calculatingLabel: string;
   inputsChangedLabel: string;
   recalculateLabel: string;
+  attackerReferenceError: string;
+  defenderReferenceError: string;
+  retry: string;
   resultHeading: string;
   pokemonSlot: DamagePokemonSlotLabels;
   movePicker: MovePickerLabels;
@@ -151,7 +162,23 @@ export function DamageLab({
   const [attackerFormSlug, setAttackerFormSlug] = useState<string | null>(null);
   const [attackerForm, setAttackerForm] = useState<ComparablePokemonForm | null>(null);
   const [attackerMoves, setAttackerMoves] = useState<MoveSummary[]>([]);
-  const [attackerLoading, setAttackerLoading] = useState(false);
+  // A real status (idle/loading/success/error), not a bare boolean — a
+  // rejected fetch used to leave `attackerLoading` stuck `true` forever
+  // (same production failure-mode `advancedReferenceStatus` above already
+  // fixed for Advanced; this closes it for the attacker/defender fetches
+  // too). `*RequestIdRef` is the staleness guard: each call to
+  // `loadAttackerReference` claims the next id, and neither its success
+  // nor its failure handler is allowed to touch state unless its id is
+  // still the latest one — so a slow response for a Pokémon/game the user
+  // has since moved on from can never overwrite the current selection
+  // (task §5), and a late `.catch` from an old request can never flip a
+  // newer request's `loading` back to `error` (task §6). One counter
+  // serves both the effect-driven fetch and a manual Retry click, so they
+  // can never race each other either.
+  const [attackerReferenceStatus, setAttackerReferenceStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
+  const attackerRequestIdRef = useRef(0);
   const [attackerConfig, setAttackerConfig] = useState<DamageAdvancedConfig>(
     createDefaultAdvancedConfig(),
   );
@@ -160,7 +187,10 @@ export function DamageLab({
 
   const [defenderFormSlug, setDefenderFormSlug] = useState<string | null>(null);
   const [defenderForm, setDefenderForm] = useState<ComparablePokemonForm | null>(null);
-  const [defenderLoading, setDefenderLoading] = useState(false);
+  const [defenderReferenceStatus, setDefenderReferenceStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
+  const defenderRequestIdRef = useRef(0);
   const [defenderConfig, setDefenderConfig] = useState<DamageAdvancedConfig>(
     createDefaultAdvancedConfig(),
   );
@@ -211,49 +241,93 @@ export function DamageLab({
   // Pokémon selections themselves. A form swap also revalidates the
   // Advanced ability, mirroring Build's own `changeTeamMemberForm` (task
   // §14) — only ability is form-scoped, everything else in the Advanced
-  // config survives untouched.
+  // config survives untouched. `attackerForm`/`attackerMoves` are cleared
+  // the instant a new request starts (not just on failure) — task §7's
+  // second constraint: once the identity the user selected has changed,
+  // the *previous* Pokémon's abilities/moves must never keep showing under
+  // it, success or not. `loadAttackerReference` is `useCallback`'d with no
+  // reactive deps (every setter it closes over is a stable React
+  // identity, and the ref is stable by definition) purely so it can be
+  // named in this effect's own dependency array without re-running on
+  // every render.
+  const loadAttackerReference = useCallback(
+    (formSlug: string, forVersionGroupSlug: string): void => {
+      const requestId = attackerRequestIdRef.current + 1;
+      attackerRequestIdRef.current = requestId;
+      setAttackerReferenceStatus('loading');
+      setAttackerForm(null);
+      setAttackerMoves([]);
+      fetchAttackerReferenceData(formSlug, forVersionGroupSlug)
+        .then((data) => {
+          if (attackerRequestIdRef.current !== requestId) return; // superseded — task §5/§6
+          setAttackerForm(data.form);
+          setAttackerMoves(data.moves);
+          setSelectedMoveSlug((current) =>
+            current && data.moves.some((move) => move.slug === current) ? current : null,
+          );
+          setAttackerConfig((config) => revalidateAdvancedConfigForForm(config, data.form));
+          setAttackerReferenceStatus('success');
+        })
+        .catch((error: unknown) => {
+          if (attackerRequestIdRef.current !== requestId) return; // superseded — task §5/§6
+          // Server-side detail is already logged by the action itself (task §13's boundary).
+          console.error('fetchAttackerReferenceData failed', error);
+          setAttackerReferenceStatus('error');
+        });
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!attackerFormSlug) {
+      attackerRequestIdRef.current += 1; // invalidates any request still in flight
+      setAttackerReferenceStatus('idle');
       setAttackerForm(null);
       setAttackerMoves([]);
       setSelectedMoveSlug(null);
       return;
     }
-    let cancelled = false;
-    setAttackerLoading(true);
-    fetchAttackerReferenceData(attackerFormSlug, versionGroupSlug).then((data) => {
-      if (cancelled) return;
-      setAttackerForm(data.form);
-      setAttackerMoves(data.moves);
-      setSelectedMoveSlug((current) =>
-        current && data.moves.some((move) => move.slug === current) ? current : null,
-      );
-      setAttackerConfig((config) => revalidateAdvancedConfigForForm(config, data.form));
-      setAttackerLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [attackerFormSlug, versionGroupSlug]);
+    loadAttackerReference(attackerFormSlug, versionGroupSlug);
+  }, [attackerFormSlug, versionGroupSlug, loadAttackerReference]);
 
-  // Defender reference data: only its form, never a learnset (task §10).
+  function retryAttackerReferenceData(): void {
+    if (attackerFormSlug) loadAttackerReference(attackerFormSlug, versionGroupSlug);
+  }
+
+  // Defender reference data: only its form, never a learnset (task §10) —
+  // same staleness/error/retry treatment as the attacker above.
+  const loadDefenderReference = useCallback((formSlug: string): void => {
+    const requestId = defenderRequestIdRef.current + 1;
+    defenderRequestIdRef.current = requestId;
+    setDefenderReferenceStatus('loading');
+    setDefenderForm(null);
+    fetchDefenderReferenceData(formSlug)
+      .then((form) => {
+        if (defenderRequestIdRef.current !== requestId) return; // superseded — task §5/§6
+        setDefenderForm(form);
+        setDefenderConfig((config) => revalidateAdvancedConfigForForm(config, form));
+        setDefenderReferenceStatus('success');
+      })
+      .catch((error: unknown) => {
+        if (defenderRequestIdRef.current !== requestId) return; // superseded — task §5/§6
+        console.error('fetchDefenderReferenceData failed', error);
+        setDefenderReferenceStatus('error');
+      });
+  }, []);
+
   useEffect(() => {
     if (!defenderFormSlug) {
+      defenderRequestIdRef.current += 1;
+      setDefenderReferenceStatus('idle');
       setDefenderForm(null);
       return;
     }
-    let cancelled = false;
-    setDefenderLoading(true);
-    fetchDefenderReferenceData(defenderFormSlug).then((form) => {
-      if (cancelled) return;
-      setDefenderForm(form);
-      setDefenderConfig((config) => revalidateAdvancedConfigForForm(config, form));
-      setDefenderLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [defenderFormSlug]);
+    loadDefenderReference(defenderFormSlug);
+  }, [defenderFormSlug, loadDefenderReference]);
+
+  function retryDefenderReferenceData(): void {
+    if (defenderFormSlug) loadDefenderReference(defenderFormSlug);
+  }
 
   // Game-switch revalidation (task §15) — re-runs only when the version
   // group actually changes (`capabilities` is memoized on its slug/
@@ -371,7 +445,20 @@ export function DamageLab({
             <span className="text-xs font-semibold tracking-wide text-muted uppercase">
               {labels.moveLabel}
             </span>
-            {attackerLoading ? (
+            {attackerReferenceStatus === 'error' ? (
+              <div className="flex flex-col items-center gap-1">
+                <p role="alert" className="m-0 text-xs font-semibold text-danger">
+                  {labels.attackerReferenceError}
+                </p>
+                <button
+                  type="button"
+                  onClick={retryAttackerReferenceData}
+                  className="text-xs font-semibold text-brand hover:underline"
+                >
+                  {labels.retry}
+                </button>
+              </div>
+            ) : attackerReferenceStatus === 'loading' ? (
               <span className="text-sm text-muted">…</span>
             ) : !attackerFormSlug ? (
               <span className="text-sm text-muted">{labels.noMoveSelected}</span>
@@ -419,6 +506,20 @@ export function DamageLab({
             onSelect={setDefenderFormSlug}
             labels={labels.pokemonSlot}
           />
+          {defenderReferenceStatus === 'error' ? (
+            <div className="flex items-center gap-2">
+              <p role="alert" className="m-0 text-xs font-semibold text-danger">
+                {labels.defenderReferenceError}
+              </p>
+              <button
+                type="button"
+                onClick={retryDefenderReferenceData}
+                className="text-xs font-semibold text-brand hover:underline"
+              >
+                {labels.retry}
+              </button>
+            </div>
+          ) : null}
           {capabilities ? (
             <DamageAdvancedPanel
               locale={locale}
@@ -483,10 +584,14 @@ export function DamageLab({
         ) : null}
       </div>
 
-      {attackerFormSlug && !attackerLoading && attackerForm === null ? (
+      {/* A successful fetch that resolved to no form at all (an unknown
+          slug) is distinct from a rejected fetch — that has its own inline
+          error+Retry above/below, this is the pre-existing "this slug
+          doesn't exist" honesty message and stays scoped to `'success'`. */}
+      {attackerFormSlug && attackerReferenceStatus === 'success' && attackerForm === null ? (
         <p className="m-0 text-center text-sm text-muted">{labels.errors['unknown-form']}</p>
       ) : null}
-      {defenderFormSlug && !defenderLoading && defenderForm === null ? (
+      {defenderFormSlug && defenderReferenceStatus === 'success' && defenderForm === null ? (
         <p className="m-0 text-center text-sm text-muted">{labels.errors['unknown-form']}</p>
       ) : null}
     </div>

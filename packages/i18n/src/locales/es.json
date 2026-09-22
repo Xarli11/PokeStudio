@@ -471,6 +471,8 @@
       "terastallizeLabel": "Teracristalizar",
       "inputsChangedLabel": "Los datos han cambiado",
       "recalculateLabel": "Recalcular",
+      "attackerReferenceError": "No se pudieron cargar los datos del atacante.",
+      "defenderReferenceError": "No se pudieron cargar los datos del defensor.",
       "natureNeutralOption": "Neutra",
       "teraSummaryTemplate": "Tera {type}",
       "advancedReferenceDataError": "No se pudieron cargar las opciones avanzadas.",

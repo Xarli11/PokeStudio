@@ -175,6 +175,9 @@ const LABELS: DamageLabLabels = {
   calculatingLabel: 'Calculating…',
   inputsChangedLabel: 'Inputs changed',
   recalculateLabel: 'Recalculate',
+  attackerReferenceError: "Couldn't load the attacker's data.",
+  defenderReferenceError: "Couldn't load the defender's data.",
+  retry: 'Retry',
   resultHeading: 'Result',
   advancedPanel: {
     advancedLabel: 'Advanced',
@@ -928,5 +931,154 @@ describe('Advanced reference-data resilience (production incident, task §2/§11
       expect(screen.getAllByRole('combobox', { name: 'Nature' })).toHaveLength(2),
     );
     expect(mockFetchAdvancedReferenceData).toHaveBeenCalledTimes(1);
+  });
+});
+
+type AttackerFetchResult = Awaited<ReturnType<typeof fetchAttackerReferenceData>>;
+type DefenderFetchResult = Awaited<ReturnType<typeof fetchDefenderReferenceData>>;
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+describe('Attacker/defender reference-data resilience (task §11)', () => {
+  it('attacker success: identity resolves and the move picker becomes usable', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab();
+    await selectAttacker();
+
+    expect(await screen.findByRole('button', { name: 'Select move' })).not.toBeNull();
+    expect(screen.queryByText("Couldn't load the attacker's data.")).toBeNull();
+  });
+
+  it('a rejected attacker fetch does NOT leave the move slot on "…" forever — it shows a localized inline error with Retry', async () => {
+    mockFetchAttacker.mockRejectedValueOnce(new Error('500'));
+    renderDamageLab();
+    await selectAttacker();
+
+    expect(await screen.findByText("Couldn't load the attacker's data.")).not.toBeNull();
+    expect(screen.queryByText('…')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Retry' })).not.toBeNull();
+  });
+
+  it('attacker Retry re-invokes fetchAttackerReferenceData and clears the error on success', async () => {
+    mockFetchAttacker.mockRejectedValueOnce(new Error('500'));
+    mockFetchAttacker.mockResolvedValueOnce({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab();
+    await selectAttacker();
+    await screen.findByText("Couldn't load the attacker's data.");
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByRole('button', { name: 'Select move' })).not.toBeNull();
+    expect(screen.queryByText("Couldn't load the attacker's data.")).toBeNull();
+    expect(mockFetchAttacker).toHaveBeenCalledTimes(2);
+  });
+
+  it('a rejected defender fetch shows a localized inline error with Retry', async () => {
+    mockFetchDefender.mockRejectedValueOnce(new Error('500'));
+    renderDamageLab();
+    await selectDefender();
+
+    expect(await screen.findByText("Couldn't load the defender's data.")).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Retry' })).not.toBeNull();
+  });
+
+  it('defender Retry re-invokes fetchDefenderReferenceData and clears the error on success', async () => {
+    mockFetchDefender.mockRejectedValueOnce(new Error('500'));
+    mockFetchDefender.mockResolvedValueOnce(HEATRAN_FORM);
+    renderDamageLab();
+    await selectDefender();
+    await screen.findByText("Couldn't load the defender's data.");
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("Couldn't load the defender's data.")).toBeNull(),
+    );
+    expect(mockFetchDefender).toHaveBeenCalledTimes(2);
+  });
+
+  it('a stale (late) attacker response never overwrites a newer Pokémon selection (task §5)', async () => {
+    const garchompFetch = deferred<AttackerFetchResult>();
+    mockFetchAttacker.mockImplementation(async (formSlug: string) =>
+      formSlug === 'garchomp' ? garchompFetch.promise : { form: HEATRAN_FORM, moves: [EARTHQUAKE] },
+    );
+    renderDamageLab();
+    await selectAttacker(); // Garchomp — request left pending
+
+    // Swap the attacker to Heatran before Garchomp's request resolves.
+    fireEvent.click(screen.getByRole('button', { name: 'Change Garchomp' }));
+    const swapInput = (await screen.findAllByRole('combobox', { name: 'Select Pokémon' }))[0]!;
+    fireEvent.change(swapInput, { target: { value: 'heatran' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Heatran/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Select move' }));
+    expect(await screen.findByRole('option', { name: /Earthquake/ })).not.toBeNull();
+    fireEvent.click(screen.getByRole('option', { name: /Earthquake/ }));
+
+    // Garchomp's stale response arrives late — must not resurrect its data.
+    garchompFetch.resolve({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    const abilitySelect = await screen.findByRole('combobox', { name: 'Ability' });
+    const optionValues = Array.from((abilitySelect as HTMLSelectElement).options).map(
+      (option) => option.value,
+    );
+    expect(optionValues).toContain('flash-fire'); // Heatran's own ability
+    expect(optionValues).not.toContain('sand-veil'); // Garchomp's — must never appear
+  });
+
+  it('a stale (late) defender response never overwrites a newer Pokémon selection (task §5)', async () => {
+    const heatranFetch = deferred<DefenderFetchResult>();
+    mockFetchDefender.mockImplementation(async (formSlug: string) =>
+      formSlug === 'heatran' ? heatranFetch.promise : GARCHOMP_FORM,
+    );
+    renderDamageLab();
+    await selectDefender(); // Heatran — request left pending
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change Heatran' }));
+    const inputs = await screen.findAllByRole('combobox', { name: 'Select Pokémon' });
+    const swapInput = inputs[inputs.length - 1]!; // defender's own picker, not attacker's still-open one
+    fireEvent.change(swapInput, { target: { value: 'garchomp' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Garchomp/ }));
+
+    heatranFetch.resolve(HEATRAN_FORM);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[1]!);
+    const abilitySelect = await screen.findByRole('combobox', { name: 'Ability' });
+    const optionValues = Array.from((abilitySelect as HTMLSelectElement).options).map(
+      (option) => option.value,
+    );
+    expect(optionValues).toContain('sand-veil'); // Garchomp's own ability
+    expect(optionValues).not.toContain('flash-fire'); // Heatran's — must never appear
+  });
+
+  it("switching the game while the attacker's reference data is loading doesn't leave it stuck loading, and the stale game's response never overwrites the new one (task §6)", async () => {
+    const scarletVioletFetch = deferred<AttackerFetchResult>();
+    mockFetchAttacker.mockImplementation(async (_formSlug: string, versionGroupSlug: string) =>
+      versionGroupSlug === 'scarlet-violet'
+        ? scarletVioletFetch.promise
+        : { form: GARCHOMP_FORM, moves: [DIG] },
+    );
+    renderDamageLab();
+    await selectAttacker(); // scarlet-violet request left pending
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Game' }), {
+      target: { value: 'sword-shield' },
+    });
+
+    // sword-shield's own request resolves right away — never stuck on "…".
+    expect(await screen.findByRole('button', { name: 'Select move' })).not.toBeNull();
+
+    // The stale scarlet-violet response arrives late.
+    scarletVioletFetch.resolve({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select move' }));
+    expect(await screen.findByRole('option', { name: /Dig/ })).not.toBeNull();
+    expect(screen.queryByRole('option', { name: /Earthquake/ })).toBeNull();
   });
 });
