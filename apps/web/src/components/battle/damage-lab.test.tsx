@@ -18,6 +18,7 @@ import {
   fetchAttackerReferenceData,
   fetchDefenderReferenceData,
 } from '@/app/[locale]/battle/damage/actions';
+import { LOCALE_CHANGE_EVENT } from '@/lib/locale-navigation';
 import { loadTeamDraft } from '@/lib/team-storage';
 import type { TeamDraft } from '@/lib/team-draft';
 
@@ -54,6 +55,8 @@ beforeEach(() => {
   mockFetchAdvancedReferenceData.mockResolvedValue({ natures: [JOLLY], items: [LIFE_ORB] });
   mockCalculate.mockReset();
   mockLoadTeamDraft.mockReset();
+  sessionStorage.clear();
+  window.history.replaceState({}, '', '/en/battle/damage');
 });
 
 const STATS = { hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 };
@@ -1354,5 +1357,150 @@ describe('Build → Damage Lab import (task §30)', () => {
     renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' });
     expect(await screen.findByText('Garchomp · My Team')).not.toBeNull();
     expect(mockLoadTeamDraft).toHaveBeenCalledTimes(2);
+  });
+});
+
+/** Simulates the real effect of clicking `LocaleSwitcher`: dispatch the handoff event, then a genuine unmount + fresh mount at the new URL — never a `rerender`, which would trivially "preserve" state via the same component instance's own `useState`. */
+function switchLocale(view: ReturnType<typeof renderDamageLab>, targetUrl: string): void {
+  window.dispatchEvent(new CustomEvent(LOCALE_CHANGE_EVENT, { detail: targetUrl }));
+  view.unmount();
+  window.history.replaceState({}, '', targetUrl);
+}
+
+describe('Damage Lab locale-switch state preservation', () => {
+  it('restores attacker, defender, move, game, both Advanced configurations and critical hit across a real unmount/remount (task §16 review)', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    const view = renderDamageLab();
+    await selectAttackerMoveAndDefender();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Game' }), {
+      target: { value: 'sword-shield' },
+    });
+
+    const advancedButtons = screen.getAllByRole('button', { name: /Advanced/ });
+    fireEvent.click(advancedButtons[0]!);
+    fireEvent.change(await screen.findByRole('spinbutton', { name: 'Level' }), {
+      target: { value: '50' },
+    });
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Critical hit' }));
+    fireEvent.click(advancedButtons[1]!);
+    const defenderLevel = (await screen.findAllByRole('spinbutton', { name: 'Level' }))[1]!;
+    fireEvent.change(defenderLevel, { target: { value: '77' } });
+
+    switchLocale(view, '/es/battle/damage');
+    renderDamageLab();
+
+    // Game survives.
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+        'sword-shield',
+      ),
+    );
+    // Both Pokémon survive (identity resolved, not stuck on the picker).
+    expect(await screen.findByText('Garchomp')).not.toBeNull();
+    expect(await screen.findByText('Heatran')).not.toBeNull();
+    // The selected move survives.
+    expect(screen.getByRole('button', { name: /Earthquake/ })).not.toBeNull();
+    // Both Advanced configs and critical hit survive.
+    const restoredAdvanced = screen.getAllByRole('button', { name: /Advanced/ });
+    fireEvent.click(restoredAdvanced[0]!);
+    expect(
+      ((await screen.findByRole('spinbutton', { name: 'Level' })) as HTMLInputElement).value,
+    ).toBe('50');
+    expect(
+      (screen.getByRole('checkbox', { name: 'Critical hit' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    fireEvent.click(restoredAdvanced[1]!);
+    const restoredDefenderLevel = (
+      await screen.findAllByRole('spinbutton', { name: 'Level' })
+    )[1] as HTMLInputElement;
+    expect(restoredDefenderLevel.value).toBe('77');
+  });
+
+  it('a corrupted sessionStorage handoff is harmless — Damage Lab initializes normally, no crash', async () => {
+    sessionStorage.setItem('pokestudio:damage-locale-handoff', '{not valid json at all');
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+
+    renderDamageLab();
+
+    // No crash, and a completely ordinary, unimported Damage Lab: default
+    // game, no attacker selected yet, picker usable as normal.
+    expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+      'scarlet-violet',
+    );
+    await selectAttacker();
+    expect(await screen.findByText('Garchomp')).not.toBeNull();
+  });
+});
+
+describe('Damage Lab locale-switch × Build import interaction (review finding)', () => {
+  it('a manual attacker change after Build import survives a locale switch, and the import banner does not resurrect the original member (review §11/§2)', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockImplementation(async (formSlug: string) =>
+      formSlug === 'garchomp'
+        ? { form: GARCHOMP_FORM, moves: [EARTHQUAKE] }
+        : { form: HEATRAN_FORM, moves: [EARTHQUAKE] },
+    );
+    const params = { teamId: 'team-1', memberId: 'member-1' };
+    const view = renderDamageLab(VERSION_GROUPS, params);
+
+    // Initial import: Garchomp, banner names it.
+    expect(await screen.findByText('Garchomp · My Team')).not.toBeNull();
+
+    // Manually swap the attacker to Heatran.
+    fireEvent.click(screen.getByRole('button', { name: 'Change Garchomp' }));
+    const swapInput = (await screen.findAllByRole('combobox', { name: 'Select Pokémon' }))[0]!;
+    fireEvent.change(swapInput, { target: { value: 'heatran' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Heatran/ }));
+    await screen.findByText('Heatran');
+
+    switchLocale(view, '/es/battle/damage?team=team-1&member=member-1');
+    renderDamageLab(VERSION_GROUPS, params);
+
+    // Heatran survives — the original Garchomp import is never reapplied.
+    expect(await screen.findByText('Heatran')).not.toBeNull();
+    expect(screen.queryByText('Garchomp')).toBeNull();
+
+    // The banner must not claim "Garchomp" any more — the review's exact
+    // finding: the state guard alone wasn't enough, the banner needs it too.
+    expect(screen.queryByText('Garchomp · My Team')).toBeNull();
+    expect(screen.queryByText(/Garchomp/)).toBeNull();
+  });
+
+  it('a manually changed move/game after Build import both survive a locale switch without reimporting', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft());
+    mockFetchAttacker.mockImplementation(async (_formSlug: string, versionGroupSlug: string) =>
+      versionGroupSlug === 'scarlet-violet'
+        ? { form: GARCHOMP_FORM, moves: [EARTHQUAKE, DIG] }
+        : { form: GARCHOMP_FORM, moves: [EARTHQUAKE, DIG] },
+    );
+    const params = { teamId: 'team-1', memberId: 'member-1' };
+    const view = renderDamageLab(VERSION_GROUPS, params);
+    await screen.findByRole('button', { name: 'Change Earthquake' });
+
+    // Manual move change.
+    fireEvent.click(screen.getByRole('button', { name: 'Change Earthquake' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Dig/ }));
+    await screen.findByRole('button', { name: 'Change Dig' });
+
+    // Manual game change.
+    fireEvent.change(screen.getByRole('combobox', { name: 'Game' }), {
+      target: { value: 'sword-shield' },
+    });
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+        'sword-shield',
+      ),
+    );
+
+    switchLocale(view, '/es/battle/damage?team=team-1&member=member-1');
+    renderDamageLab(VERSION_GROUPS, params);
+
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+        'sword-shield',
+      ),
+    );
+    expect(await screen.findByRole('button', { name: /Dig/ })).not.toBeNull();
   });
 });

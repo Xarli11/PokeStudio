@@ -6,6 +6,24 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Damage Lab desktop layout and locale-switch state preservation (2026-09-22)
+
+- Fixed a desktop layout asymmetry: the defender column sat visibly closer to the Move selector than
+  the attacker did. Root cause was alignment, not spacing — both columns used the same
+  `flex-start`-equivalent default, which is the outer edge for the attacker but the edge closest to
+  center for the defender. Replaced the row with a `[minmax(0,1fr) auto minmax(0,1fr)]` grid and an
+  explicit outer alignment per side, active at `lg:` and up (below that, the existing single-column
+  stack is kept — two full Pokémon-plus-Advanced columns side by side is cramped below laptop width).
+  DOM order (attacker → move → defender) is unchanged.
+- Damage Lab's selections (game, attacker, defender, move, both sides' Advanced configuration,
+  critical hit) now survive an ES↔EN locale switch instead of being silently lost on the resulting
+  route remount. A locale switch still recalculates rather than restoring a previous result. The
+  mechanism is a one-shot, tab-local `sessionStorage` handoff, written only for a genuine same-tab
+  language click and bound to the exact destination URL, read once and deleted immediately,
+  expiring after 60 seconds, and defensively validated field-by-field — malformed or stray data is
+  treated as no handoff at all. Team import URLs (`?team=`/`?member=`) are unaffected, and a locale
+  switch after a Build import never re-imports over a manually changed selection.
+
 ### Build → Damage Lab integration (2026-09-22)
 
 A configured Team Builder set now feeds Damage Lab directly: "Test damage"/"Probar daño" on the
