@@ -63,6 +63,19 @@ describe('PokemonCard', () => {
     expect(screen.queryByText('B')).toBeNull(); // monogram not also rendered
   });
 
+  it('carries the .group class so the sprite can key its hover/focus microinteraction off the whole card, not just the image itself', () => {
+    render(
+      <PokemonCard
+        href="/en/pokemon/bulbasaur"
+        name="Bulbasaur"
+        dexNumberLabel="#001"
+        types={[...BULBASAUR_TYPES]}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: /Bulbasaur/ }).className).toContain('group');
+  });
+
   it('falls back to the monogram if the sprite image itself fails to load', () => {
     render(
       <PokemonCard

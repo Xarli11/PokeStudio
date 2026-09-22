@@ -66,7 +66,7 @@ export function PokemonCard({
   const primaryVar = pokemonTypeColorVar[displayTypes[0]!.type];
 
   return (
-    <Link href={href} className={interactiveCardClass('flex flex-col overflow-hidden')}>
+    <Link href={href} className={interactiveCardClass('group flex flex-col overflow-hidden')}>
       <PokemonArtSlot
         initial={name.charAt(0)}
         types={displayTypes.map((t) => t.type)}
