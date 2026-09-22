@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 
 import { type Locale, locales } from '@pokestudio/i18n';
 
+import { LOCALE_CHANGE_EVENT } from '@/lib/locale-navigation';
 import { segmentClass, segmentGroupClass } from '@/lib/ui-classes';
 
 export function LocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
@@ -42,7 +43,26 @@ export function LocaleSwitcher({ currentLocale }: { currentLocale: Locale }) {
           // *next* request to pick the default locale for an un-prefixed
           // path. `<Link>` still does its own client-side navigation for
           // this click; this only primes the next one.
-          onClick={() => {
+          onClick={(event) => {
+            // Broadcast intent only for a genuine same-tab navigation — a
+            // modifier-key click (open in new tab/window) never actually
+            // leaves this tab, so dispatching a handoff for it would save
+            // state that's never consumed here and could resurface stale
+            // in a later, unrelated same-tab navigation. Pages that care
+            // (Damage Lab) listen for this themselves; this component
+            // owns none of that logic (task: query preservation and
+            // ephemeral page-state preservation are separate concerns).
+            if (
+              locale !== currentLocale &&
+              !event.metaKey &&
+              !event.ctrlKey &&
+              !event.shiftKey &&
+              !event.altKey
+            ) {
+              window.dispatchEvent(
+                new CustomEvent(LOCALE_CHANGE_EVENT, { detail: hrefFor(locale) }),
+              );
+            }
             document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=31536000`;
           }}
           aria-current={locale === currentLocale}

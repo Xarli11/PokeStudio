@@ -1,5 +1,7 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { LOCALE_CHANGE_EVENT } from '@/lib/locale-navigation';
 
 import { LocaleSwitcher } from './locale-switcher';
 
@@ -28,5 +30,34 @@ describe('LocaleSwitcher', () => {
 
     const esLink = await screen.findByRole('link', { name: 'ES' });
     expect(esLink.getAttribute('href')).toBe('/es/pokemon');
+  });
+
+  it('dispatches LOCALE_CHANGE_EVENT with the destination href on a plain same-tab click, never on a modifier-key click', () => {
+    window.history.pushState({}, '', '/en/battle/damage');
+    const listener = vi.fn();
+    window.addEventListener(LOCALE_CHANGE_EVENT, listener);
+    render(<LocaleSwitcher currentLocale="en" />);
+
+    // Opens in a new tab/window — must not save a handoff this tab never consumes.
+    fireEvent.click(screen.getByRole('link', { name: 'ES' }), { ctrlKey: true });
+    expect(listener).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('link', { name: 'ES' }));
+    expect(listener).toHaveBeenCalledOnce();
+    expect((listener.mock.calls[0]![0] as CustomEvent<string>).detail).toBe('/es/battle/damage');
+
+    window.removeEventListener(LOCALE_CHANGE_EVENT, listener);
+  });
+
+  it('does not dispatch when clicking the already-active locale', () => {
+    window.history.pushState({}, '', '/en/battle/damage');
+    const listener = vi.fn();
+    window.addEventListener(LOCALE_CHANGE_EVENT, listener);
+    render(<LocaleSwitcher currentLocale="en" />);
+
+    fireEvent.click(screen.getByRole('link', { name: 'EN' }));
+    expect(listener).not.toHaveBeenCalled();
+
+    window.removeEventListener(LOCALE_CHANGE_EVENT, listener);
   });
 });

@@ -44,6 +44,8 @@ import {
   revalidateAdvancedConfigForForm,
   type DamageAdvancedConfig,
 } from '@/lib/damage-advanced';
+import { saveDamageLocaleHandoff, takeDamageLocaleHandoff } from '@/lib/damage-locale-handoff';
+import { LOCALE_CHANGE_EVENT } from '@/lib/locale-navigation';
 import { moveDisplayName } from '@/lib/move-search';
 import { resolveRosterVisualIdentity } from '@/lib/roster-visual-identity';
 import { loadTeamDraft } from '@/lib/team-storage';
@@ -266,6 +268,80 @@ export function DamageLab({
       });
   }, []);
 
+  // Locale-switch state handoff — a locale switch is a real route-segment
+  // change ([locale]), which unmounts this whole component; without this,
+  // every selection/config here was silently lost on every ES↔EN switch.
+  // `localeRestoredRef` doubles as the signal the Build-import effect below
+  // checks: if this mount is a restore, the import must not re-seed state
+  // over a since-changed manual selection (task §11 of the review — the
+  // exact scenario: import Garchomp → manually swap to Charizard → switch
+  // locale → Charizard, not Garchomp, must survive). `restoringGameRef`
+  // stops the game-switch capability-revalidation effect (declared later)
+  // from running its very first pass against the *default* game's
+  // capabilities before this restore has actually applied — that pass
+  // would self-correct on the next render regardless, but skipping it
+  // avoids a pointless transient revalidation against the wrong game.
+  const localeRestoredRef = useRef(false);
+  const restoringGameRef = useRef<string | null>(null);
+  useEffect(() => {
+    const draft = takeDamageLocaleHandoff();
+    if (!draft || !versionGroups.some((vg) => vg.slug === draft.versionGroupSlug)) return;
+    localeRestoredRef.current = true;
+    restoringGameRef.current = draft.versionGroupSlug;
+    setVersionGroupSlug(draft.versionGroupSlug);
+    setAttackerFormSlug(draft.attackerFormSlug);
+    setDefenderFormSlug(draft.defenderFormSlug);
+    setAttackerConfig(draft.attackerConfig);
+    setDefenderConfig(draft.defenderConfig);
+    setIsCritical(draft.isCritical);
+    // Reuses the exact same "consume once, once real legal moves exist to
+    // check it against" mechanism the Build import already relies on
+    // (task: "reuse existing reference-data/Pokémon-loading infrastructure,
+    // do not create a parallel fetch system") — never a second move-restore
+    // path.
+    pendingImportedMoveSlugsRef.current = [draft.selectedMoveSlug];
+    // Only start Advanced's reference-data fetch if the restored config
+    // actually needs a name to render honestly — same reasoning as the
+    // Build-import branch below, same shared gate/guard.
+    if (
+      draft.attackerConfig.natureSlug ||
+      draft.attackerConfig.itemSlug ||
+      draft.defenderConfig.natureSlug ||
+      draft.defenderConfig.itemSlug
+    ) {
+      ensureAdvancedReferenceData();
+    }
+    // Deliberately not preserved: the calculated result. A fresh mount's
+    // `useActionState` already starts at `null`, and `DamageLocaleDraft`
+    // never carries one — inputs survive, the result is recalculated,
+    // never left looking current for state that's just been replaced.
+  }, [versionGroups, ensureAdvancedReferenceData]);
+
+  useEffect(() => {
+    function handleLocaleChange(event: Event): void {
+      const target = (event as CustomEvent<string>).detail;
+      saveDamageLocaleHandoff(target, {
+        versionGroupSlug,
+        attackerFormSlug,
+        defenderFormSlug,
+        selectedMoveSlug,
+        attackerConfig,
+        defenderConfig,
+        isCritical,
+      });
+    }
+    window.addEventListener(LOCALE_CHANGE_EVENT, handleLocaleChange);
+    return () => window.removeEventListener(LOCALE_CHANGE_EVENT, handleLocaleChange);
+  }, [
+    versionGroupSlug,
+    attackerFormSlug,
+    defenderFormSlug,
+    selectedMoveSlug,
+    attackerConfig,
+    defenderConfig,
+    isCritical,
+  ]);
+
   // Build import (Fase M3.2) — runs once per mount, only when both
   // `teamId`/`memberId` are present. `loadTeamDraft` is the one sanctioned
   // read of local team storage (task §2: never a second parsing path).
@@ -280,6 +356,17 @@ export function DamageLab({
     if (teamImportAppliedRef.current) return;
     teamImportAppliedRef.current = true;
     if (!teamId || !memberId) return;
+    // A locale-restore that already applied (this same mount, from the
+    // effect above) takes priority over the original Build import in every
+    // respect — including the banner, and including a stale "team/member
+    // not found" warning a fresh lookup could otherwise produce. The
+    // restored state already fully represents "now"; a `loadTeamDraft`
+    // re-read here would only describe the *original* import, which may
+    // no longer be true (the user may have manually changed the attacker
+    // since) — never resurrect that provenance once it's stale (review
+    // finding: the state-seeding guard alone wasn't enough, this whole
+    // branch — including `setImportStatus` — needs the same guard).
+    if (localeRestoredRef.current) return;
 
     const team = loadTeamDraft(teamId);
     if (!team) {
@@ -427,11 +514,20 @@ export function DamageLab({
   // Game-switch revalidation (task §15) — re-runs only when the version
   // group actually changes (`capabilities` is memoized on its slug/
   // generation above, so this effect doesn't fire on every render).
+  // `restoringGameRef` skips this effect's very first pass on a
+  // locale-restore mount, before the restored `versionGroupSlug` has
+  // actually applied — without it, this would revalidate the just-restored
+  // config against the *default* game's capabilities for one render (it
+  // self-corrects the next render regardless, since `capabilities`/
+  // `versionGroupSlug` change again once the restore lands, but skipping
+  // the wrong pass avoids a pointless transient revalidation).
   useEffect(() => {
     if (!capabilities) return;
+    if (restoringGameRef.current && restoringGameRef.current !== versionGroupSlug) return;
+    restoringGameRef.current = null;
     setAttackerConfig((config) => revalidateAdvancedConfigForCapabilities(config, capabilities));
     setDefenderConfig((config) => revalidateAdvancedConfigForCapabilities(config, capabilities));
-  }, [capabilities]);
+  }, [capabilities, versionGroupSlug]);
 
   const selectedMove = attackerMoves.find((move) => move.slug === selectedMoveSlug);
 
@@ -499,8 +595,21 @@ export function DamageLab({
         </select>
       </label>
 
-      <div className="flex flex-col items-stretch gap-6 sm:flex-row sm:items-start">
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
+      {/* Structural fix (manual review — desktop asymmetry): the old
+          `flex-1` row left both sides' content at their own box's
+          `flex-start`, which for the attacker (left box) is the outer
+          edge, but for the defender (right box) is the edge *closest to
+          center* — same alignment value, opposite visual result. A real
+          `[1fr auto 1fr]` grid with an explicit `justify-self-end` on the
+          defender fixes the actual geometry (both sides now hug their
+          outer edge symmetrically) rather than nudging it with a margin or
+          translate tuned to one screenshot. Only at `lg:` and up — below
+          that, two full Pokémon-plus-Advanced columns side by side leaves
+          too little room (task: "no forzar side-by-side en tablet"), so it
+          stays the existing single-column stack. DOM order (attacker →
+          move → defender) is unchanged either way. */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-10">
+        <div className="flex w-full min-w-0 flex-col gap-3 lg:max-w-72">
           <DamagePokemonSlot
             locale={locale}
             label={labels.attackerLabel}
@@ -593,7 +702,7 @@ export function DamageLab({
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
+        <div className="flex w-full min-w-0 flex-col gap-3 lg:max-w-72 lg:justify-self-end">
           <DamagePokemonSlot
             locale={locale}
             label={labels.defenderLabel}
