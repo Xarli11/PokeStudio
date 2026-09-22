@@ -473,6 +473,7 @@
       "recalculateLabel": "Recalculate",
       "natureNeutralOption": "Neutral",
       "teraSummaryTemplate": "Tera {type}",
+      "advancedReferenceDataError": "Couldn't load the advanced options.",
       "statAbbr": {
         "hp": "HP",
         "attack": "Atk",

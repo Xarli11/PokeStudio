@@ -203,6 +203,8 @@ const LABELS: DamageLabLabels = {
     teraSummaryTemplate: 'Tera {type}',
     criticalLabel: 'Critical hit',
     loadingReferenceData: 'Loading…',
+    referenceDataErrorLabel: "Couldn't load the advanced options.",
+    retryLabel: 'Retry',
     statAbbr: {
       hp: 'HP',
       attack: 'Atk',
@@ -859,5 +861,72 @@ describe('DamageLab Advanced', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Recalculate' }));
     await waitFor(() => expect(screen.queryByText('Inputs changed')).toBeNull());
+  });
+});
+
+describe('Advanced reference-data resilience (production incident, task §2/§11)', () => {
+  it('goes loading → success and shows the real fields', async () => {
+    renderDamageLab();
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    expect(screen.getByText('Loading…')).not.toBeNull();
+    expect(await screen.findByRole('combobox', { name: 'Nature' })).not.toBeNull();
+    expect(screen.queryByText('Loading…')).toBeNull();
+  });
+
+  it('a rejected fetch does NOT leave the panel loading forever — it shows a localized inline error with Retry', async () => {
+    mockFetchAdvancedReferenceData.mockReset();
+    mockFetchAdvancedReferenceData.mockRejectedValueOnce(new Error('500'));
+    renderDamageLab();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    expect(await screen.findByText("Couldn't load the advanced options.")).not.toBeNull();
+    expect(screen.queryByText('Loading…')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Retry' })).not.toBeNull();
+  });
+
+  it('Retry calls the action again and success clears the error', async () => {
+    mockFetchAdvancedReferenceData.mockReset();
+    mockFetchAdvancedReferenceData.mockRejectedValueOnce(new Error('500'));
+    mockFetchAdvancedReferenceData.mockResolvedValueOnce({ natures: [JOLLY], items: [LIFE_ORB] });
+    renderDamageLab();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
+    await screen.findByRole('button', { name: 'Retry' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByRole('combobox', { name: 'Nature' })).not.toBeNull();
+    expect(screen.queryByText("Couldn't load the advanced options.")).toBeNull();
+    expect(mockFetchAdvancedReferenceData).toHaveBeenCalledTimes(2);
+  });
+
+  it("attacker and defender share one fetch — opening both doesn't request natures/items twice", async () => {
+    renderDamageLab();
+    const advancedButtons = screen.getAllByRole('button', { name: /Advanced/ });
+
+    fireEvent.click(advancedButtons[0]!);
+    await screen.findByRole('combobox', { name: 'Nature' });
+    fireEvent.click(advancedButtons[1]!);
+    await waitFor(() =>
+      expect(screen.getAllByRole('combobox', { name: 'Nature' })).toHaveLength(2),
+    );
+
+    expect(mockFetchAdvancedReferenceData).toHaveBeenCalledTimes(1);
+  });
+
+  it('opening both panels in the same tick does not start two concurrent requests (task §10)', async () => {
+    renderDamageLab();
+    const advancedButtons = screen.getAllByRole('button', { name: /Advanced/ });
+
+    // Both clicks fire before React has committed the first `loading` state
+    // update — the request guard must still be synchronous, not read from
+    // (async-batched) state.
+    fireEvent.click(advancedButtons[0]!);
+    fireEvent.click(advancedButtons[1]!);
+
+    await waitFor(() =>
+      expect(screen.getAllByRole('combobox', { name: 'Nature' })).toHaveLength(2),
+    );
+    expect(mockFetchAdvancedReferenceData).toHaveBeenCalledTimes(1);
   });
 });

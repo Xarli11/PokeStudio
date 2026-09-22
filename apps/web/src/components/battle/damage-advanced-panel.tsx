@@ -6,9 +6,11 @@ import type { ComparablePokemonForm, Item, Nature } from '@pokestudio/database';
 import { formatMessage, type Locale } from '@pokestudio/i18n';
 import { ALL_POKEMON_TYPES, type BaseStats, type PokemonType } from '@pokestudio/pokemon-data';
 
+import type { AdvancedReferenceData } from '@/app/[locale]/battle/damage/actions';
 import { ItemPicker, type ItemPickerLabels } from '@/components/build/item-picker';
-import { itemDisplayName } from '@/lib/item-search';
 import type { BuildGameCapabilities } from '@/lib/build-game-capabilities';
+import { summarizeAdvancedConfig, type DamageAdvancedConfig } from '@/lib/damage-advanced';
+import { itemDisplayName } from '@/lib/item-search';
 import {
   clampEv,
   clampIv,
@@ -21,7 +23,13 @@ import {
   MIN_LEVEL,
 } from '@/lib/team-draft';
 import { versionGroupDisplayName } from '@/lib/version-group-label';
-import { summarizeAdvancedConfig, type DamageAdvancedConfig } from '@/lib/damage-advanced';
+
+/** Advanced's own reference-data fetch, as a real state machine (task §11's production incident: a rejected fetch used to leave the panel loading forever). */
+export type AdvancedReferenceDataStatus =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: AdvancedReferenceData }
+  | { status: 'error' };
 
 export interface DamageAdvancedPanelLabels {
   advancedLabel: string;
@@ -50,6 +58,8 @@ export interface DamageAdvancedPanelLabels {
   teraSummaryTemplate: string;
   criticalLabel: string;
   loadingReferenceData: string;
+  referenceDataErrorLabel: string;
+  retryLabel: string;
   statLabels: Record<keyof BaseStats, string>;
   statAbbr: Record<keyof BaseStats, string>;
   typeLabels: Record<PokemonType, string>;
@@ -102,8 +112,8 @@ export function DamageAdvancedPanel({
   onCriticalChange,
   isOpen,
   onToggleOpen,
-  natures,
-  items,
+  referenceData,
+  onRetryReferenceData,
   labels,
 }: {
   locale: Locale;
@@ -116,14 +126,18 @@ export function DamageAdvancedPanel({
   onCriticalChange: (value: boolean) => void;
   isOpen: boolean;
   onToggleOpen: () => void;
-  natures: Nature[] | undefined;
-  items: Item[] | undefined;
+  referenceData: AdvancedReferenceDataStatus;
+  onRetryReferenceData: () => void;
   labels: DamageAdvancedPanelLabels;
 }) {
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
   const panelId = useId();
   const itemLabelId = useId();
   const itemButtonId = useId();
+  const natures: Nature[] | undefined =
+    referenceData.status === 'success' ? referenceData.data.natures : undefined;
+  const items: Item[] | undefined =
+    referenceData.status === 'success' ? referenceData.data.items : undefined;
   const selectedItem = items?.find((item) => item.slug === config.itemSlug);
   const selectedNature = natures?.find((nature) => nature.slug === config.natureSlug);
   const selectedAbility = form?.abilities.find((ability) => ability.slug === config.abilitySlug);
@@ -153,7 +167,8 @@ export function DamageAdvancedPanel({
         : formatMessage(labels.evsOverLimitTemplate, { count: Math.abs(evsRemaining) });
 
   const needsReferenceData = capabilities.heldItems || capabilities.natures;
-  const referenceDataReady = !needsReferenceData || (natures !== undefined && items !== undefined);
+  const referenceDataReady = !needsReferenceData || referenceData.status === 'success';
+  const referenceDataFailed = needsReferenceData && referenceData.status === 'error';
 
   return (
     <div className="flex flex-col gap-2">
@@ -173,7 +188,20 @@ export function DamageAdvancedPanel({
           id={panelId}
           className="flex flex-col gap-4 rounded-lg border border-border-subtle p-3"
         >
-          {!referenceDataReady ? (
+          {referenceDataFailed ? (
+            <div className="flex flex-col items-start gap-2">
+              <p role="alert" className="m-0 text-xs font-semibold text-danger">
+                {labels.referenceDataErrorLabel}
+              </p>
+              <button
+                type="button"
+                onClick={onRetryReferenceData}
+                className="text-xs font-semibold text-brand hover:underline"
+              >
+                {labels.retryLabel}
+              </button>
+            </div>
+          ) : !referenceDataReady ? (
             <p className="m-0 text-xs text-muted">{labels.loadingReferenceData}</p>
           ) : (
             <>
