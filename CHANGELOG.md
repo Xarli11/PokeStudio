@@ -6,6 +6,20 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Battle Lab — Advanced Damage Lab (2026-09-22)
+
+Damage Lab grows from a fixed-assumption calculator into a genuinely competitive tool via
+progressive disclosure: each side (Attacker/Defender) gets an independent, collapsed-by-default
+Advanced panel — level, nature, ability, item, EVs/IVs, Tera, critical hit (attacker only) — gated
+entirely through the existing Build game-capability model, so a Gen I matchup never shows a modern
+EV/IV editor it can't back. Simple Mode is unchanged; its fixed assumptions are now just the
+Advanced panel's own defaults, so both modes share one calculation path and one Server Action
+contract. A new searchable item picker (mirroring the Move Picker) replaces what would otherwise be
+a bare `<select>` over ~175 items. Advanced's own reference data (natures/items) loads only once a
+panel is actually opened, never inflating the page's initial payload. A visible result is clearly
+marked "Inputs changed" the instant any input it depended on changes, instead of silently going
+stale.
+
 ### Final brand and public domain (2026-09-20)
 
 - Confirm **PokeStudio** as the brand and **https://pokestudio.pro** as its public SEO origin.
