@@ -692,13 +692,13 @@ describe('DamageLab Advanced', () => {
     await selectAttackerMoveAndDefender();
 
     fireEvent.click(screen.getAllByRole('button', { name: /Advanced/ })[0]!);
-    expect(await screen.findByRole('button', { name: 'No item' })).not.toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'No item' }));
+    expect(await screen.findByRole('button', { name: 'Held item No item' })).not.toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Held item No item' }));
 
     const searchInput = await screen.findByRole('combobox', { name: 'Search items…' });
     fireEvent.change(searchInput, { target: { value: 'life' } });
     fireEvent.click(await screen.findByRole('option', { name: 'Life Orb' }));
-    expect(await screen.findByRole('button', { name: 'Life Orb' })).not.toBeNull();
+    expect(await screen.findByRole('button', { name: 'Held item Life Orb' })).not.toBeNull();
 
     await clickCalculate();
     expect(mockCalculate.mock.calls[0]![0].attacker.itemSlug).toBe('life-orb');

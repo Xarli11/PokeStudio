@@ -122,6 +122,8 @@ export function DamageAdvancedPanel({
 }) {
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
   const panelId = useId();
+  const itemLabelId = useId();
+  const itemButtonId = useId();
   const selectedItem = items?.find((item) => item.slug === config.itemSlug);
   const selectedNature = natures?.find((nature) => nature.slug === config.natureSlug);
   const selectedAbility = form?.abilities.find((ability) => ability.slug === config.abilitySlug);
@@ -231,7 +233,7 @@ export function DamageAdvancedPanel({
 
                 {capabilities.heldItems ? (
                   <div className="flex flex-col gap-1 text-xs text-muted">
-                    {labels.itemLabel}
+                    <span id={itemLabelId}>{labels.itemLabel}</span>
                     {itemPickerOpen ? (
                       <ItemPicker
                         locale={locale}
@@ -252,6 +254,8 @@ export function DamageAdvancedPanel({
                     ) : (
                       <button
                         type="button"
+                        id={itemButtonId}
+                        aria-labelledby={`${itemLabelId} ${itemButtonId}`}
                         onClick={() => setItemPickerOpen(true)}
                         className="rounded-md border border-border-subtle bg-surface px-2 py-2 text-left text-sm text-foreground"
                       >
