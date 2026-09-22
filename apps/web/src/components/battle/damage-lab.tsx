@@ -32,6 +32,7 @@ import {
 } from '@/app/[locale]/battle/damage/actions';
 import { advancedConfigFromTeamMember, preferredDamageMoveSlug } from '@/lib/build-damage-import';
 import { MovePicker, type MovePickerLabels } from '@/components/build/move-picker';
+import { PopoverDisclosure } from '@/components/popover-disclosure';
 import {
   resolveBuildGameCapabilities,
   type BuildGameCapabilities,
@@ -595,21 +596,46 @@ export function DamageLab({
         </select>
       </label>
 
-      {/* Structural fix (manual review — desktop asymmetry): the old
-          `flex-1` row left both sides' content at their own box's
-          `flex-start`, which for the attacker (left box) is the outer
-          edge, but for the defender (right box) is the edge *closest to
-          center* — same alignment value, opposite visual result. A real
-          `[1fr auto 1fr]` grid with an explicit `justify-self-end` on the
-          defender fixes the actual geometry (both sides now hug their
-          outer edge symmetrically) rather than nudging it with a margin or
-          translate tuned to one screenshot. Only at `lg:` and up — below
-          that, two full Pokémon-plus-Advanced columns side by side leaves
-          too little room (task: "no forzar side-by-side en tablet"), so it
-          stays the existing single-column stack. DOM order (attacker →
-          move → defender) is unchanged either way. */}
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-10">
-        <div className="flex w-full min-w-0 flex-col gap-3 lg:max-w-72">
+      {/* A real `[1fr auto 1fr]` grid, only at `lg:` and up — below that,
+          two full Pokémon-plus-Advanced columns side by side leaves too
+          little room, so it stays the existing single-column stack. DOM
+          order (attacker → move → defender) is unchanged at every width;
+          the mirroring below is presentational only.
+
+          Sizing (visual review round 2 — attacker/defender cards rendered
+          different widths from each other and from their own Advanced
+          panel): neither the column nor the compact card is width-capped
+          anymore, and neither column uses `items-end`/`items-start` as an
+          alignment-based substitute for width. Both columns are plain
+          `w-full` of their equal `minmax(0,1fr)` tracks, and both the
+          compact card and `DamageAdvancedPanel` (already `w-full` on its
+          own root) are explicit `w-full` of that same column — so card
+          width and Advanced width are byte-identical on each side, and
+          attacker/defender sides are byte-identical to each other, at
+          every width, regardless of name length or badge count. (An
+          earlier pass used `lg:items-end` on the attacker column to pull
+          it toward the Move column — that inadvertently switched its
+          children from the default `align-items: stretch`, which fills up
+          to a max-width, to shrink-to-content, which is exactly why the
+          two sides drifted apart; the fix is explicit width, not
+          alignment.) `mx-auto lg:max-w-[80rem]` still gives the whole
+          composition its own sensible ceiling — a no-op today since the
+          page shell is narrower, but correct if that ever changes. The
+          center track is a fixed `minmax` (not `auto`), so the Move block
+          reads as a stable connector.
+
+          Mirroring (visual review — "attacker → MOVE ← defender", artwork
+          nearest the center): with both cards now the same full width,
+          centering the Pokémon *within* each card is `DamagePokemonSlot`'s
+          own concern (fixed-size artwork + `flex-1` info area, filling the
+          card edge to edge — see that component). `artworkTrailing`
+          (attacker only) reverses the *visual* order of its two children —
+          text/info then artwork — via `lg:flex-row-reverse`, never a
+          `transform` and never a DOM/reading-order change; the defender
+          keeps the component's plain default order (artwork then text),
+          which already puts its artwork on the side nearest the center. */}
+      <div className="mx-auto grid w-full grid-cols-1 items-start gap-6 lg:max-w-[80rem] lg:grid-cols-[minmax(0,1fr)_minmax(10rem,12.5rem)_minmax(0,1fr)] lg:gap-10">
+        <div className="flex w-full min-w-0 flex-col gap-3">
           <DamagePokemonSlot
             locale={locale}
             label={labels.attackerLabel}
@@ -618,6 +644,7 @@ export function DamageLab({
             selectedFormSlug={attackerFormSlug}
             onSelect={setAttackerFormSlug}
             labels={labels.pokemonSlot}
+            artworkTrailing
           />
           {capabilities ? (
             <DamageAdvancedPanel
@@ -643,12 +670,18 @@ export function DamageLab({
           ) : null}
         </div>
 
-        <div className="flex flex-col items-center gap-2 self-center">
-          <span aria-hidden="true" className="text-lg text-muted">
+        {/* Visual polish pass: deliberately no `self-center` — the grid's
+            own `items-start` already lines this block up with the top of
+            both compact summary cards (art/name start there too), which
+            keeps working "naturally" once a side's Advanced panel opens and
+            makes the row much taller, instead of drifting toward the
+            middle of that full height. */}
+        <div className="flex flex-col items-center gap-2.5">
+          <span aria-hidden="true" className="text-2xl leading-none text-muted">
             →
           </span>
-          <div className="flex flex-col gap-1.5 text-center">
-            <span className="text-xs font-semibold tracking-wide text-muted uppercase">
+          <div className="flex flex-col gap-2 text-center">
+            <span className="text-xs font-bold tracking-wide text-foreground uppercase">
               {labels.moveLabel}
             </span>
             {attackerReferenceStatus === 'error' ? (
@@ -668,41 +701,68 @@ export function DamageLab({
               <span className="text-sm text-muted">…</span>
             ) : !attackerFormSlug ? (
               <span className="text-sm text-muted">{labels.noMoveSelected}</span>
-            ) : movePickerOpen ? (
-              <MovePicker
-                locale={locale}
-                moves={attackerMoves}
-                typeLabels={typeLabels}
-                selectedMoveSlugs={[]}
-                labels={labels.movePicker}
-                onSelect={(moveSlug) => {
-                  setSelectedMoveSlug(moveSlug);
-                  setMovePickerOpen(false);
-                }}
-                onClose={() => setMovePickerOpen(false)}
-              />
             ) : attackerMoves.length === 0 ? (
               <span className="text-sm text-muted">{labels.noLegalMoves}</span>
             ) : (
-              <button
-                type="button"
-                onClick={() => setMovePickerOpen(true)}
-                aria-label={
-                  selectedMove
-                    ? formatMessage(labels.changeMoveTemplate, {
-                        name: moveDisplayName(selectedMove, locale),
-                      })
-                    : labels.selectMoveLabel
-                }
-                className={buttonClass('default', 'px-3 py-1.5 text-sm font-semibold')}
+              // Overlay, not inline grid content (visual review — the
+              // expanded picker used to be constrained by/break the narrow
+              // center track): `PopoverDisclosure` positions it absolutely,
+              // anchored under this trigger and centered on it, so opening
+              // it never resizes the Move column or pushes attacker/
+              // defender. `panelClassName` drops the primitive's own small-
+              // popover chrome entirely (width/border/background/padding)
+              // since `MovePicker`'s own `surfaceClassName` below supplies
+              // a proper self-contained overlay frame instead — Build's
+              // original dashed-brand "editing in place" border read as a
+              // stray oversized focus ring once floating on its own
+              // (visual review round 2); this is a solid, opaque, bordered
+              // surface instead, sized for an overlay rather than a form
+              // row. ~34rem (544px) is the target — comfortably inside the
+              // requested 32–35rem/512–560px range — viewport-clamped so it
+              // never overflows a narrow screen.
+              <PopoverDisclosure
+                align="center"
+                open={movePickerOpen}
+                onOpenChange={setMovePickerOpen}
+                panelClassName="w-[min(34rem,calc(100vw-2rem))]"
+                renderTrigger={({ toggle, ref }) => (
+                  <button
+                    ref={ref}
+                    type="button"
+                    onClick={toggle}
+                    aria-expanded={movePickerOpen}
+                    aria-label={
+                      selectedMove
+                        ? formatMessage(labels.changeMoveTemplate, {
+                            name: moveDisplayName(selectedMove, locale),
+                          })
+                        : labels.selectMoveLabel
+                    }
+                    className={buttonClass('default', 'px-4 py-2 text-sm font-semibold')}
+                  >
+                    {selectedMove ? moveDisplayName(selectedMove, locale) : labels.selectMoveLabel}
+                  </button>
+                )}
               >
-                {selectedMove ? moveDisplayName(selectedMove, locale) : labels.selectMoveLabel}
-              </button>
+                <MovePicker
+                  locale={locale}
+                  moves={attackerMoves}
+                  typeLabels={typeLabels}
+                  selectedMoveSlugs={[]}
+                  labels={labels.movePicker}
+                  onSelect={(moveSlug) => {
+                    setSelectedMoveSlug(moveSlug);
+                    setMovePickerOpen(false);
+                  }}
+                  onClose={() => setMovePickerOpen(false)}
+                  surfaceClassName="flex flex-col gap-2 rounded-lg border border-border bg-surface-raised p-3 shadow-md"
+                />
+              </PopoverDisclosure>
             )}
           </div>
         </div>
 
-        <div className="flex w-full min-w-0 flex-col gap-3 lg:max-w-72 lg:justify-self-end">
+        <div className="flex w-full min-w-0 flex-col gap-3">
           <DamagePokemonSlot
             locale={locale}
             label={labels.defenderLabel}

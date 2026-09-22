@@ -181,6 +181,8 @@ export default async function DamageLabPage({
             koGuaranteedTemplate: dictionary.battle.damageLab.koGuaranteedTemplate,
             koChanceTemplate: dictionary.battle.damageLab.koChanceTemplate,
             koPossibleTemplate: dictionary.battle.damageLab.koPossibleTemplate,
+            koHitWordSingular: dictionary.battle.damageLab.koHitWordSingular,
+            koHitWordPlural: dictionary.battle.damageLab.koHitWordPlural,
             koNoDamage: dictionary.battle.damageLab.koNoDamage,
             detailsLabel: dictionary.battle.damageLab.detailsLabel,
             debugDescriptionLabel: dictionary.battle.damageLab.debugDescriptionLabel,

@@ -21,6 +21,8 @@ export interface DamageResultLabels {
   koGuaranteedTemplate: string;
   koChanceTemplate: string;
   koPossibleTemplate: string;
+  koHitWordSingular: string;
+  koHitWordPlural: string;
   koNoDamage: string;
   detailsLabel: string;
   debugDescriptionLabel: string;
@@ -45,7 +47,17 @@ export interface DamageResultLabels {
   };
 }
 
-/** KO copy built purely from `result.ko` (task §17) — never from Smogon's own `koChanceText`, which doesn't exist in the v2 domain at all. */
+/**
+ * KO copy built purely from `result.ko` (task §17) — never from Smogon's
+ * own `koChanceText`, which doesn't exist in the v2 domain at all.
+ *
+ * Spanish spells out "KO garantizado en 2 golpes" instead of exposing
+ * unexplained competitive shorthand ("2HKO") to a general audience (visual
+ * review); English keeps the established "Guaranteed 2HKO" wording, so
+ * `hitWord` is threaded through as a template var rather than a second
+ * template set. `hitsToKo` is never 0, so the singular/plural check only
+ * needs to distinguish exactly 1 hit from everything else.
+ */
 function koSummary(
   result: DamageCalculationResult,
   locale: Locale,
@@ -53,11 +65,14 @@ function koSummary(
 ): string | null {
   const { chance, hitsToKo } = result.ko;
   if (hitsToKo === undefined) return null;
-  if (chance === 1) return formatMessage(labels.koGuaranteedTemplate, { hits: hitsToKo });
-  if (chance === undefined) return formatMessage(labels.koPossibleTemplate, { hits: hitsToKo });
+  const hitWord = hitsToKo === 1 ? labels.koHitWordSingular : labels.koHitWordPlural;
+  if (chance === 1) return formatMessage(labels.koGuaranteedTemplate, { hits: hitsToKo, hitWord });
+  if (chance === undefined)
+    return formatMessage(labels.koPossibleTemplate, { hits: hitsToKo, hitWord });
   return formatMessage(labels.koChanceTemplate, {
     chance: formatDecimal(locale, chance * 100, 1),
     hits: hitsToKo,
+    hitWord,
   });
 }
 
@@ -106,6 +121,18 @@ export function DamageResult({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const ko = koSummary(result, locale, labels);
   const modifierLabels = activeModifierLabels(result, labels);
+
+  // `result.debugDescription` is populated on every result (task §15's
+  // upstream trace string), not just ones with something to show — so
+  // using its mere presence to decide whether `Details` has content (the
+  // pre-existing condition below) made the disclosure open to an empty
+  // panel in production for the common case where no modifier is active
+  // (visual review after PR #25: none of weather/terrain/screens/status/
+  // Dynamax have a control wired up yet, so `modifierLabels` is normally
+  // empty). The debug trace itself only ever renders outside production,
+  // so only count it as "content" under that same condition.
+  const showDebugTrace = process.env.NODE_ENV !== 'production' && Boolean(result.debugDescription);
+  const hasDetails = modifierLabels.length > 0 || showDebugTrace;
 
   // Visual clamp only — the headline text below always shows the real
   // (possibly >100%) percent (task §20: "no clamping del dato").
@@ -156,7 +183,7 @@ export function DamageResult({
         ) : null}
       </div>
 
-      {modifierLabels.length > 0 || result.debugDescription ? (
+      {hasDetails ? (
         <div className="w-full max-w-xs text-left">
           <button
             type="button"
@@ -175,7 +202,7 @@ export function DamageResult({
                   ))}
                 </ul>
               ) : null}
-              {process.env.NODE_ENV !== 'production' ? (
+              {showDebugTrace ? (
                 <p className="m-0 text-[0.6875rem] text-muted italic">
                   {labels.debugDescriptionLabel}: {result.debugDescription}
                 </p>

@@ -171,7 +171,17 @@ export function DamageAdvancedPanel({
   const referenceDataFailed = needsReferenceData && referenceData.status === 'error';
 
   return (
-    <div className="flex flex-col gap-2">
+    // `w-full` (explicit, not just relying on the parent's default flex
+    // stretch — a column-alignment override elsewhere in an earlier
+    // iteration briefly turned that implicit stretch off for one side,
+    // which is exactly the kind of drift an explicit width doesn't have).
+    // `@container` makes the panel respond to its own rendered width
+    // rather than the viewport:
+    // the surrounding grid column can render anywhere from ~300px (small
+    // laptop) to 500px+ (wide desktop), and a viewport breakpoint has no
+    // way to know which — a real regression source for the EV/IV clipping
+    // this fixes (visual review after PR #25).
+    <div className="w-full @container flex flex-col gap-2">
       <p className="m-0 text-xs text-muted">{summaryTokens.join(' · ')}</p>
       <button
         type="button"
@@ -205,7 +215,7 @@ export function DamageAdvancedPanel({
             <p className="m-0 text-xs text-muted">{labels.loadingReferenceData}</p>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2">
                 <label className="flex flex-col gap-1 text-xs text-muted">
                   {labels.levelLabel}
                   <input
@@ -218,7 +228,7 @@ export function DamageAdvancedPanel({
                       if (Number.isNaN(value)) return;
                       onChange({ level: clampLevel(value) });
                     }}
-                    className="rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground"
+                    className="w-full min-w-0 [appearance:textfield] rounded-md border border-border-subtle bg-surface px-2 py-2 text-sm text-foreground [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                   />
                 </label>
 
@@ -346,7 +356,14 @@ export function DamageAdvancedPanel({
               ) : null}
 
               {capabilities.modernEvsIvs ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                // Deliberately always stacked (EVs above IVs), never
+                // side-by-side (visual review after PR #25): six numeric
+                // fields is already tight for one row's worth of width —
+                // splitting that same width in half for EVs *and* IVs at
+                // once was the main cause of the clipped/colliding inputs,
+                // and readability matters more here than fitting both
+                // groups on one line.
+                <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted">{labels.evsLabel}</span>
@@ -357,7 +374,7 @@ export function DamageAdvancedPanel({
                         {evsStatusText}
                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2 @sm:grid-cols-3">
                       {STAT_KEYS.map((key) => {
                         const ceiling = maxEvForStat(config.evs, key);
                         return (
@@ -376,7 +393,7 @@ export function DamageAdvancedPanel({
                                   evs: { ...config.evs, [key]: Math.min(ceiling, clampEv(value)) },
                                 });
                               }}
-                              className="rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-sm text-foreground aria-[invalid=true]:border-danger"
+                              className="w-full min-w-0 [appearance:textfield] rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-sm text-foreground aria-[invalid=true]:border-danger [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                           </label>
                         );
@@ -386,7 +403,7 @@ export function DamageAdvancedPanel({
 
                   <div className="flex flex-col gap-2">
                     <span className="text-xs font-semibold text-muted">{labels.ivsLabel}</span>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2 @sm:grid-cols-3">
                       {STAT_KEYS.map((key) => (
                         <label key={key} className="flex flex-col gap-1 text-xs text-muted">
                           {labels.statLabels[key]}
@@ -400,7 +417,7 @@ export function DamageAdvancedPanel({
                               if (Number.isNaN(value)) return;
                               onChange({ ivs: { ...config.ivs, [key]: clampIv(value) } });
                             }}
-                            className="rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-sm text-foreground"
+                            className="w-full min-w-0 [appearance:textfield] rounded-md border border-border-subtle bg-surface px-2 py-1.5 text-sm text-foreground [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           />
                         </label>
                       ))}

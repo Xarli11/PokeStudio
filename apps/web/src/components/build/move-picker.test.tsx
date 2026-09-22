@@ -71,11 +71,12 @@ function renderPicker(
     selectedMoveSlugs?: string[];
     onSelect?: (slug: string) => void;
     onClose?: () => void;
+    surfaceClassName?: string;
   } = {},
 ) {
   const onSelect = options.onSelect ?? vi.fn();
   const onClose = options.onClose ?? vi.fn();
-  render(
+  const { container } = render(
     <MovePicker
       locale={options.locale ?? 'en'}
       moves={MOVES}
@@ -84,9 +85,12 @@ function renderPicker(
       labels={LABELS}
       onSelect={onSelect}
       onClose={onClose}
+      {...(options.surfaceClassName !== undefined
+        ? { surfaceClassName: options.surfaceClassName }
+        : {})}
     />,
   );
-  return { onSelect, onClose };
+  return { onSelect, onClose, container };
 }
 
 function getSearchInput() {
@@ -208,5 +212,36 @@ describe('MovePicker', () => {
     fireEvent.change(getSearchInput(), { target: { value: 'this move does not exist' } });
     expect(getMoveOptions()).toHaveLength(0);
     expect(screen.getByText('No moves match these filters.')).not.toBeNull();
+  });
+});
+
+describe('MovePicker layout (visual review — broken layout hosted in a Damage Lab overlay)', () => {
+  it('gives the search input its own row, never sharing a row with the type filter', () => {
+    renderPicker();
+    const searchRow = getSearchInput().closest('div');
+    const typeFilterRow = screen.getByRole('combobox', { name: 'Type' }).closest('div');
+    expect(searchRow).not.toBe(typeFilterRow);
+  });
+
+  it('keeps the type filter, category filter and cancel control together in one row', () => {
+    renderPicker();
+    const typeFilter = screen.getByRole('combobox', { name: 'Type' });
+    const categoryFilter = screen.getByRole('combobox', { name: 'Category' });
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    expect(typeFilter.parentElement).toBe(categoryFilter.parentElement);
+    expect(typeFilter.parentElement).toBe(cancel.parentElement);
+  });
+
+  it('defaults to the original inline dashed-brand frame (Build usage unaffected)', () => {
+    const { container } = renderPicker();
+    expect(container.querySelector('.border-dashed.border-brand')).not.toBeNull();
+  });
+
+  it('accepts a surfaceClassName override without the dashed-brand frame (Damage Lab overlay usage)', () => {
+    const { container } = renderPicker({
+      surfaceClassName: 'flex flex-col gap-2 rounded-lg border border-border bg-surface-raised p-3',
+    });
+    expect(container.querySelector('.border-dashed')).toBeNull();
+    expect(container.querySelector('.border-brand')).toBeNull();
   });
 });

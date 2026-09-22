@@ -197,26 +197,32 @@ export function CompareAddInput({
                   onMouseDown={(event) => event.preventDefault()}
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => selectSuggestion(suggestion)}
-                  className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left text-sm text-inherit data-[active=true]:bg-surface-hover"
+                  className="flex w-full min-w-0 flex-col items-start gap-1 px-3 py-2 text-left text-sm text-inherit data-[active=true]:bg-surface-hover"
                   data-active={active}
                 >
-                  <span className="w-11 shrink-0 text-xs font-semibold tabular-nums text-muted">
-                    {dexNumberLabel(item.nationalDexNumber)}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-semibold text-foreground">
+                  {/* Name is the primary information (visual review: names
+                      were collapsing to "Ch..."/"C..." to make room for the
+                      dex number and type badges on one line) — its own full-
+                      width row, competing only with the compact dex number,
+                      so an ordinary name is never truncated for badges'
+                      sake. Badges move to a second, wrapping row below. */}
+                  <span className="flex w-full min-w-0 items-baseline gap-2">
+                    <span className="shrink-0 text-xs font-semibold tabular-nums text-muted">
+                      {dexNumberLabel(item.nationalDexNumber)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-semibold text-foreground">
                       {speciesDisplayName(item, locale)}
                     </span>
-                    {contextLabel ? (
-                      <span className="block truncate text-xs text-muted">
-                        {formMatch?.kind === 'ambiguous'
-                          ? `${formatMessage(multipleFormsMatchTemplate, { count: formMatch.aliases.length })} — ${contextLabel}`
-                          : contextLabel}
-                      </span>
-                    ) : null}
                   </span>
+                  {contextLabel ? (
+                    <span className="block w-full truncate pl-[2.75rem] text-xs text-muted">
+                      {formMatch?.kind === 'ambiguous'
+                        ? `${formatMessage(multipleFormsMatchTemplate, { count: formMatch.aliases.length })} — ${contextLabel}`
+                        : contextLabel}
+                    </span>
+                  ) : null}
                   {!isAmbiguous ? (
-                    <span className="flex shrink-0 gap-1">
+                    <span className="flex w-full flex-wrap gap-1 pl-[2.75rem]">
                       {displayTypes.slice(0, 2).map((type) => (
                         <PokemonTypeBadge
                           key={type}
