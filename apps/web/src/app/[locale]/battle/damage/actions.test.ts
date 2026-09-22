@@ -245,3 +245,29 @@ describe('calculateDamageAction', () => {
     expect(response.result.modifiers.isCritical).toBe(true);
   });
 });
+
+describe("'use server' file shape (production incident regression)", () => {
+  it('exports only async functions — a plain-value export breaks every action in this file, not just its own', async () => {
+    // Root cause of the Cloud DEV 500 (fetchAdvancedReferenceData and every
+    // other action in this file): this module has a top-level `'use
+    // server'` directive, which Next.js requires means EVERY export must be
+    // an async function — this file used to also export three plain
+    // constants (DAMAGE_LAB_SIMPLE_LEVEL/_EVS/_IVS), which broke the whole
+    // file's action reference table at the framework level (confirmed by
+    // directly invoking each action's compiled id through the raw Server
+    // Action wire protocol against a real `next dev` build — every action
+    // 500'd identically until the constants were removed). This unit test
+    // can't reproduce that RSC/webpack machinery directly, but it encodes
+    // the actual constraint Next.js enforces
+    // (https://nextjs.org/docs/messages/invalid-use-server-value) so a
+    // future non-function export added to this file fails fast here
+    // instead of silently reaching production.
+    const actionsModule = await import('./actions');
+    for (const [name, value] of Object.entries(actionsModule)) {
+      expect(
+        typeof value === 'function' && value.constructor.name === 'AsyncFunction',
+        `"${name}" is exported from a 'use server' file but is not an async function (got ${typeof value}) — Next.js requires every export of such a file to be an async function.`,
+      ).toBe(true);
+    }
+  });
+});

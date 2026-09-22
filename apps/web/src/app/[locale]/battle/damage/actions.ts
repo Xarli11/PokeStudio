@@ -20,7 +20,6 @@ import {
 } from '@pokestudio/damage';
 import type { PokemonType } from '@pokestudio/pokemon-data';
 
-import { DEFAULT_IVS, MAX_LEVEL, ZERO_EVS } from '@/lib/team-draft';
 import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
 
 /**
@@ -33,12 +32,24 @@ import { getPokemonDatabaseClient } from '@/lib/pokemon-database';
  * strips a Server Action's implementation out of every client bundle that
  * imports this file, replacing it with an RPC stub — that boundary is
  * enforced by the framework, not by an extra import guard.
+ *
+ * A file with the top-level `'use server'` directive may only export async
+ * functions — Next.js wraps every export of such a file as a server
+ * reference, and throws at the reference-table-build step ("A \"use
+ * server\" file can only export async functions, found number" —
+ * https://nextjs.org/docs/messages/invalid-use-server-value) the instant it
+ * finds a non-function one, for *every* action in the file, not just the
+ * one actually being called. This file used to also export three plain
+ * constants (`DAMAGE_LAB_SIMPLE_LEVEL`/`_EVS`/`_IVS`, Simple Mode's fixed
+ * assumptions) that nothing outside this file had imported since Damage
+ * Lab's UI switched to building its own default `DamageAdvancedConfig`
+ * (Fase M3.1C) — a real, reproducible production bug (`fetchAdvancedReferenceData`
+ * 500ing in Cloud DEV; confirmed locally by directly POSTing each action's
+ * id through the raw Server Action wire protocol, which reproduces the
+ * exact same failure for every action exported here, not just this one).
+ * Fixed by deleting the now-dead constants outright, not merely moving
+ * them elsewhere — nothing referenced them any more.
  */
-
-/** Simple Mode's fixed assumptions (task §7) — reused from Build's own constants, not redefined. */
-export const DAMAGE_LAB_SIMPLE_LEVEL = MAX_LEVEL;
-export const DAMAGE_LAB_SIMPLE_EVS = ZERO_EVS;
-export const DAMAGE_LAB_SIMPLE_IVS = DEFAULT_IVS;
 
 export interface AttackerReferenceData {
   form: ComparablePokemonForm | null;
@@ -152,9 +163,9 @@ function toDamageCombatant(combatant: DamageLabCombatantRequest) {
  * (task §17), calls `@pokestudio/damage` directly (never `@smogon/calc`),
  * and returns a plain serializable result. Simple Mode and Advanced share
  * this one path: Simple Mode's fixed assumptions (task §7) are just
- * `DamageAdvancedConfig`'s own default values (`DAMAGE_LAB_SIMPLE_LEVEL`/
- * `_EVS`/`_IVS` below, plus `null` ability/item/nature/tera) — the client
- * builds the same request shape either way, so there is no separate
+ * `DamageAdvancedConfig`'s own default values (`apps/web/src/lib/damage-advanced.ts`'s
+ * `createDefaultAdvancedConfig`) — the client builds the same request shape
+ * either way, so there is no separate
  * "simple" code path here to keep in sync. `DamageInputError` maps to its
  * own `code` (+ `side` when present); anything else is logged server-side
  * and collapsed to a generic `'unknown'` code — no stack trace or internal

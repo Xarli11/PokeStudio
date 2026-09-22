@@ -126,6 +126,8 @@ export default async function DamageLabPage({ params }: { params: Promise<{ loca
             teraSummaryTemplate: dictionary.battle.damageLab.teraSummaryTemplate,
             criticalLabel: dictionary.battle.damageLab.criticalLabel,
             loadingReferenceData: dictionary.build.loadingReferenceData,
+            referenceDataErrorLabel: dictionary.battle.damageLab.advancedReferenceDataError,
+            retryLabel: dictionary.build.retryReferenceDataLabel,
             statAbbr: dictionary.battle.damageLab.statAbbr,
           },
           pokemonSlot: {

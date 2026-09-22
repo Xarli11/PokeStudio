@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useActionState, useEffect, useMemo, useState } from 'react';
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
   ComparablePokemonForm,
@@ -172,19 +172,37 @@ export function DamageLab({
   // Advanced's own reference data (natures/items) — interaction-gated
   // (task §16), fetched at most once, the first time either side's
   // Advanced panel opens. Shared between attacker/defender: natures/items
-  // are global, not per-Pokémon.
-  const [advancedReferenceData, setAdvancedReferenceData] = useState<
-    AdvancedReferenceData | undefined
-  >(undefined);
-  const [advancedReferenceDataLoading, setAdvancedReferenceDataLoading] = useState(false);
+  // are global, not per-Pokémon. A real state machine (idle/loading/
+  // success/error), not two booleans — a rejected fetch used to leave
+  // `loading` stuck `true` forever (production incident: `fetchAdvancedReferenceData`
+  // 500ing left both panels showing "Loading…" indefinitely, with no error
+  // or retry). `startedRef` — not the `status` state — is the request
+  // guard: it's set synchronously the instant a fetch starts, so two
+  // panels opened in the same tick (before React has applied the `loading`
+  // state update) still only ever start one request (task §10).
+  const [advancedReferenceStatus, setAdvancedReferenceStatus] = useState<
+    | { status: 'idle' }
+    | { status: 'loading' }
+    | { status: 'success'; data: AdvancedReferenceData }
+    | { status: 'error' }
+  >({ status: 'idle' });
+  const advancedReferenceFetchStartedRef = useRef(false);
 
   function ensureAdvancedReferenceData(): void {
-    if (advancedReferenceData || advancedReferenceDataLoading) return;
-    setAdvancedReferenceDataLoading(true);
-    fetchAdvancedReferenceData().then((data) => {
-      setAdvancedReferenceData(data);
-      setAdvancedReferenceDataLoading(false);
-    });
+    if (advancedReferenceFetchStartedRef.current) return;
+    advancedReferenceFetchStartedRef.current = true;
+    setAdvancedReferenceStatus({ status: 'loading' });
+    fetchAdvancedReferenceData()
+      .then((data) => {
+        setAdvancedReferenceStatus({ status: 'success', data });
+      })
+      .catch((error: unknown) => {
+        // Server-side detail is already logged by the action itself (task
+        // §13's boundary); this is the client-side symptom only.
+        console.error('fetchAdvancedReferenceData failed', error);
+        advancedReferenceFetchStartedRef.current = false; // allow Retry to try again
+        setAdvancedReferenceStatus({ status: 'error' });
+      });
   }
 
   // Attacker reference data: only fetched once a form is selected (never
@@ -338,8 +356,8 @@ export function DamageLab({
                   return !open;
                 })
               }
-              natures={advancedReferenceData?.natures}
-              items={advancedReferenceData?.items}
+              referenceData={advancedReferenceStatus}
+              onRetryReferenceData={ensureAdvancedReferenceData}
               labels={{ ...labels.advancedPanel, statLabels, typeLabels }}
             />
           ) : null}
@@ -418,8 +436,8 @@ export function DamageLab({
                   return !open;
                 })
               }
-              natures={advancedReferenceData?.natures}
-              items={advancedReferenceData?.items}
+              referenceData={advancedReferenceStatus}
+              onRetryReferenceData={ensureAdvancedReferenceData}
               labels={{ ...labels.advancedPanel, statLabels, typeLabels }}
             />
           ) : null}
