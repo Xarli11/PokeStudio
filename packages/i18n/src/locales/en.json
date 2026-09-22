@@ -438,5 +438,100 @@
     "loadingReferenceData": "Loading…",
     "referenceDataErrorMessage": "Couldn't load Pokémon data.",
     "retryReferenceDataLabel": "Retry"
+  },
+  "battle": {
+    "title": "Battle Lab",
+    "tagline": "Calculate real damage between any two Pokémon, grounded in PokeStudio's own mechanics engine — matchups, traces and full simulation are coming next.",
+    "indexDescription": "Calculate Pokémon damage for any matchup, move and game with PokeStudio's Battle Lab.",
+    "damageLabCardTitle": "Damage Lab",
+    "damageLabCardDescription": "Pick an attacker, a move and a defender — get a real damage range, KO chance and type effectiveness.",
+    "openDamageLab": "Open Damage Lab",
+    "moreComingSoon": "Matchup comparison, structured battle traces and full simulation are planned for later phases.",
+    "damageLab": {
+      "title": "Damage Lab",
+      "tagline": "Calculate real damage between any two Pokémon, using PokeStudio's own mechanics engine.",
+      "indexDescription": "Calculate Pokémon damage for any matchup, move and game — powered by PokeStudio's damage engine.",
+      "gameLabel": "Game",
+      "attackerLabel": "Attacker",
+      "defenderLabel": "Defender",
+      "moveLabel": "Move",
+      "selectPokemonLabel": "Select Pokémon",
+      "changeLabel": "Change",
+      "changePokemonTemplate": "Change {name}",
+      "selectMoveLabel": "Select move",
+      "changeMoveTemplate": "Change {name}",
+      "noMoveSelected": "No move selected",
+      "noLegalMoves": "No damaging moves are learnable in this game.",
+      "cancelLabel": "Cancel",
+      "calculateLabel": "Calculate",
+      "calculatingLabel": "Calculating…",
+      "assumptionsTemplate": "Lv. {level} · {evs} EVs · {ivs} IVs · Neutral nature · No ability · No item",
+      "resultHeading": "Result",
+      "hpRangeTemplate": "{min}–{max} HP",
+      "percentRangeTemplate": "{min}–{max}%",
+      "effectiveness": {
+        "immune": "Immune",
+        "not-very-effective": "Not very effective",
+        "neutral": "Effective",
+        "super-effective": "Super effective"
+      },
+      "stabLabel": "STAB",
+      "criticalLabel": "Critical hit",
+      "koGuaranteedTemplate": "Guaranteed {hits}HKO",
+      "koChanceTemplate": "{chance}% chance to {hits}HKO",
+      "koPossibleTemplate": "Possible {hits}HKO",
+      "koNoDamage": "No damage this calculation.",
+      "detailsLabel": "Details",
+      "debugDescriptionLabel": "Upstream calculation trace (debug)",
+      "modifiers": {
+        "hitsTemplate": "{count} hits",
+        "burned": "Burned",
+        "protected": "Protected",
+        "defenderDynamaxed": "Defender Dynamaxed",
+        "weather": {
+          "sand": "Sandstorm",
+          "sun": "Harsh sunlight",
+          "rain": "Rain",
+          "hail": "Hail",
+          "snow": "Snow",
+          "harsh-sunshine": "Extremely harsh sunlight",
+          "heavy-rain": "Heavy rain",
+          "strong-winds": "Strong winds"
+        },
+        "terrain": {
+          "electric": "Electric Terrain",
+          "grassy": "Grassy Terrain",
+          "psychic": "Psychic Terrain",
+          "misty": "Misty Terrain"
+        },
+        "reflect": "Reflect",
+        "lightScreen": "Light Screen",
+        "auroraVeil": "Aurora Veil",
+        "helpingHand": "Helping Hand",
+        "friendGuard": "Friend Guard",
+        "battery": "Battery",
+        "powerSpot": "Power Spot",
+        "ruinAbility": {
+          "sword": "Sword of Ruin",
+          "beads": "Beads of Ruin",
+          "tablets": "Tablets of Ruin",
+          "vessel": "Vessel of Ruin"
+        }
+      },
+      "errors": {
+        "unknownForm": "That Pokémon isn't available for this calculation.",
+        "unsupportedForm": "This form isn't supported for damage calculations yet.",
+        "unknownMove": "That move isn't available for this calculation.",
+        "unknownAbility": "That ability isn't available for this calculation.",
+        "unknownItem": "That item isn't available for this calculation.",
+        "unknownNature": "That nature isn't available for this calculation.",
+        "naturesNotAvailableInGeneration": "This game doesn't have natures.",
+        "levelOutOfRange": "Level must be between 1 and 100.",
+        "evOutOfRange": "EVs must be between 0 and 252.",
+        "ivOutOfRange": "IVs must be between 0 and 31.",
+        "generationOutOfRange": "This game isn't supported.",
+        "generic": "Something went wrong calculating this. Try again."
+      }
+    }
   }
 }

@@ -832,6 +832,60 @@ export async function getFormLearnsetAllVersionGroups(
   };
 }
 
+/**
+ * A form's legal moves in exactly *one* version group (Damage Lab, task
+ * §10) — deliberately not `getFormLearnsetAllVersionGroups` reused with a
+ * client-side filter: that function fetches a form's *entire* cross-version
+ * learnset in one bounded call (Mew: 1500-2700+ raw rows across every
+ * version group it has data in), which is the right shape for Build's
+ * instant version-switching but far more than Damage Lab's single-game
+ * picker ever needs. Same underlying `pokemon_form_move` index
+ * (`pokemon_form_id`, `version_group_id`) as that function, just filtered
+ * to both ids instead of one.
+ */
+export async function getFormLearnsetForVersionGroup(
+  client: PokeStudioDatabaseClient,
+  formSlug: string,
+  versionGroupSlug: string,
+): Promise<MoveSummary[]> {
+  const [formResult, versionGroupResult] = await Promise.all([
+    client.from('pokemon_form').select('id').eq('slug', formSlug).maybeSingle(),
+    client.from('version_group').select('id').eq('slug', versionGroupSlug).maybeSingle(),
+  ]);
+  if (formResult.error) {
+    throw new Error(`getFormLearnsetForVersionGroup (form) failed: ${formResult.error.message}`);
+  }
+  if (versionGroupResult.error) {
+    throw new Error(
+      `getFormLearnsetForVersionGroup (version group) failed: ${versionGroupResult.error.message}`,
+    );
+  }
+  if (!formResult.data || !versionGroupResult.data) return [];
+
+  const learnsetRows = await selectAllRows<{ move_id: string }>((from, to) =>
+    client
+      .from('pokemon_form_move')
+      .select('move_id')
+      .eq('pokemon_form_id', formResult.data!.id)
+      .eq('version_group_id', versionGroupResult.data!.id)
+      .range(from, to),
+  );
+  if (learnsetRows.length === 0) return [];
+
+  const moveIds = [...new Set(learnsetRows.map((row) => row.move_id))];
+  const movesResult = await client
+    .from('move')
+    .select('id, slug, name_en, name_es, type, damage_class, power, accuracy, pp, priority')
+    .in('id', moveIds);
+  if (movesResult.error) {
+    throw new Error(`getFormLearnsetForVersionGroup (moves) failed: ${movesResult.error.message}`);
+  }
+
+  return movesResult.data
+    .map((row) => toMoveSummary(row as MoveRow))
+    .sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+}
+
 export interface MovePage {
   items: MoveSummary[];
   page: number;
