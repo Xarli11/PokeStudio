@@ -109,7 +109,12 @@ export function PokemonArtSlot({
       }}
     >
       <span
-        className="absolute top-[12%] left-[12%] rounded-tl-[2px]"
+        className={
+          'absolute top-[12%] left-[12%] rounded-tl-[2px]' +
+          (variant === 'tile'
+            ? ' opacity-80 transition-opacity duration-200 ease-ps group-hover:opacity-100 group-focus-visible:opacity-100'
+            : '')
+        }
         style={{
           width: bracketArm,
           height: bracketArm,
@@ -118,7 +123,12 @@ export function PokemonArtSlot({
         }}
       />
       <span
-        className="absolute bottom-[12%] right-[12%] rounded-br-[2px]"
+        className={
+          'absolute right-[12%] bottom-[12%] rounded-br-[2px]' +
+          (variant === 'tile'
+            ? ' opacity-80 transition-opacity duration-200 ease-ps group-hover:opacity-100 group-focus-visible:opacity-100'
+            : '')
+        }
         style={{
           width: bracketArm,
           height: bracketArm,
@@ -127,17 +137,34 @@ export function PokemonArtSlot({
         }}
       />
       {spriteUrl ? (
-        // Fills the frame at a modest inset (not full-bleed) — object-contain
-        // then lets each species' own intrinsic size scale within that box,
-        // so a tall/narrow sprite (Wailord) and a small/square one (Pikachu)
-        // both read clearly without any per-species value here.
+        // Fills the frame at a modest inset (not full-bleed). Explicit
+        // width/height (not just `inset`) matter here: a replaced element
+        // (`<img>`) that's absolutely positioned with all four inset sides
+        // set but no explicit width/height falls back to its *intrinsic*
+        // pixel size (CSS 2.1 §10.3.8) instead of stretching to fill the
+        // inset box — PokéAPI's flat sprite set is ~96×96px, so inside a
+        // wide 2:1 tile frame it rendered tiny and pinned toward the
+        // top-left corner (the over-constrained left/top offsets win over
+        // right/bottom when width/height are also intrinsic). Pairing
+        // `inset-[6%]` with matching `h-[88%] w-[88%]` removes that
+        // ambiguity — the box is always 88% of the frame on every axis,
+        // then `object-contain` fits each species' own aspect ratio inside
+        // it (unaffected either way: Wailord and Pikachu both still read
+        // clearly, no per-species value here). Scoped to `tile` only — the
+        // fixed-pixel `hero`/`detailHero` boxes don't exhibit this (no
+        // sprite call site passes them one yet either), and this PR doesn't
+        // touch their behavior.
         // eslint-disable-next-line @next/next/no-img-element -- see pokemon-sprite.ts's doc comment (same provisional external host Team Builder's roster tile already uses).
         <img
           src={spriteUrl}
           alt=""
           loading="lazy"
           onError={onSpriteError}
-          className="absolute inset-[6%] object-contain [image-rendering:pixelated]"
+          className={
+            variant === 'tile'
+              ? 'absolute inset-[6%] h-[88%] w-[88%] object-contain [image-rendering:pixelated] transition-transform duration-200 ease-ps motion-reduce:transition-none group-hover:-translate-y-[2.5px] group-hover:scale-[1.06] group-focus-visible:-translate-y-[2.5px] group-focus-visible:scale-[1.06] motion-reduce:group-hover:translate-y-0 motion-reduce:group-hover:scale-100 motion-reduce:group-focus-visible:translate-y-0 motion-reduce:group-focus-visible:scale-100'
+              : 'absolute inset-[6%] object-contain [image-rendering:pixelated]'
+          }
         />
       ) : (
         <span
