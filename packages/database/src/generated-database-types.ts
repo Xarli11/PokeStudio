@@ -443,6 +443,7 @@ export type Database = {
           is_default: boolean
           name_en: string
           name_es: string
+          pokeapi_pokemon_id: number | null
           slug: string
           source_id: string
           species_id: string
@@ -457,6 +458,7 @@ export type Database = {
           is_default?: boolean
           name_en: string
           name_es: string
+          pokeapi_pokemon_id?: number | null
           slug: string
           source_id: string
           species_id: string
@@ -471,6 +473,7 @@ export type Database = {
           is_default?: boolean
           name_en?: string
           name_es?: string
+          pokeapi_pokemon_id?: number | null
           slug?: string
           source_id?: string
           species_id?: string

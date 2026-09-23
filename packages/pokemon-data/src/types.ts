@@ -86,6 +86,17 @@ export interface NormalizedForm {
   types: PokemonType[];
   baseStats: BaseStats;
   source: SourceRef;
+  /**
+   * The upstream PokéAPI `pokemon` (variety) resource id this form belongs
+   * to — the id PokéAPI's own sprite set is actually keyed by
+   * (`sprites/pokemon/{id}.png`). Deliberately distinct from
+   * `source.externalId` (the `pokemon-form` resource's own id, used for
+   * this row's upsert identity) — the two ids only coincide for a 1:1
+   * variety/form pair; a species with several cosmetic forms sharing one
+   * variety (Unown, Alcremie) is exactly where they diverge, and the
+   * sprite lookup needs the variety's id, not the form's.
+   */
+  pokeapiPokemonId: number;
 }
 
 export interface DataProvenance {

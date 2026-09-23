@@ -50,6 +50,7 @@ const GARCHOMP_FORM: ComparablePokemonForm = {
     speed: 102,
   },
   abilities: [{ slug: 'rough-skin', nameEn: 'Rough Skin', isHidden: false, slot: 1 }],
+  pokeapiPokemonId: 445,
 };
 
 const FERROTHORN_FORM: ComparablePokemonForm = {
@@ -69,6 +70,7 @@ const FERROTHORN_FORM: ComparablePokemonForm = {
     speed: 20,
   },
   abilities: [{ slug: 'iron-barbs', nameEn: 'Iron Barbs', isHidden: false, slot: 1 }],
+  pokeapiPokemonId: 598,
 };
 
 describe('fetchAttackerReferenceData', () => {

@@ -14,6 +14,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['dragon', 'ground'],
     baseStats: STATS,
     formSlug: 'garchomp',
+    pokeapiPokemonId: 445,
   },
   {
     slug: 'meowth',
@@ -22,6 +23,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['normal'],
     baseStats: STATS,
     formSlug: 'meowth',
+    pokeapiPokemonId: 52,
   },
 ];
 
@@ -32,6 +34,7 @@ const ALIASES: SpeciesSearchAlias[] = [
     speciesSlug: 'meowth',
     types: ['dark'],
     formSlug: 'meowth-alola',
+    pokeapiPokemonId: 10102,
   },
 ];
 
@@ -46,6 +49,7 @@ describe('resolveRosterVisualIdentity', () => {
       isDefaultForm: true,
       displayName: { en: 'Garchomp', es: 'Garchomp' },
       types: ['dragon', 'ground'],
+      pokeapiPokemonId: 445,
     });
   });
 
@@ -57,6 +61,7 @@ describe('resolveRosterVisualIdentity', () => {
       isDefaultForm: false,
       displayName: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
       types: ['dark'],
+      pokeapiPokemonId: 10102,
     });
   });
 
@@ -70,6 +75,7 @@ describe('resolveRosterVisualIdentity', () => {
       speciesSlug: 'not-in-items',
       types: ['normal'],
       formSlug: 'orphan-form',
+      pokeapiPokemonId: 9999,
     };
     const index = { items: ITEMS, aliases: [orphanAlias] };
     expect(resolveRosterVisualIdentity(index, 'orphan-form')).toBeUndefined();

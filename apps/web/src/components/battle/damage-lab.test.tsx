@@ -17,6 +17,7 @@ import {
   fetchAdvancedReferenceData,
   fetchAttackerReferenceData,
   fetchDefenderReferenceData,
+  fetchFormSupportedVersionGroups,
 } from '@/app/[locale]/battle/damage/actions';
 import { LOCALE_CHANGE_EVENT } from '@/lib/locale-navigation';
 import { loadTeamDraft } from '@/lib/team-storage';
@@ -28,6 +29,7 @@ vi.mock('@/app/[locale]/battle/damage/actions', () => ({
   fetchAttackerReferenceData: vi.fn(),
   fetchDefenderReferenceData: vi.fn(),
   fetchAdvancedReferenceData: vi.fn(),
+  fetchFormSupportedVersionGroups: vi.fn(),
   calculateDamageAction: vi.fn(),
 }));
 
@@ -36,6 +38,7 @@ vi.mock('@/lib/team-storage', () => ({ loadTeamDraft: vi.fn() }));
 const mockFetchAttacker = vi.mocked(fetchAttackerReferenceData);
 const mockFetchDefender = vi.mocked(fetchDefenderReferenceData);
 const mockFetchAdvancedReferenceData = vi.mocked(fetchAdvancedReferenceData);
+const mockFetchFormSupportedVersionGroups = vi.mocked(fetchFormSupportedVersionGroups);
 const mockCalculate = vi.mocked(calculateDamageAction);
 const mockLoadTeamDraft = vi.mocked(loadTeamDraft);
 
@@ -53,6 +56,12 @@ beforeEach(() => {
   mockFetchDefender.mockReset();
   mockFetchAdvancedReferenceData.mockReset();
   mockFetchAdvancedReferenceData.mockResolvedValue({ natures: [JOLLY], items: [LIFE_ORB] });
+  mockFetchFormSupportedVersionGroups.mockReset();
+  // Default: the seeded form is supported in every fixture version group,
+  // so the ordinary case (a form that's fine in the default game) never
+  // triggers a game switch — tests that specifically want the "unsupported
+  // in the default game" fallback override this per-test.
+  mockFetchFormSupportedVersionGroups.mockResolvedValue(VERSION_GROUPS);
   mockCalculate.mockReset();
   mockLoadTeamDraft.mockReset();
   sessionStorage.clear();
@@ -70,6 +79,7 @@ const SEARCH_INDEX: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] 
       name: { en: 'Garchomp', es: 'Garchomp' },
       types: ['dragon', 'ground'],
       baseStats: STATS,
+      pokeapiPokemonId: 445,
     },
     {
       slug: 'heatran',
@@ -78,9 +88,31 @@ const SEARCH_INDEX: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] 
       name: { en: 'Heatran', es: 'Heatran' },
       types: ['fire', 'steel'],
       baseStats: STATS,
+      pokeapiPokemonId: 485,
+    },
+    // Representative alternate-form fixture (same shape/values as
+    // compare-view.test.tsx's MEOWTH/MEOWTH_ALOLA_ALIAS pair) — Explore →
+    // Damage Lab must carry the *exact* form, never collapse an alternate
+    // form's seed back to its base species.
+    {
+      slug: 'meowth',
+      formSlug: 'meowth',
+      nationalDexNumber: 52,
+      name: { en: 'Meowth', es: 'Meowth' },
+      types: ['normal'],
+      baseStats: STATS,
+      pokeapiPokemonId: 52,
     },
   ],
-  aliases: [],
+  aliases: [
+    {
+      name: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
+      speciesSlug: 'meowth',
+      types: ['dark'],
+      formSlug: 'meowth-alola',
+      pokeapiPokemonId: 10102,
+    },
+  ],
 };
 
 const VERSION_GROUPS: VersionGroupSummary[] = [
@@ -101,6 +133,7 @@ const GARCHOMP_FORM: ComparablePokemonForm = {
     { slug: 'sand-veil', nameEn: 'Sand Veil', isHidden: false, slot: 1 },
     { slug: 'rough-skin', nameEn: 'Rough Skin', isHidden: false, slot: 2 },
   ],
+  pokeapiPokemonId: 445,
 };
 
 const HEATRAN_FORM: ComparablePokemonForm = {
@@ -113,6 +146,20 @@ const HEATRAN_FORM: ComparablePokemonForm = {
   types: ['fire', 'steel'],
   baseStats: STATS,
   abilities: [{ slug: 'flash-fire', nameEn: 'Flash Fire', isHidden: false, slot: 1 }],
+  pokeapiPokemonId: 485,
+};
+
+const MEOWTH_ALOLA_FORM: ComparablePokemonForm = {
+  formSlug: 'meowth-alola',
+  speciesSlug: 'meowth',
+  nationalDexNumber: 52,
+  speciesName: { en: 'Meowth', es: 'Meowth' },
+  formName: { en: 'Alolan Meowth', es: 'Meowth de Alola' },
+  isDefaultForm: false,
+  types: ['dark'],
+  baseStats: STATS,
+  abilities: [{ slug: 'pickpocket', nameEn: 'Pickpocket', isHidden: false, slot: 1 }],
+  pokeapiPokemonId: 10102,
 };
 
 const EARTHQUAKE: MoveSummary = {
@@ -347,6 +394,7 @@ const STAT_LABELS = {
 function renderDamageLab(
   versionGroups: VersionGroupSummary[] = VERSION_GROUPS,
   importParams?: { teamId: string; memberId: string },
+  exploreAttackerFormSlug?: string | null,
 ) {
   return render(
     <DamageLab
@@ -358,6 +406,7 @@ function renderDamageLab(
       statLabels={STAT_LABELS}
       teamId={importParams?.teamId ?? null}
       memberId={importParams?.memberId ?? null}
+      exploreAttackerFormSlug={exploreAttackerFormSlug ?? null}
       labels={LABELS}
     />,
   );
@@ -1504,5 +1553,232 @@ describe('Damage Lab locale-switch × Build import interaction (review finding)'
       ),
     );
     expect(await screen.findByRole('button', { name: /Dig/ })).not.toBeNull();
+  });
+});
+
+describe('Explore → Damage Lab attacker seed (Phase 3 roadmap, attacker-only)', () => {
+  it('seeds the exact form as attacker, resolved through the existing attacker-fetch pipeline', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'garchomp');
+
+    expect(await screen.findByText('Garchomp')).not.toBeNull();
+    expect(mockFetchAttacker).toHaveBeenCalledWith('garchomp', 'scarlet-violet');
+  });
+
+  it('an alternate form does not collapse to its base species', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: MEOWTH_ALOLA_FORM, moves: [] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'meowth-alola');
+
+    expect(await screen.findByText('Alolan Meowth')).not.toBeNull();
+    // Exact-text match — never collapsed down to the bare species name.
+    expect(screen.queryByText('Meowth')).toBeNull();
+    expect(mockFetchAttacker).toHaveBeenCalledWith('meowth-alola', 'scarlet-violet');
+  });
+
+  it('leaves the defender at its normal default (picker, not a resolved identity)', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'garchomp');
+
+    await screen.findByText('Garchomp');
+    expect(mockFetchDefender).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('combobox', { name: 'Select Pokémon' })).toHaveLength(1);
+  });
+
+  it('leaves the move at its normal default — no move preference to auto-apply', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE, DIG] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'garchomp');
+
+    await screen.findByText('Garchomp');
+    // Attacker moves resolved (Earthquake/Dig legal) but no move chosen —
+    // the ordinary "pick one" trigger, never an auto-selected move.
+    expect(await screen.findByRole('button', { name: 'Select move' })).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /Earthquake/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Dig/ })).toBeNull();
+  });
+
+  it('never shows the Team Builder import banner for an Explore-seeded attacker', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'garchomp');
+
+    await screen.findByText('Garchomp');
+    expect(screen.queryByText('Imported from Team Builder')).toBeNull();
+    expect(screen.queryByText(/· My Team/)).toBeNull();
+  });
+
+  it('a malformed/unknown Explore seed is ignored safely — Damage Lab loads with its normal empty attacker state', async () => {
+    renderDamageLab(VERSION_GROUPS, undefined, 'not-a-real-form-slug');
+
+    expect(mockFetchAttacker).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('combobox', { name: 'Select Pokémon' })).toHaveLength(2);
+    expect(screen.queryByText('Imported from Team Builder')).toBeNull();
+  });
+
+  it('a valid Build team/member import takes precedence over an Explore attacker seed present in the same URL', async () => {
+    mockLoadTeamDraft.mockReturnValue(makeTeamDraft()); // imports Garchomp (member-1)
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, { teamId: 'team-1', memberId: 'member-1' }, 'heatran');
+
+    expect(await screen.findByText('Imported from Team Builder')).not.toBeNull();
+    expect(mockFetchAttacker).toHaveBeenCalledWith('garchomp', 'scarlet-violet');
+    expect(mockFetchAttacker).not.toHaveBeenCalledWith('heatran', expect.anything());
+  });
+
+  it('an Explore seed still applies when the Build params in the same URL do not resolve to a real member', async () => {
+    mockLoadTeamDraft.mockReturnValue(null); // team-not-found
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, { teamId: 'ghost-team', memberId: 'member-1' }, 'garchomp');
+
+    expect(await screen.findByText('Garchomp')).not.toBeNull();
+    expect(screen.queryByText('Imported from Team Builder')).toBeNull();
+    expect(mockFetchAttacker).toHaveBeenCalledWith('garchomp', 'scarlet-violet');
+  });
+
+  it('an Explore-seeded attacker survives a locale switch through the existing locale handoff, with no import banner reappearing', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    const view = renderDamageLab(VERSION_GROUPS, undefined, 'garchomp');
+    await screen.findByText('Garchomp');
+
+    switchLocale(view, '/es/battle/damage');
+    renderDamageLab();
+
+    expect(await screen.findByText('Garchomp')).not.toBeNull();
+    expect(screen.queryByText('Imported from Team Builder')).toBeNull();
+  });
+
+  it('resolves the seeded form to its real sprite — the same production PokéAPI family Explore already uses, via its exact-form id', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'garchomp');
+
+    await screen.findByText('Garchomp');
+    const img = document.querySelector('img[alt=""]') as HTMLImageElement;
+    expect(img).not.toBeNull();
+    expect(img.src).toBe(
+      'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/445.png',
+    );
+  });
+
+  it('resolves an alternate-form seed to its own exact sprite, never a PokéSprite/box URL and never the base species', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: MEOWTH_ALOLA_FORM, moves: [] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'meowth-alola');
+
+    await screen.findByText('Alolan Meowth');
+    const img = document.querySelector('img[alt=""]') as HTMLImageElement;
+    expect(img).not.toBeNull();
+    expect(img.src).toBe(
+      'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10102.png',
+    );
+    expect(img.src).not.toContain('pokesprite');
+    expect(img.src).not.toContain('/52.png');
+  });
+
+  it('the selected alternate-form name is not truncated — a normal name like "Alolan Meowth" stays fully readable', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: MEOWTH_ALOLA_FORM, moves: [] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'meowth-alola');
+
+    const nameEl = await screen.findByText('Alolan Meowth');
+    expect(nameEl.className).not.toContain('truncate');
+  });
+});
+
+describe('Explore → Damage Lab compatible-game fallback (Phase 3 roadmap)', () => {
+  it('keeps the default game when the seeded form is supported there', async () => {
+    mockFetchFormSupportedVersionGroups.mockResolvedValue(VERSION_GROUPS); // includes scarlet-violet
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'garchomp');
+
+    await screen.findByText('Garchomp');
+    expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+      'scarlet-violet',
+    );
+    expect(mockFetchAttacker).toHaveBeenCalledWith('garchomp', 'scarlet-violet');
+  });
+
+  it('automatically switches to the most recent version group the form actually supports when the default game does not support it, and preserves the exact form', async () => {
+    // Only sword-shield (the older of the two fixture games) has data for
+    // this form — the exact shape a Mega Evolution/older-game-only form
+    // seed produces against Damage Lab's modern default game.
+    mockFetchFormSupportedVersionGroups.mockResolvedValue([
+      VERSION_GROUPS.find((vg) => vg.slug === 'sword-shield')!,
+    ]);
+    mockFetchAttacker.mockResolvedValue({ form: MEOWTH_ALOLA_FORM, moves: [] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'meowth-alola');
+
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+        'sword-shield',
+      ),
+    );
+    // Exact form preserved through the switch — never collapsed to the
+    // base species, never silently dropped.
+    expect(await screen.findByText('Alolan Meowth')).not.toBeNull();
+    expect(mockFetchAttacker).toHaveBeenCalledWith('meowth-alola', 'sword-shield');
+    expect(mockFetchAttacker).not.toHaveBeenCalledWith('meowth-alola', 'scarlet-violet');
+  });
+
+  it('stays on the default game (and never crashes) when the form has no learnset data for any Damage Lab game at all', async () => {
+    mockFetchFormSupportedVersionGroups.mockResolvedValue([]);
+    mockFetchAttacker.mockResolvedValue({ form: MEOWTH_ALOLA_FORM, moves: [] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'meowth-alola');
+
+    expect(await screen.findByText('Alolan Meowth')).not.toBeNull();
+    expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+      'scarlet-violet',
+    );
+    expect(screen.queryByText('No damaging moves are learnable in this game.')).not.toBeNull();
+  });
+
+  it('the automatic game switch happens once and does not override a later manual game change', async () => {
+    mockFetchFormSupportedVersionGroups.mockResolvedValue([
+      VERSION_GROUPS.find((vg) => vg.slug === 'sword-shield')!,
+    ]);
+    mockFetchAttacker.mockResolvedValue({ form: MEOWTH_ALOLA_FORM, moves: [] });
+    renderDamageLab(VERSION_GROUPS, undefined, 'meowth-alola');
+
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+        'sword-shield',
+      ),
+    );
+
+    // Manual change back to the other game, after the automatic switch has
+    // already landed.
+    fireEvent.change(screen.getByRole('combobox', { name: 'Game' }), {
+      target: { value: 'scarlet-violet' },
+    });
+    expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+      'scarlet-violet',
+    );
+
+    // Give any stray effect a chance to fire, then confirm the manual
+    // choice was never reverted.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+      'scarlet-violet',
+    );
+  });
+
+  it('locale handoff preserves the automatically selected game and the exact form', async () => {
+    mockFetchFormSupportedVersionGroups.mockResolvedValue([
+      VERSION_GROUPS.find((vg) => vg.slug === 'sword-shield')!,
+    ]);
+    mockFetchAttacker.mockResolvedValue({ form: MEOWTH_ALOLA_FORM, moves: [] });
+    const view = renderDamageLab(VERSION_GROUPS, undefined, 'meowth-alola');
+
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+        'sword-shield',
+      ),
+    );
+    await screen.findByText('Alolan Meowth');
+
+    switchLocale(view, '/es/battle/damage');
+    renderDamageLab();
+
+    await waitFor(() =>
+      expect((screen.getByRole('combobox', { name: 'Game' }) as HTMLSelectElement).value).toBe(
+        'sword-shield',
+      ),
+    );
+    expect(await screen.findByText('Alolan Meowth')).not.toBeNull();
   });
 });

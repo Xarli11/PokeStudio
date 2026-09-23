@@ -6,6 +6,60 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Explore → Damage Lab, attacker-only (2026-09-23)
+
+Phase 3 roadmap item shipped: from a Pokémon/form's Explore detail page, "Open in Damage Lab" /
+"Abrir en Damage Lab" opens Damage Lab with that exact form preselected as the attacker —
+including alternate forms (a regional/other-form section links its own form, never the base
+species). Deliberately attacker-only for this milestone: defender, move and Advanced configuration
+all stay at their normal defaults, and no Team Builder-style import banner appears (this isn't a
+saved set, just the Pokémon already being viewed).
+
+Navigation contract: `/battle/damage?attacker=<formSlug>`, the same stable-slug convention
+Compare's own `?pokemon=` link already uses — never a localized display name. Reuses Damage Lab's
+existing attacker-loading pipeline end to end (the same client-side search-index resolution Build's
+own import already trusts, then the same fetch/validation Damage Lab always runs for a selected
+attacker) — no parallel Pokémon-loading mechanism, no new state-transfer system. An unknown or
+malformed `attacker` value is silently ignored; Damage Lab loads with its ordinary empty attacker
+state, never an error for what's an optional seed. If a URL somehow carries both a valid Build
+`team`/`member` import and an `attacker` seed, the valid Build import wins. The existing PR #25
+locale-switch handoff preserves the resulting Damage Lab state exactly as it already does for a
+manual selection — no second locale-state mechanism.
+
+Follow-up integration pass (manual browser testing): Explore's detail page and Damage Lab's compact
+identity card were both still rendering a monogram for real, known Pokémon/forms. Root causes were
+two separate gaps — Explore never wired a sprite URL into `art-slot.tsx` at all, and `'modern'`
+(PokéAPI's own flat sprite set, already Explore's grid and Build roster's production source) is keyed
+by PokéAPI's `pokemon` (variety) resource id, which the ingestion pipeline was discarding in favor of
+a different id (the separate `pokemon-form` resource's own id) that only coincides with it for a 1:1
+variety/form pair — so a non-default form (Charizard and Mega Charizard Y share a National Dex
+number) had no way to resolve its own exact sprite from that source at all. Fixed at the source
+instead of switching visual families: a new ingested column,
+`pokemon_form.pokeapi_pokemon_id` (migration `20260923120000_pokemon_form_sprite_identity.sql`,
+captured from `variety.pokemon.id` in `packages/pokemon-data`), threaded through
+`packages/database`'s form-shaped return types into `getPokemonSprite()`'s existing `'modern'`
+resolution — Explore's detail page, Damage Lab (manual selection, Build import and Explore seeding
+alike, all through the one `DamagePokemonSlot`) and Build's own roster tile all now resolve the exact
+form's sprite from the same PokéAPI sprite family Explore's grid already used, never a different
+source. A form with no known sprite (a generation gap in that set) or a genuine image load failure
+still falls back to the existing monogram placeholder, never a broken image or a crash — Explore's
+detail page stays a Server Component throughout; only a small new leaf (`PokemonFormArt`) owns the
+`<img onError>` state, not the whole section. Also fixed: the compact identity card no longer
+truncates a normal alternate-form name (e.g. "Mega Charizard Y") — it wraps instead. Finally, an
+Explore seed now checks whether Damage Lab's default game actually supports the exact seeded form
+(via the same per-form learnset data the Explore Moves section already queries) and automatically
+switches to the most recent version group that does, so a form like a Mega Evolution no longer lands
+in a game where it has zero legal moves — Build → Damage Lab's own game selection is unaffected.
+
+Final presentation pass: Damage Lab's artwork slot trimmed slightly (~120px at `lg`, ~128px at
+`xl`+, down from ~128/~144px) so large forms like Mega Charizard Y no longer dominate the card —
+Explore's own sprite sizes are unchanged. Also fixed non-default Gigantamax forms exposing the raw
+technical descriptor as their display name (e.g. "Venusaur (gmax)"); `resolveFormName` now composes
+the real Nintendo localization pattern for any `form_name === 'gmax'` form — "Gigantamax {species}"
+(English, matching what PokéAPI already provides directly) / "{species} Gigamax" (Spanish, which
+PokéAPI never localizes) — form slugs, sprite identity and routing are untouched. Mega/regional/other
+composed-fallback names are out of scope and unchanged.
+
 ### Damage Lab result copy, Advanced panel and battle-stage UI fixes (2026-09-22)
 
 Corrective UI/UX patch from a manual visual review of the merged Damage Lab — not new Phase 3

@@ -63,13 +63,34 @@ export default async function DamageLabPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  /** Build → Damage Lab import (Fase M3.2) — opaque local ids only, never metadata/canonical inputs (task §5). The server can't resolve localStorage; these are handed to the client component as-is. */
-  searchParams: Promise<{ team?: string; member?: string }>;
+  /**
+   * Build → Damage Lab import (Fase M3.2) — opaque local ids only, never
+   * metadata/canonical inputs (task §5). The server can't resolve
+   * localStorage; these are handed to the client component as-is.
+   *
+   * `attacker` — Explore → Damage Lab (Phase 3 roadmap, attacker-only): a
+   * stable form slug, same contract Compare's `?pokemon=` already uses
+   * (never a localized display name). Passed through unvalidated, same as
+   * `team`/`member` — `DamageLab` resolves it against `searchIndex`
+   * (already fetched below either way) before ever seeding it as the
+   * attacker, so this stays exactly as defensive as the existing imports
+   * without a second, server-side validation path.
+   */
+  searchParams: Promise<{ team?: string; member?: string; attacker?: string }>;
 }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const dictionary = getDictionary(locale);
-  const { team: teamId, member: memberId } = await searchParams;
+  const {
+    team: teamId,
+    member: memberId,
+    attacker: exploreAttackerFormSlugRaw,
+  } = await searchParams;
+  // Same normalization Compare's own `?pokemon=` parsing already applies —
+  // form slugs are canonically lowercase; `DamageLab` still validates the
+  // result against the search index regardless (task §6: never trust a URL
+  // value outright).
+  const exploreAttackerFormSlug = exploreAttackerFormSlugRaw?.trim().toLowerCase() || null;
 
   const client = getPokemonDatabaseClient();
   const [searchIndex, versionGroups] = await Promise.all([
@@ -94,6 +115,7 @@ export default async function DamageLabPage({
         statLabels={dictionary.pokedex.stat}
         teamId={teamId ?? null}
         memberId={memberId ?? null}
+        exploreAttackerFormSlug={exploreAttackerFormSlug}
         labels={{
           gameLabel: dictionary.battle.damageLab.gameLabel,
           generationOptionTemplate: dictionary.moves.generation,

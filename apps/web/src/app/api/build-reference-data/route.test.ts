@@ -31,6 +31,7 @@ const FAKE_SEARCH_INDEX: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAli
         specialDefense: 65,
         speed: 45,
       },
+      pokeapiPokemonId: 1,
     },
   ],
   aliases: [],

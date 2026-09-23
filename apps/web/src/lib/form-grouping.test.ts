@@ -20,6 +20,7 @@ function makeForm(overrides: Partial<SpeciesFormDetail> = {}): SpeciesFormDetail
       speed: 64,
     },
     abilities: [],
+    pokeapiPokemonId: 1,
     ...overrides,
   };
 }

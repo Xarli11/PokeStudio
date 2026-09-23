@@ -102,6 +102,7 @@ export default async function PokemonIndexPage({
             types: item.defaultForm.types,
             baseStats: item.defaultForm.baseStats,
             formSlug: item.defaultForm.slug,
+            pokeapiPokemonId: item.defaultForm.pokeapiPokemonId,
           })),
           page: result.page,
           totalPages: result.totalPages,

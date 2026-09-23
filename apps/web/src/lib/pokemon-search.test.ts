@@ -25,6 +25,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['grass', 'poison'],
     baseStats: STATS,
     formSlug: 'bulbasaur',
+    pokeapiPokemonId: 1,
   },
   {
     slug: 'pikachu',
@@ -33,6 +34,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['electric'],
     baseStats: STATS,
     formSlug: 'pikachu',
+    pokeapiPokemonId: 25,
   },
   {
     slug: 'mewtwo',
@@ -41,6 +43,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['psychic'],
     baseStats: STATS,
     formSlug: 'mewtwo',
+    pokeapiPokemonId: 150,
   },
   {
     slug: 'meowth',
@@ -49,6 +52,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['normal'],
     baseStats: STATS,
     formSlug: 'meowth',
+    pokeapiPokemonId: 52,
   },
 ];
 
@@ -59,12 +63,14 @@ const ALIASES: SpeciesSearchAlias[] = [
     speciesSlug: 'meowth',
     types: ['dark'],
     formSlug: 'meowth-alola',
+    pokeapiPokemonId: 10102,
   },
   {
     name: { en: 'Galarian Meowth', es: 'Meowth de Galar' },
     speciesSlug: 'meowth',
     types: ['steel'],
     formSlug: 'meowth-galar',
+    pokeapiPokemonId: 10101,
   },
 ];
 
@@ -158,6 +164,7 @@ describe('filterSpeciesSearchIndex', () => {
         types: ['normal'],
         baseStats: STATS,
         formSlug: 'accentmon',
+        pokeapiPokemonId: 500,
       },
     ];
     expect(filterSpeciesSearchIndex(items, [], 'camion', 'es').map((m) => m.item.slug)).toEqual([
@@ -212,6 +219,7 @@ describe('getPokemonSuggestions', () => {
       types: ['psychic'],
       baseStats: STATS,
       formSlug: 'mew',
+      pokeapiPokemonId: 151,
     },
     {
       slug: 'mewtwo',
@@ -220,6 +228,7 @@ describe('getPokemonSuggestions', () => {
       types: ['psychic'],
       baseStats: STATS,
       formSlug: 'mewtwo',
+      pokeapiPokemonId: 150,
     },
     {
       slug: 'charmander',
@@ -228,6 +237,7 @@ describe('getPokemonSuggestions', () => {
       types: ['fire'],
       baseStats: STATS,
       formSlug: 'charmander',
+      pokeapiPokemonId: 4,
     },
     {
       slug: 'charmeleon',
@@ -236,6 +246,7 @@ describe('getPokemonSuggestions', () => {
       types: ['fire'],
       baseStats: STATS,
       formSlug: 'charmeleon',
+      pokeapiPokemonId: 5,
     },
     {
       slug: 'charizard',
@@ -244,6 +255,7 @@ describe('getPokemonSuggestions', () => {
       types: ['fire', 'flying'],
       baseStats: STATS,
       formSlug: 'charizard',
+      pokeapiPokemonId: 6,
     },
     {
       slug: 'meowth',
@@ -252,6 +264,7 @@ describe('getPokemonSuggestions', () => {
       types: ['normal'],
       baseStats: STATS,
       formSlug: 'meowth',
+      pokeapiPokemonId: 52,
     },
   ];
 
@@ -283,6 +296,7 @@ describe('getPokemonSuggestions', () => {
         types: ['steel'],
         baseStats: STATS,
         formSlug: 'armorpoke',
+        pokeapiPokemonId: 999,
       },
     ];
     const result = getPokemonSuggestions(items, ALIASES, 'arm', 'en');
@@ -302,6 +316,7 @@ describe('getPokemonSuggestions', () => {
         speciesSlug: 'meowth',
         types: ['dark'],
         formSlug: 'meowth-alola',
+        pokeapiPokemonId: 10102,
       },
     });
   });
@@ -339,6 +354,7 @@ describe('getPokemonSuggestions', () => {
           speciesSlug: 'meowth',
           types: ['dark'],
           formSlug: 'meowth-alola',
+          pokeapiPokemonId: 10102,
         },
       });
     });
@@ -353,6 +369,7 @@ describe('getPokemonSuggestions', () => {
           speciesSlug: 'meowth',
           types: ['steel'],
           formSlug: 'meowth-galar',
+          pokeapiPokemonId: 10101,
         },
       });
     });
@@ -367,6 +384,7 @@ describe('getPokemonSuggestions', () => {
           speciesSlug: 'meowth',
           types: ['dark'],
           formSlug: 'meowth-alola',
+          pokeapiPokemonId: 10102,
         },
       });
     });
@@ -385,6 +403,7 @@ describe('getPokemonSuggestions', () => {
       types: ['normal'],
       baseStats: STATS,
       formSlug: `test-${i}`,
+      pokeapiPokemonId: 900 + i,
     }));
     expect(getPokemonSuggestions(manyItems, [], 'testmon', 'en')).toHaveLength(
       MAX_POKEMON_SUGGESTIONS,
@@ -422,6 +441,7 @@ describe('getPokemonSuggestions', () => {
         types: ['normal'],
         baseStats: STATS,
         formSlug: 'high-dex-locale',
+        pokeapiPokemonId: 20,
       },
       {
         slug: 'low-dex-source',
@@ -430,6 +450,7 @@ describe('getPokemonSuggestions', () => {
         types: ['normal'],
         baseStats: STATS,
         formSlug: 'low-dex-source',
+        pokeapiPokemonId: 10,
       },
     ];
     const aliases: SpeciesSearchAlias[] = [
@@ -439,6 +460,7 @@ describe('getPokemonSuggestions', () => {
         speciesSlug: 'high-dex-locale',
         types: ['normal'],
         formSlug: 'high-dex-locale-alt',
+        pokeapiPokemonId: 10020,
       },
       // en field starts with "forma"; es field does not.
       {
@@ -446,6 +468,7 @@ describe('getPokemonSuggestions', () => {
         speciesSlug: 'low-dex-source',
         types: ['normal'],
         formSlug: 'low-dex-source-alt',
+        pokeapiPokemonId: 10010,
       },
     ];
 
@@ -487,6 +510,7 @@ describe('applyPokemonIndexFilters (Explore Pro, Milestone 2 Stage 2A)', () => {
       speed: 45,
     },
     formSlug: 'bulbasaur',
+    pokeapiPokemonId: 1,
   };
   const charmander: SpeciesSearchItem = {
     slug: 'charmander',
@@ -502,6 +526,7 @@ describe('applyPokemonIndexFilters (Explore Pro, Milestone 2 Stage 2A)', () => {
       speed: 65,
     },
     formSlug: 'charmander',
+    pokeapiPokemonId: 4,
   };
   const charizard: SpeciesSearchItem = {
     slug: 'charizard',
@@ -517,6 +542,7 @@ describe('applyPokemonIndexFilters (Explore Pro, Milestone 2 Stage 2A)', () => {
       speed: 100,
     },
     formSlug: 'charizard',
+    pokeapiPokemonId: 6,
   };
   const squirtle: SpeciesSearchItem = {
     slug: 'squirtle',
@@ -532,6 +558,7 @@ describe('applyPokemonIndexFilters (Explore Pro, Milestone 2 Stage 2A)', () => {
       speed: 43,
     },
     formSlug: 'squirtle',
+    pokeapiPokemonId: 7,
   };
   const ALL: SpeciesSearchMatch[] = [bulbasaur, charmander, charizard, squirtle].map((item) => ({
     item,

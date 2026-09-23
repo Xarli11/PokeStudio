@@ -30,6 +30,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['grass', 'poison'],
     baseStats: STATS,
     formSlug: 'bulbasaur',
+    pokeapiPokemonId: 1,
   },
   {
     slug: 'pikachu',
@@ -38,6 +39,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['electric'],
     baseStats: STATS,
     formSlug: 'pikachu',
+    pokeapiPokemonId: 25,
   },
   {
     slug: 'mewtwo',
@@ -46,6 +48,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['psychic'],
     baseStats: STATS,
     formSlug: 'mewtwo',
+    pokeapiPokemonId: 150,
   },
   {
     slug: 'meowth',
@@ -54,6 +57,7 @@ const ITEMS: SpeciesSearchItem[] = [
     types: ['normal'],
     baseStats: STATS,
     formSlug: 'meowth',
+    pokeapiPokemonId: 52,
   },
 ];
 
@@ -65,12 +69,14 @@ const ALIASES: SpeciesSearchAlias[] = [
     speciesSlug: 'meowth',
     types: ['dark'],
     formSlug: 'meowth-alola',
+    pokeapiPokemonId: 10102,
   },
   {
     name: { en: 'Galarian Meowth', es: 'Meowth de Galar' },
     speciesSlug: 'meowth',
     types: ['steel'],
     formSlug: 'meowth-galar',
+    pokeapiPokemonId: 10101,
   },
 ];
 
@@ -171,6 +177,7 @@ describe('PokemonExplorer search combobox', () => {
       types: ['normal'],
       baseStats: STATS,
       formSlug: `test-${i}`,
+      pokeapiPokemonId: 900 + i,
     }));
     renderExplorer(manyItems, []);
     fireEvent.change(getInput(), { target: { value: 'testmon' } });

@@ -82,6 +82,7 @@ const CHARIZARD: ComparablePokemonForm = {
     { slug: 'blaze', nameEn: 'Blaze', isHidden: false, slot: 1 },
     { slug: 'solar-power', nameEn: 'Solar Power', isHidden: true, slot: 3 },
   ],
+  pokeapiPokemonId: 6,
 };
 
 const BULBASAUR: ComparablePokemonForm = {
@@ -94,6 +95,7 @@ const BULBASAUR: ComparablePokemonForm = {
   types: ['grass', 'poison'],
   baseStats: { hp: 45, attack: 49, defense: 49, specialAttack: 65, specialDefense: 65, speed: 45 },
   abilities: [{ slug: 'overgrow', nameEn: 'Overgrow', isHidden: false, slot: 1 }],
+  pokeapiPokemonId: 1,
 };
 
 const MEOWTH_FORM: ComparablePokemonForm = {
@@ -106,6 +108,7 @@ const MEOWTH_FORM: ComparablePokemonForm = {
   types: ['normal'],
   baseStats: { hp: 40, attack: 45, defense: 35, specialAttack: 40, specialDefense: 40, speed: 90 },
   abilities: [{ slug: 'pickup', nameEn: 'Pickup', isHidden: false, slot: 1 }],
+  pokeapiPokemonId: 52,
 };
 
 const MEOWTH: SpeciesSearchItem = {
@@ -115,6 +118,7 @@ const MEOWTH: SpeciesSearchItem = {
   name: { en: 'Meowth', es: 'Meowth' },
   types: ['normal'],
   baseStats: { hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 },
+  pokeapiPokemonId: 52,
 };
 
 const MEOWTH_ALOLA_ALIAS: SpeciesSearchAlias = {
@@ -122,6 +126,7 @@ const MEOWTH_ALOLA_ALIAS: SpeciesSearchAlias = {
   speciesSlug: 'meowth',
   types: ['dark'],
   formSlug: 'meowth-alola',
+  pokeapiPokemonId: 10102,
 };
 
 function renderCompareView(

@@ -454,6 +454,7 @@
       "title": "Damage Lab",
       "tagline": "Calcula el daño real entre dos Pokémon con el motor de mecánicas propio de PokeStudio.",
       "indexDescription": "Calcula el daño de cualquier enfrentamiento, movimiento y juego — con el motor de daño de PokeStudio.",
+      "entryLink": "Abrir en Damage Lab",
       "gameLabel": "Juego",
       "attackerLabel": "Atacante",
       "defenderLabel": "Defensor",

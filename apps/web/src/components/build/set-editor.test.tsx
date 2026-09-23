@@ -27,6 +27,7 @@ const GARCHOMP_FORM: ComparablePokemonForm = {
     speed: 102,
   },
   abilities: [{ slug: 'rough-skin', nameEn: 'Rough Skin', isHidden: false, slot: 1 }],
+  pokeapiPokemonId: 445,
 };
 
 const LABELS: SetEditorLabels = {

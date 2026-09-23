@@ -23,6 +23,7 @@ function form(overrides: Partial<NormalizedForm> = {}): NormalizedForm {
     types: ['grass'],
     baseStats: { hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 },
     source: { sourceId: 'pokeapi', externalId: '1' },
+    pokeapiPokemonId: 1,
     ...overrides,
   };
 }
