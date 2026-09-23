@@ -59,6 +59,7 @@ function makeDataset(
             speed: 2,
           },
           source: { sourceId: TEST_SOURCE_ID, externalId: 'form-90002' },
+          pokeapiPokemonId: 90002,
         },
       ]
     : [];
@@ -90,6 +91,7 @@ function makeDataset(
         types: ['normal'],
         baseStats: { hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 },
         source: { sourceId: TEST_SOURCE_ID, externalId: 'form-90001' },
+        pokeapiPokemonId: 90001,
       },
       ...secondForm,
     ],

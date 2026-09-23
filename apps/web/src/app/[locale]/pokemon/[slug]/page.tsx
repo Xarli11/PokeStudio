@@ -22,6 +22,7 @@ import { PokemonMovesSection, type MovesExplorerMove } from '@/components/pokemo
 import { getCachedSpeciesBySlug, getPokemonDatabaseClient } from '@/lib/pokemon-database';
 import { partitionOtherForms } from '@/lib/form-grouping';
 import { pickDefaultVersionGroup } from '@/lib/moves-explorer';
+import { getPokemonSprite } from '@/lib/pokemon-sprite';
 import { buttonClass, cardClass, eyebrowClass, tagClass } from '@/lib/ui-classes';
 import { versionGroupDisplayName } from '@/lib/version-group-label';
 
@@ -42,6 +43,8 @@ function dexNumberLabel(n: number): string {
 
 function formSectionProps(
   form: SpeciesFormDetail,
+  speciesSlug: string,
+  nationalDexNumber: number,
   locale: 'en' | 'es',
   dictionary: ReturnType<typeof getDictionary>,
   variant: 'primary' | 'secondary',
@@ -49,6 +52,23 @@ function formSectionProps(
   return {
     id: form.slug,
     name: form.name[locale],
+    // The same production PokéAPI sprite family Explore's own grid already
+    // uses (`getPokemonSprite()`, `'modern'`) — not a different visual
+    // source. `form.pokeapiPokemonId` is the exact-form fix: the upstream
+    // `pokemon` resource id this form belongs to, which `'modern'`'s sprite
+    // set is actually keyed by, as opposed to the National Dex number every
+    // form of one species shares (Charizard and Mega Charizard Y are both
+    // #6). `undefined` for a genuine gap (no exact id yet and not a default
+    // form, or a species PokéAPI's set doesn't cover) — `PokemonFormArt`'s
+    // own `<img onError>` handles a load failure on top of that; both
+    // degrade to the monogram, never a broken image or a crash.
+    spriteUrl: getPokemonSprite({
+      formSlug: form.slug,
+      speciesSlug,
+      nationalDexNumber,
+      isDefaultForm: form.isDefault,
+      pokeapiPokemonId: form.pokeapiPokemonId,
+    }),
     categoryLabel: dictionary.pokedex.formCategory[form.category],
     types: form.types.map((type) => ({ type, label: dictionary.types[type] })),
     stats: form.baseStats,
@@ -83,6 +103,14 @@ function formSectionProps(
     hiddenAbilityLabel: dictionary.pokedex.hiddenAbility,
     noAbilityDescriptionLabel: dictionary.pokedex.noAbilityDescription,
     fallbackLanguageLabel: dictionary.pokedex.descriptionFallbackLanguage,
+    // Phase 3 "Explore → Damage Lab" (attacker-only): this exact form's
+    // own stable slug, never the localized `name` above — same contract
+    // Compare's own `?pokemon=` link already uses one row up. `damage-lab.tsx`
+    // resolves it against the search index before ever seeding it as the
+    // attacker, so an unsupported/stale slug degrades to Damage Lab's
+    // normal empty state rather than an error.
+    damageLabHref: `/${locale}/battle/damage?attacker=${form.slug}`,
+    damageLabLabel: dictionary.battle.damageLab.entryLink,
     variant,
   } as const;
 }
@@ -203,7 +231,16 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
         <h1 className="m-0 text-3xl tracking-tight">{species.name[locale]}</h1>
       </header>
 
-      <PokemonFormSection {...formSectionProps(defaultForm, locale, dictionary, 'primary')} />
+      <PokemonFormSection
+        {...formSectionProps(
+          defaultForm,
+          species.slug,
+          species.nationalDexNumber,
+          locale,
+          dictionary,
+          'primary',
+        )}
+      />
 
       <PokemonMovesSection
         moves={movesExplorerMoves}
@@ -269,7 +306,14 @@ export default async function PokemonDetailPage({ params }: { params: Promise<Pa
           {distinctForms.map((form) => (
             <PokemonFormSection
               key={form.slug}
-              {...formSectionProps(form, locale, dictionary, 'secondary')}
+              {...formSectionProps(
+                form,
+                species.slug,
+                species.nationalDexNumber,
+                locale,
+                dictionary,
+                'secondary',
+              )}
             />
           ))}
 

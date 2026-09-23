@@ -221,6 +221,7 @@ describe('team status badges (manual review v2, §9: persistence never implies l
         speed: 102,
       },
       abilities: [{ slug: 'rough-skin', nameEn: 'Rough Skin', isHidden: false, slot: 1 }],
+      pokeapiPokemonId: 445,
     };
     fetchTeamMemberReferenceData.mockResolvedValue({ forms: [GARCHOMP_FORM], learnsets: {} });
 

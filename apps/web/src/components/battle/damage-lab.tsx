@@ -26,6 +26,7 @@ import {
   fetchAdvancedReferenceData,
   fetchAttackerReferenceData,
   fetchDefenderReferenceData,
+  fetchFormSupportedVersionGroups,
   type AdvancedReferenceData,
   type DamageLabCalculationRequest,
   type DamageLabCalculationResponse,
@@ -151,6 +152,7 @@ export function DamageLab({
   labels,
   teamId = null,
   memberId = null,
+  exploreAttackerFormSlug = null,
 }: {
   locale: Locale;
   searchIndex: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] };
@@ -162,6 +164,15 @@ export function DamageLab({
   /** Build → Damage Lab one-way import (Fase M3.2) — both present, or the import is skipped entirely (task §5/§23: normal usage without these params must behave exactly as before). */
   teamId?: string | null;
   memberId?: string | null;
+  /**
+   * Explore → Damage Lab, attacker-only (Phase 3 roadmap). One-way,
+   * one-time: seeds `attackerFormSlug` only — never the defender, move or
+   * Advanced config, and never an import banner (unlike Build's own
+   * import, this isn't "a saved set," just "the Pokémon already being
+   * viewed"). A valid Build import always wins if both are somehow present
+   * in the URL; see the effect below.
+   */
+  exploreAttackerFormSlug?: string | null;
 }) {
   const initialVersionGroupSlug =
     versionGroups.find((vg) => vg.slug === defaultVersionGroupSlug)?.slug ??
@@ -228,6 +239,15 @@ export function DamageLab({
   // move/attacker change.
   const [importStatus, setImportStatus] = useState<DamageLabImportStatus>({ kind: 'none' });
   const teamImportAppliedRef = useRef(false);
+  // Set synchronously (not via `importStatus` state) the instant a Build
+  // import actually resolves to a real team member, so the Explore-seed
+  // effect declared right after this one — which React always runs after
+  // it, in source order, within the same mount — can check it reliably
+  // even on the very first render. A state read here would still show the
+  // *previous* render's value to that later effect (React batches state
+  // updates from one effect within a single commit; they aren't visible to
+  // a sibling effect until the next render), which a ref sidesteps.
+  const buildImportSucceededRef = useRef(false);
   const pendingImportedMoveSlugsRef = useRef<(string | null)[] | null>(null);
 
   // Advanced's own reference data (natures/items) — interaction-gated
@@ -383,6 +403,7 @@ export function DamageLab({
     const gameAvailable = versionGroups.some((vg) => vg.slug === team.versionGroupSlug);
     if (gameAvailable) setVersionGroupSlug(team.versionGroupSlug);
 
+    buildImportSucceededRef.current = true;
     setAttackerFormSlug(member.formSlug);
     setAttackerConfig(advancedConfigFromTeamMember(member));
     pendingImportedMoveSlugsRef.current = member.moveSlugs;
@@ -407,6 +428,81 @@ export function DamageLab({
     // still loading.
     if (member.natureSlug || member.itemSlug) ensureAdvancedReferenceData();
   }, [teamId, memberId, versionGroups, searchIndex, locale, ensureAdvancedReferenceData]);
+
+  // Explore → Damage Lab attacker seed (Phase 3 roadmap, attacker-only) —
+  // runs once per mount, only when `exploreAttackerFormSlug` is present.
+  // Seeds `attackerFormSlug` (and, only when needed, `versionGroupSlug` —
+  // see below); the existing attacker-fetch effect right below picks up
+  // whichever pair results exactly like a manual selection would, and
+  // Advanced config/defender/move all stay at their normal defaults (task:
+  // "no parallel Pokémon-loading mechanism, no import banner — this isn't
+  // a saved set, just the Pokémon already being viewed").
+  //
+  // Precedence (task §5): a *validly resolved* Build import always wins if
+  // both are somehow present in the URL — `buildImportSucceededRef` is set
+  // synchronously inside the Build-import effect above, and React runs
+  // effects within one component in declaration order on mount, so this
+  // check is never racy even on the very first render. A locale-restore
+  // wins for the same reason Build's own import defers to it: the restored
+  // state already represents "now," including any manual change since.
+  //
+  // Defensive (task §6): `exploreAttackerFormSlug` is resolved against the
+  // search index — the exact same lookup Build's own optimistic identity
+  // already trusts (`resolveRosterVisualIdentity`, imported above) — before
+  // ever being applied. A malformed, unknown, or stale slug simply resolves
+  // to `undefined` and is silently ignored; Damage Lab loads with its
+  // normal empty attacker state, never an error for an optional seed.
+  //
+  // Compatible-game fallback (visual review — a Mega Evolution seed landed
+  // in Damage Lab's default game with zero legal moves, a real form
+  // correctly resolved into a dead end): `fetchFormSupportedVersionGroups`
+  // asks whether the *default* game is itself one this exact form has
+  // learnset data for; only when it genuinely isn't does this switch to the
+  // most recent version group (the query's own result is newest-first)
+  // that both this form supports and Damage Lab itself offers. This runs
+  // exactly once, inside this same one-time effect, and both state setters
+  // are called together in the same callback — the existing game-switch
+  // capability-revalidation effect further down reacts to the result
+  // exactly as it would a manual game change, nothing special-cased there.
+  // A form with no learnset data anywhere (or none that overlaps Damage
+  // Lab's own games) simply keeps the default game — the existing
+  // "no damaging moves" state already handles that honestly, never a crash
+  // or a second unsupported-form mechanism.
+  const exploreSeedAppliedRef = useRef(false);
+  useEffect(() => {
+    if (exploreSeedAppliedRef.current) return;
+    exploreSeedAppliedRef.current = true;
+    if (!exploreAttackerFormSlug) return;
+    if (localeRestoredRef.current) return;
+    if (buildImportSucceededRef.current) return;
+    const identity = resolveRosterVisualIdentity(searchIndex, exploreAttackerFormSlug);
+    if (!identity) return;
+
+    fetchFormSupportedVersionGroups(identity.formSlug)
+      .then((supported) => {
+        // Re-checked: this callback runs well after mount, but a locale
+        // switch/Build import can't happen mid-flight in practice (this
+        // effect only ever runs once, and nothing else sets
+        // `attackerFormSlug` before it does) — defensive, not load-bearing.
+        if (localeRestoredRef.current || buildImportSucceededRef.current) return;
+        setAttackerFormSlug(identity.formSlug);
+        const supportedSlugs = new Set(supported.map((vg) => vg.slug));
+        setVersionGroupSlug((current) => {
+          if (supportedSlugs.has(current)) return current; // default already usable — keep it
+          const damageLabSlugs = new Set(versionGroups.map((vg) => vg.slug));
+          const compatible = supported.find((vg) => damageLabSlugs.has(vg.slug));
+          return compatible ? compatible.slug : current; // no compatible game found — stay put
+        });
+      })
+      .catch((error: unknown) => {
+        console.error('fetchFormSupportedVersionGroups failed', error);
+        // The compatible-game check is a UX nicety, not a correctness
+        // requirement — still seed the attacker at the default game rather
+        // than dropping the seed entirely over a failed secondary lookup.
+        if (localeRestoredRef.current || buildImportSucceededRef.current) return;
+        setAttackerFormSlug(identity.formSlug);
+      });
+  }, [exploreAttackerFormSlug, searchIndex, versionGroups]);
 
   // Attacker reference data: only fetched once a form is selected (never
   // before), and re-fetched (for this same form) whenever the game changes

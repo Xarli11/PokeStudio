@@ -14,6 +14,8 @@ export interface RosterVisualIdentity {
   isDefaultForm: boolean;
   displayName: LocalizedName;
   types: PokemonType[];
+  /** See `@pokestudio/database`'s `SpeciesFormSummary.pokeapiPokemonId` doc comment — passed straight through so any sprite resolver downstream can build the exact-form (not just default-form) production sprite URL. */
+  pokeapiPokemonId: number | null;
 }
 
 /**
@@ -39,6 +41,7 @@ export function resolveRosterVisualIdentity(
       isDefaultForm: true,
       displayName: item.name,
       types: item.types,
+      pokeapiPokemonId: item.pokeapiPokemonId,
     };
   }
 
@@ -54,5 +57,6 @@ export function resolveRosterVisualIdentity(
     isDefaultForm: false,
     displayName: alias.name,
     types: alias.types,
+    pokeapiPokemonId: alias.pokeapiPokemonId,
   };
 }

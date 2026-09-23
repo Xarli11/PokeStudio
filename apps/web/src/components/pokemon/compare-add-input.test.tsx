@@ -27,6 +27,7 @@ const LONG_NAME_ITEM: SpeciesSearchItem = {
   name: { en: 'Charizard Mega Evolution Y Form', es: 'Charizard Megaevolución Y' },
   types: ['fire', 'flying'],
   baseStats: { hp: 1, attack: 1, defense: 1, specialAttack: 1, specialDefense: 1, speed: 1 },
+  pokeapiPokemonId: 10035,
 };
 
 function renderInput(searchIndex: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] }) {

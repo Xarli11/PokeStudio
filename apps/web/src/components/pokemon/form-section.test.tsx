@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { PokemonFormSection } from './form-section';
@@ -202,5 +202,251 @@ describe('PokemonFormSection', () => {
     expect(screen.getByRole('group', { name: 'Types' })).not.toBeNull();
     expect(screen.queryByText('Fire')).not.toBeNull();
     expect(screen.queryByText('Flying')).not.toBeNull();
+  });
+
+  it('omits the Damage Lab link entirely when no href/label is supplied', () => {
+    render(
+      <PokemonFormSection
+        id="rotom"
+        name="Rotom"
+        categoryLabel="Default form"
+        types={[{ type: 'electric', label: 'Electric' }]}
+        stats={{
+          hp: 50,
+          attack: 50,
+          defense: 77,
+          specialAttack: 95,
+          specialDefense: 77,
+          speed: 91,
+        }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
+        variant="primary"
+      />,
+    );
+
+    expect(screen.queryByRole('link', { name: /Open in Damage Lab/ })).toBeNull();
+  });
+
+  it('renders the Damage Lab link with this exact form’s href on the primary form (Phase 3 "Explore → Damage Lab")', () => {
+    render(
+      <PokemonFormSection
+        id="garchomp"
+        name="Garchomp"
+        categoryLabel="Default form"
+        types={[{ type: 'dragon', label: 'Dragon' }]}
+        stats={{
+          hp: 108,
+          attack: 130,
+          defense: 95,
+          specialAttack: 80,
+          specialDefense: 85,
+          speed: 102,
+        }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
+        damageLabHref="/en/battle/damage?attacker=garchomp"
+        damageLabLabel="Open in Damage Lab"
+        variant="primary"
+      />,
+    );
+
+    const link = screen.getByRole('link', { name: /Open in Damage Lab/ });
+    expect(link.getAttribute('href')).toBe('/en/battle/damage?attacker=garchomp');
+  });
+
+  it("carries the alternate form's own slug, never the base species', for a secondary form", () => {
+    render(
+      <PokemonFormSection
+        id="meowth-alola"
+        name="Alolan Meowth"
+        categoryLabel="Regional form"
+        types={[{ type: 'dark', label: 'Dark' }]}
+        stats={{
+          hp: 40,
+          attack: 35,
+          defense: 35,
+          specialAttack: 50,
+          specialDefense: 40,
+          speed: 90,
+        }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
+        damageLabHref="/en/battle/damage?attacker=meowth-alola"
+        damageLabLabel="Open in Damage Lab"
+        variant="secondary"
+      />,
+    );
+
+    const link = screen.getByRole('link', { name: /Open in Damage Lab/ });
+    expect(link.getAttribute('href')).toBe('/en/battle/damage?attacker=meowth-alola');
+  });
+
+  it("renders the base form's own sprite when given a spriteUrl (visual review — Explore showed a monogram despite real sprite data existing)", () => {
+    const { container } = render(
+      <PokemonFormSection
+        id="charizard"
+        name="Charizard"
+        categoryLabel="Default form"
+        types={[{ type: 'fire', label: 'Fire' }]}
+        stats={{
+          hp: 78,
+          attack: 84,
+          defense: 78,
+          specialAttack: 109,
+          specialDefense: 85,
+          speed: 100,
+        }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
+        spriteUrl="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png"
+        variant="primary"
+      />,
+    );
+
+    const img = container.querySelector('img')!;
+    expect(img.src).toBe(
+      'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png',
+    );
+  });
+
+  it("renders an alternate form's own distinct sprite, never the base species'", () => {
+    const { container } = render(
+      <PokemonFormSection
+        id="charizard-mega-y"
+        name="Mega Charizard Y"
+        categoryLabel="Mega Evolution"
+        types={[
+          { type: 'fire', label: 'Fire' },
+          { type: 'flying', label: 'Flying' },
+        ]}
+        stats={{
+          hp: 78,
+          attack: 104,
+          defense: 78,
+          specialAttack: 159,
+          specialDefense: 115,
+          speed: 100,
+        }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
+        spriteUrl="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10035.png"
+        variant="secondary"
+      />,
+    );
+
+    const img = container.querySelector('img')!;
+    expect(img.src).toBe(
+      'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10035.png',
+    );
+    expect(img.src).not.toContain('/6.png');
+  });
+
+  it('falls back to the monogram when no sprite is known for this form (no crash, no broken image)', () => {
+    const { container } = render(
+      <PokemonFormSection
+        id="rotom"
+        name="Rotom"
+        categoryLabel="Default form"
+        types={[{ type: 'electric', label: 'Electric' }]}
+        stats={{
+          hp: 50,
+          attack: 50,
+          defense: 77,
+          specialAttack: 95,
+          specialDefense: 77,
+          speed: 91,
+        }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
+        variant="primary"
+      />,
+    );
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('R')).not.toBeNull(); // monogram initial
+  });
+
+  it('falls back to the monogram when the sprite image genuinely fails to load', () => {
+    const { container } = render(
+      <PokemonFormSection
+        id="charizard"
+        name="Charizard"
+        categoryLabel="Default form"
+        types={[{ type: 'fire', label: 'Fire' }]}
+        stats={{
+          hp: 78,
+          attack: 84,
+          defense: 78,
+          specialAttack: 109,
+          specialDefense: 85,
+          speed: 100,
+        }}
+        statLabels={statLabels}
+        typesLabel="Types"
+        baseStatsLabel="Base stats"
+        baseStatTotalLabel="Base stat total"
+        abilities={[]}
+        abilitiesLabel="Abilities"
+        hiddenAbilityLabel="Hidden Ability"
+        noAbilityDescriptionLabel="No description available."
+        fallbackLanguageLabel="English"
+        statTierLabels={{ low: 'Low', average: 'Average', good: 'Good', excellent: 'Excellent' }}
+        spriteUrl="https://example.test/charizard.png"
+        variant="primary"
+      />,
+    );
+
+    fireEvent.error(container.querySelector('img')!);
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('C')).not.toBeNull();
   });
 });

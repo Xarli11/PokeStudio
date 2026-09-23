@@ -73,6 +73,7 @@ const GARCHOMP_FORM: ComparablePokemonForm = {
     { slug: 'sand-veil', nameEn: 'Sand Veil', isHidden: false, slot: 1 },
     { slug: 'rough-skin', nameEn: 'Rough Skin', isHidden: false, slot: 2 },
   ],
+  pokeapiPokemonId: 445,
 };
 
 describe('createDefaultAdvancedConfig', () => {

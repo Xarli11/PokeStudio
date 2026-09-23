@@ -14,8 +14,13 @@ import { getPokemonSprite } from '@/lib/pokemon-sprite';
 import { resolveRosterVisualIdentity } from '@/lib/roster-visual-identity';
 import { buttonClass, cardClass } from '@/lib/ui-classes';
 
-/** ~128px at `lg`, ~144px at `xl`+ (visual review: "Pokémon as protagonist") — below `lg`, unchanged from the original fixed 6rem/96px. */
-const ART_SIZE_CLASS = 'h-24 w-24 lg:h-32 lg:w-32 xl:h-36 xl:w-36';
+/**
+ * ~120px at `lg`, ~128px at `xl`+ — below `lg`, unchanged from the original
+ * fixed 6rem/96px. Trimmed down from an earlier ~128/~144px pass (visual
+ * review: large forms like Mega Charizard Y read as too dominant for the
+ * card); still noticeably larger than the pre-review 96px baseline.
+ */
+const ART_SIZE_CLASS = 'h-24 w-24 lg:h-[7.5rem] lg:w-[7.5rem] xl:h-32 xl:w-32';
 
 export interface DamagePokemonSlotLabels {
   selectPokemonLabel: string;
@@ -89,12 +94,24 @@ export function DamagePokemonSlot({
 
   const showPicker = pickerOpen || !identity;
   const displayName = identity ? identity.displayName[locale] : '';
+  // The exact same production sprite family Explore already uses
+  // (PokéAPI's own `'modern'` set, via `getPokemonSprite()`) — not a
+  // different visual source. What used to be missing wasn't a different
+  // sprite family, it was the exact-form *id*: `getPokemonSprite()`
+  // resolves through `identity.pokeapiPokemonId` now (the upstream
+  // `pokemon` resource id, distinct from the National Dex number every
+  // form of one species shares), so a non-default form like Mega
+  // Charizard Y gets its own real sprite instead of falling back to the
+  // monogram. One identity/sprite path for manual selection, Build import
+  // and Explore seeding alike — they all resolve through this one
+  // component regardless of source.
   const spriteUrl = identity
     ? getPokemonSprite({
         formSlug: identity.formSlug,
         speciesSlug: identity.speciesSlug,
         nationalDexNumber: identity.nationalDexNumber,
         isDefaultForm: identity.isDefaultForm,
+        pokeapiPokemonId: identity.pokeapiPokemonId,
       })
     : undefined;
 
@@ -160,7 +177,14 @@ export function DamagePokemonSlot({
             onSpriteError={() => setSpriteFailed(true)}
           />
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <span className="truncate text-lg font-bold text-foreground">{displayName}</span>
+            {/* No `truncate` (visual review — "Mega-Chariz..." inside a card
+                with real width to spare): the info column is already
+                `min-w-0`, so a normal-length name like "Mega Charizard Y"
+                or a regional form's name simply wraps onto a second line
+                instead of being cut. The full name is always in the DOM
+                either way — this only changes what's visually clipped, not
+                the accessible name. */}
+            <span className="text-lg font-bold text-foreground">{displayName}</span>
             <span className="flex flex-wrap gap-1">
               {identity.types.map((type) => (
                 <PokemonTypeBadge key={type} type={type} label={typeLabels[type]} />

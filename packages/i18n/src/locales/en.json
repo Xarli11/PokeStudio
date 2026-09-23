@@ -454,6 +454,7 @@
       "title": "Damage Lab",
       "tagline": "Calculate real damage between any two Pokémon, using PokeStudio's own mechanics engine.",
       "indexDescription": "Calculate Pokémon damage for any matchup, move and game — powered by PokeStudio's damage engine.",
+      "entryLink": "Open in Damage Lab",
       "gameLabel": "Game",
       "attackerLabel": "Attacker",
       "defenderLabel": "Defender",

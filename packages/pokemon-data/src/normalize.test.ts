@@ -271,6 +271,13 @@ describe('normalizeSpeciesGroup', () => {
     expect(polar.isDefault).toBe(false);
     expect(polar.category).toBe('cosmetic');
     expect(polar.name.en).toBe('Polar Vivillon');
+    // The exact case `pokeapiPokemonId` exists for: two cosmetic
+    // `pokemon-form` entries (own ids 10059/10060) share one `pokemon`
+    // variety (id 666) — PokéAPI's sprite set is keyed by the variety id,
+    // so both forms must report the *same* pokeapiPokemonId (666), never
+    // their own distinct form id.
+    expect(defaults[0]!.pokeapiPokemonId).toBe(666);
+    expect(polar.pokeapiPokemonId).toBe(666);
   });
 
   it('classifies a Mega form as battle even for a non-region-suffixed, non-default variety', () => {
@@ -324,9 +331,123 @@ describe('normalizeSpeciesGroup', () => {
     };
 
     const { forms } = normalizeSpeciesGroup(group, 'pokeapi');
+    const base = forms.find((f) => f.slug === 'charizard')!;
     const megaX = forms.find((f) => f.slug === 'charizard-mega-x')!;
     expect(megaX.category).toBe('battle');
     expect(megaX.types).toEqual(['fire', 'dragon']);
+    // The exact real-world divergence this field exists for: Mega
+    // Charizard X's own `pokemon-form` id (10035, the `form({ id: 10035,
+    // ... })` above) is *not* the same as its `pokemon` variety's id
+    // (10034) — the sprite-relevant id is the variety's, not the form's.
+    expect(base.pokeapiPokemonId).toBe(6);
+    expect(megaX.pokeapiPokemonId).toBe(10034);
+  });
+
+  it('composes proper localized Gigantamax display names ("Gigantamax {species}" / "{species} Gigamax"), never the raw "(gmax)" technical descriptor', () => {
+    const group: RawSpeciesGroup = {
+      species: {
+        id: 3,
+        name: 'venusaur',
+        names: [
+          { name: 'Venusaur', language: { name: 'en', url: '' } },
+          { name: 'Venusaur', language: { name: 'es', url: '' } },
+        ],
+        varieties: [
+          { is_default: true, pokemon: { name: 'venusaur', url: '' } },
+          { is_default: false, pokemon: { name: 'venusaur-gmax', url: '' } },
+        ],
+        evolution_chain: { url: '' },
+      },
+      varieties: [
+        {
+          isDefaultVariety: true,
+          pokemon: pokemon({
+            id: 3,
+            name: 'venusaur',
+            types: [
+              { slot: 1, type: { name: 'grass', url: '' } },
+              { slot: 2, type: { name: 'poison', url: '' } },
+            ],
+          }),
+          forms: [form({ id: 3, name: 'venusaur' })],
+        },
+        {
+          isDefaultVariety: false,
+          pokemon: pokemon({
+            id: 10033,
+            name: 'venusaur-gmax',
+            types: [
+              { slot: 1, type: { name: 'grass', url: '' } },
+              { slot: 2, type: { name: 'poison', url: '' } },
+            ],
+          }),
+          forms: [
+            form({
+              id: 10195,
+              name: 'venusaur-gmax',
+              is_battle_only: true,
+              form_name: 'gmax',
+              // Real PokéAPI shape for every Gigantamax form: English is
+              // already provided directly via `names`; Spanish is not —
+              // PokéAPI never localizes "gmax" for any language.
+              names: [{ name: 'Gigantamax Venusaur', language: { name: 'en', url: '' } }],
+            }),
+          ],
+        },
+      ],
+    };
+
+    const { forms } = normalizeSpeciesGroup(group, 'pokeapi');
+    const gmax = forms.find((f) => f.slug === 'venusaur-gmax')!;
+    expect(gmax.category).toBe('battle');
+    // English: PokéAPI's own name is used as-is (never overridden).
+    expect(gmax.name.en).toBe('Gigantamax Venusaur');
+    // Spanish: composed with the real Nintendo localization pattern, not
+    // the raw technical descriptor ("Venusaur (gmax)").
+    expect(gmax.name.es).toBe('Venusaur Gigamax');
+  });
+
+  it('composes the Gigantamax English name too when PokéAPI has no English name for that gmax form (defensive fallback)', () => {
+    const group: RawSpeciesGroup = {
+      species: {
+        id: 9,
+        name: 'blastoise',
+        names: [
+          { name: 'Blastoise', language: { name: 'en', url: '' } },
+          { name: 'Blastoise', language: { name: 'es', url: '' } },
+        ],
+        varieties: [
+          { is_default: true, pokemon: { name: 'blastoise', url: '' } },
+          { is_default: false, pokemon: { name: 'blastoise-gmax', url: '' } },
+        ],
+        evolution_chain: { url: '' },
+      },
+      varieties: [
+        {
+          isDefaultVariety: true,
+          pokemon: pokemon({ id: 9, name: 'blastoise' }),
+          forms: [form({ id: 9, name: 'blastoise' })],
+        },
+        {
+          isDefaultVariety: false,
+          pokemon: pokemon({ id: 10195, name: 'blastoise-gmax' }),
+          forms: [
+            form({
+              id: 10196,
+              name: 'blastoise-gmax',
+              is_battle_only: true,
+              form_name: 'gmax',
+              names: [],
+            }),
+          ],
+        },
+      ],
+    };
+
+    const { forms } = normalizeSpeciesGroup(group, 'pokeapi');
+    const gmax = forms.find((f) => f.slug === 'blastoise-gmax')!;
+    expect(gmax.name.en).toBe('Gigantamax Blastoise');
+    expect(gmax.name.es).toBe('Blastoise Gigamax');
   });
 
   it('throws for a species with an invalid type count', () => {

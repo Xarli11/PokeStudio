@@ -461,6 +461,53 @@ reason the PokéAPI entry above is:
   fallback chain to another source is decided) — see the Sprite Lab's own
   final-report recommendation for the current thinking.
 
+### 2026-09-23: exact-form identity for the existing PokéAPI ('modern') sprite set — extended to Explore + Damage Lab
+
+**PokéSprite (`'box'`) is explicitly NOT used here.** An earlier draft of
+this pass briefly promoted it to a production source for these two call
+sites; that was rejected on visual-consistency grounds (a different sprite
+family/style than Explore's own existing Pokédex grid) before landing, and
+this entry replaces that draft — PokéSprite's status is exactly what the
+Sprite Lab entry above already says: a candidate, evaluation-only, not
+approved for production anywhere in the product. Nothing about its
+rights/provenance classification changed.
+
+The actual fix stays entirely within the **same already-documented PokéAPI
+`'modern'` source** the Milestone 2 entry above covers (same URL family,
+same rights status, same "PROVISIONAL / RIGHTS REVIEW REQUIRED, not cleared
+for production use" caveat — none of that changed either). Two things did
+change:
+
+- **Scope**: that source is now also read by Explore's detail page
+  (`apps/web/src/components/pokemon/form-section.tsx`) — extending the
+  Phase 1A "no sprite/artwork source yet" decision above to cover Explore
+  for the first time, the same way the Milestone 2 entry already did for
+  Build's roster. Damage Lab's `DamagePokemonSlot` was already reading this
+  same source; unchanged in kind, only in what it can now resolve (below).
+- **Exact-form identity**: `'modern'`'s sprite set is keyed by PokéAPI's
+  `pokemon` (variety) resource id, which is _not_ reliably the same id as
+  PokeStudio's own dex-number-derived identity — a form previously had no
+  way to ask for its own exact sprite, only its species' default one. A new
+  ingested field, `pokemon_form.pokeapi_pokemon_id` (migration
+  `20260923120000_pokemon_form_sprite_identity.sql`; captured in
+  `packages/pokemon-data/src/normalize.ts` from `variety.pokemon.id`, never
+  from `pokemon-form.id` — a separate PokéAPI resource/id space that only
+  coincides with the variety id for a 1:1 variety/form pair, and provably
+  diverges for a species with several cosmetic forms sharing one variety,
+  e.g. Unown, Alcremie), threads that exact id through
+  `packages/database`'s form-shaped return types and into
+  `apps/web/src/lib/pokemon-sprite.ts`'s `'modern'` resolution, so a
+  non-default form (a Mega Evolution, a regional form) now gets its own
+  real sprite from the same family instead of falling back to the
+  monogram. No new provider, no hand-written form→sprite alias table.
+- Generation IX / any other gap `'modern'`'s own flat set doesn't cover
+  remains a real, known limitation — still degrades to the monogram
+  placeholder honestly, in both Explore and Damage Lab, never an error.
+- Build's own team roster tile (`apps/web/src/components/build/team-slot.tsx`)
+  now also passes this same exact-form id through to `getPokemonSprite()`
+  for consistency (same source, same fix, same "not cleared for production"
+  status as before — no change to its own approval tier).
+
 ### Sprite Lab evaluation: Pokémon Showdown / Smogon sprites (candidate, PROVISIONAL / dev-only — stricter rights caveat)
 
 Added to the Sprite Lab as Option D per explicit owner request. This is a

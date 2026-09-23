@@ -1,6 +1,7 @@
 'use server';
 
 import {
+  getFormLearnsetAllVersionGroups,
   getFormLearnsetForVersionGroup,
   getFormsBySlugs,
   listItems,
@@ -9,6 +10,7 @@ import {
   type Item,
   type MoveSummary,
   type Nature,
+  type VersionGroupSummary,
 } from '@pokestudio/database';
 
 import {
@@ -85,6 +87,28 @@ export async function fetchDefenderReferenceData(
   const client = getPokemonDatabaseClient();
   const forms = await getFormsBySlugs(client, [formSlug]);
   return forms[0] ?? null;
+}
+
+/**
+ * Every version group this exact form actually has learnset data for,
+ * newest-first — Explore → Damage Lab attacker seed only (Phase 3
+ * roadmap): a seeded form like a Mega Evolution can be real and correctly
+ * resolved while still having zero legal moves in Damage Lab's own default
+ * game, which used to leave the user staring at "no damaging moves" for a
+ * form they just clicked into. Reuses the exact same query the Explore
+ * detail page's own Moves section already calls for this form (Fase
+ * 1C.2b's `getFormLearnsetAllVersionGroups`) — no new table, no per-species
+ * logic: a Mega form simply has no `pokemon_form_move` rows for a game
+ * with no Mega Evolution mechanic, the same honest absence every other
+ * learnset gap in this schema already represents. Never called for manual
+ * selection or Build import — those keep exactly their existing behavior.
+ */
+export async function fetchFormSupportedVersionGroups(
+  formSlug: string,
+): Promise<VersionGroupSummary[]> {
+  const client = getPokemonDatabaseClient();
+  const data = await getFormLearnsetAllVersionGroups(client, formSlug);
+  return data?.versionGroups ?? [];
 }
 
 export interface AdvancedReferenceData {

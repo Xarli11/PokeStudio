@@ -54,6 +54,8 @@ export interface IngestSchema {
           base_stats: Record<string, number>;
           source_id: string;
           external_id: string;
+          /** The upstream `pokemon` (variety) resource id — see this column's own migration comment; distinct from `external_id` (the `pokemon-form` resource's own id). */
+          pokeapi_pokemon_id: number;
         };
         Update: never;
         Relationships: [];
@@ -428,6 +430,7 @@ export async function persistDataset(
       base_stats: { ...form.baseStats } satisfies Record<string, number>,
       source_id: form.source.sourceId,
       external_id: form.source.externalId,
+      pokeapi_pokemon_id: form.pokeapiPokemonId,
     };
   });
 

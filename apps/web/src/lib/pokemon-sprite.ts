@@ -89,6 +89,19 @@ export interface PokemonSpriteRequest {
   speciesSlug: string;
   nationalDexNumber: number;
   isDefaultForm: boolean;
+  /**
+   * The upstream PokéAPI `pokemon` (variety) resource id this exact form
+   * belongs to (`packages/database`'s `pokeapiPokemonId` on every form
+   * summary/comparable-form/search-item type) — the id `'modern'`'s own
+   * sprite set is actually keyed by, and the one thing that lets it
+   * distinguish a non-default form (a Mega Evolution, a regional form)
+   * from its own base species, which otherwise shares its National Dex
+   * number. `null`/omitted only for a row ingested before this field
+   * existed — falls back to the dex-number lookup, but only for a default
+   * form (never a non-default one, where that fallback would silently
+   * point at the wrong Pokémon's sprite).
+   */
+  pokeapiPokemonId?: number | null;
   /** Which candidate strategy to resolve. Defaults to `'modern'` — today's production choice (task §14: keep current behavior until the owner picks a winner). */
   strategy?: SpriteStrategy;
   /** Required (and only meaningful) for `'game-era'` — which game's own sprite set to use. */
@@ -119,13 +132,20 @@ export function getPokemonSprite(request: PokemonSpriteRequest): string | undefi
 }
 
 function resolveModernSprite(request: PokemonSpriteRequest): SpriteResolution {
-  if (!request.isDefaultForm) return { url: undefined, sourceKind: 'unavailable' };
-  if (!Number.isInteger(request.nationalDexNumber) || request.nationalDexNumber <= 0) {
+  // The exact-form id, when we have it — works for both default and
+  // non-default forms alike (task: "exact form"). Only a default form
+  // falls back to the National Dex number when the id is missing — that
+  // fallback would silently resolve to the *base species'* sprite for a
+  // non-default form (they share a dex number), which is exactly the bug
+  // this field exists to fix, so it's deliberately not offered there.
+  const id =
+    request.pokeapiPokemonId ?? (request.isDefaultForm ? request.nationalDexNumber : undefined);
+  if (id === undefined || !Number.isInteger(id) || id <= 0) {
     return { url: undefined, sourceKind: 'unavailable' };
   }
   const variantSegment = request.variant === 'shiny' ? 'shiny/' : '';
   return {
-    url: `${POKEAPI_SPRITES_BASE}/${variantSegment}${request.nationalDexNumber}.png`,
+    url: `${POKEAPI_SPRITES_BASE}/${variantSegment}${id}.png`,
     sourceKind: 'modern',
   };
 }

@@ -38,7 +38,7 @@ describe('getPokemonSprite', () => {
     ).toContain('/445.png');
   });
 
-  it('falls back to undefined for a non-default form — no incorrect sprite guessed', () => {
+  it('falls back to undefined for a non-default form with no known exact-form id — no incorrect sprite guessed', () => {
     const url = getPokemonSprite({
       formSlug: 'meowth-alola',
       speciesSlug: 'meowth',
@@ -46,6 +46,69 @@ describe('getPokemonSprite', () => {
       isDefaultForm: false,
     });
     expect(url).toBeUndefined();
+  });
+
+  it('resolves an alternate form by its own exact PokéAPI pokemon id, never the base species’ dex number (visual review — Mega Charizard Y showed a monogram)', () => {
+    const url = getPokemonSprite({
+      formSlug: 'charizard-mega-y',
+      speciesSlug: 'charizard',
+      nationalDexNumber: 6, // shared with base Charizard — must not be used here
+      isDefaultForm: false,
+      pokeapiPokemonId: 10035,
+    });
+    expect(url).toBe(
+      'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/10035.png',
+    );
+  });
+
+  it('Mega Charizard X and Y resolve to distinct sprites, and neither collapses to base Charizard', () => {
+    const base = getPokemonSprite({
+      formSlug: 'charizard',
+      speciesSlug: 'charizard',
+      nationalDexNumber: 6,
+      isDefaultForm: true,
+      pokeapiPokemonId: 6,
+    });
+    const megaX = getPokemonSprite({
+      formSlug: 'charizard-mega-x',
+      speciesSlug: 'charizard',
+      nationalDexNumber: 6,
+      isDefaultForm: false,
+      pokeapiPokemonId: 10034,
+    });
+    const megaY = getPokemonSprite({
+      formSlug: 'charizard-mega-y',
+      speciesSlug: 'charizard',
+      nationalDexNumber: 6,
+      isDefaultForm: false,
+      pokeapiPokemonId: 10035,
+    });
+    expect(base).toContain('/6.png');
+    expect(megaX).toContain('/10034.png');
+    expect(megaY).toContain('/10035.png');
+    expect(new Set([base, megaX, megaY]).size).toBe(3); // three genuinely distinct URLs
+  });
+
+  it('a default form with an exact id uses it (not the dex number), matching a species whose dex number and variety id happen to differ', () => {
+    const url = getPokemonSprite({
+      formSlug: 'garchomp',
+      speciesSlug: 'garchomp',
+      nationalDexNumber: 445,
+      isDefaultForm: true,
+      pokeapiPokemonId: 445,
+    });
+    expect(url).toContain('/445.png');
+  });
+
+  it('a default form with no exact id yet still falls back to the dex number (pre-reingest transition)', () => {
+    const url = getPokemonSprite({
+      formSlug: 'pikachu',
+      speciesSlug: 'pikachu',
+      nationalDexNumber: 25,
+      isDefaultForm: true,
+      pokeapiPokemonId: null,
+    });
+    expect(url).toContain('/25.png');
   });
 
   it('falls back to undefined for an invalid/missing Dex number', () => {

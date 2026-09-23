@@ -178,6 +178,7 @@ export function FilledTeamTile({
         speciesSlug: form.speciesSlug,
         nationalDexNumber: form.nationalDexNumber,
         isDefaultForm: form.isDefaultForm,
+        pokeapiPokemonId: form.pokeapiPokemonId,
       }
     : visualIdentity
       ? {
@@ -185,6 +186,7 @@ export function FilledTeamTile({
           speciesSlug: visualIdentity.speciesSlug,
           nationalDexNumber: visualIdentity.nationalDexNumber,
           isDefaultForm: visualIdentity.isDefaultForm,
+          pokeapiPokemonId: visualIdentity.pokeapiPokemonId,
         }
       : undefined;
 

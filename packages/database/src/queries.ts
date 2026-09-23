@@ -24,6 +24,16 @@ export interface SpeciesFormSummary {
   category: FormCategory;
   types: PokemonType[];
   baseStats: BaseStats;
+  /**
+   * The upstream PokéAPI `pokemon` (variety) resource id this exact form
+   * belongs to — the id PokéAPI's own sprite set is keyed by
+   * (`sprites/pokemon/{id}.png`), which is *not* always the same as this
+   * form's own PokeStudio dex-number-derived identity (Charizard and Mega
+   * Charizard Y share a National Dex number but not this id). `null` only
+   * for a row ingested before this field existed (self-heals on the next
+   * `pnpm ingest:pi`).
+   */
+  pokeapiPokemonId: number | null;
 }
 
 export interface SpeciesListItem {
@@ -68,6 +78,7 @@ interface FormRow {
   form_category: string;
   types: string[];
   base_stats: Record<string, number>;
+  pokeapi_pokemon_id: number | null;
 }
 
 function toFormSummary(row: FormRow): SpeciesFormSummary {
@@ -78,6 +89,7 @@ function toFormSummary(row: FormRow): SpeciesFormSummary {
     category: row.form_category as FormCategory,
     types: row.types as PokemonType[],
     baseStats: row.base_stats as unknown as BaseStats,
+    pokeapiPokemonId: row.pokeapi_pokemon_id,
   };
 }
 
@@ -122,7 +134,9 @@ export async function listSpecies(client: PokeStudioDatabaseClient): Promise<Spe
     selectAllRows((from, to) =>
       client
         .from('pokemon_form')
-        .select('species_id, slug, name_en, name_es, is_default, form_category, types, base_stats')
+        .select(
+          'species_id, slug, name_en, name_es, is_default, form_category, types, base_stats, pokeapi_pokemon_id',
+        )
         .eq('is_default', true)
         .range(from, to),
     ),
@@ -189,7 +203,7 @@ export async function listSpeciesPage(
       ? await client
           .from('pokemon_form')
           .select(
-            'species_id, slug, name_en, name_es, is_default, form_category, types, base_stats',
+            'species_id, slug, name_en, name_es, is_default, form_category, types, base_stats, pokeapi_pokemon_id',
           )
           .eq('is_default', true)
           .in('species_id', speciesIds)
@@ -242,7 +256,9 @@ export async function getSpeciesBySlug(
 
   const formsResult = await client
     .from('pokemon_form')
-    .select('id, species_id, slug, name_en, name_es, is_default, form_category, types, base_stats')
+    .select(
+      'id, species_id, slug, name_en, name_es, is_default, form_category, types, base_stats, pokeapi_pokemon_id',
+    )
     .eq('species_id', species.id)
     .order('is_default', { ascending: false })
     .order('slug', { ascending: true });
@@ -1010,6 +1026,8 @@ export interface SpeciesSearchItem {
   baseStats: BaseStats;
   /** The default form's own slug (Milestone 2, Stage 2A — Compare) — usually equal to `slug`, but not guaranteed for every species, so kept explicit rather than assumed. */
   formSlug: string;
+  /** See `SpeciesFormSummary.pokeapiPokemonId`'s own doc comment. */
+  pokeapiPokemonId: number | null;
 }
 
 /**
@@ -1035,6 +1053,8 @@ export interface SpeciesSearchAlias {
   types: PokemonType[];
   /** This form's own stable slug (Milestone 2, Stage 2A — Compare needs to address a specific non-default form, e.g. "meowth-alola", not just its species). */
   formSlug: string;
+  /** See `SpeciesFormSummary.pokeapiPokemonId`'s own doc comment. */
+  pokeapiPokemonId: number | null;
 }
 
 export interface SpeciesSearchIndex {
@@ -1077,10 +1097,13 @@ export async function getSpeciesSearchIndex(
       is_default: boolean;
       types: string[];
       base_stats: unknown;
+      pokeapi_pokemon_id: number | null;
     }>((from, to) =>
       client
         .from('pokemon_form')
-        .select('species_id, slug, name_en, name_es, is_default, types, base_stats')
+        .select(
+          'species_id, slug, name_en, name_es, is_default, types, base_stats, pokeapi_pokemon_id',
+        )
         .range(from, to),
     ),
   ]);
@@ -1097,6 +1120,7 @@ export async function getSpeciesSearchIndex(
       speciesSlug: speciesSlugById.get(form.species_id) ?? '',
       types: form.types as PokemonType[],
       formSlug: form.slug,
+      pokeapiPokemonId: form.pokeapi_pokemon_id,
     }))
     .filter((alias) => alias.speciesSlug !== '');
 
@@ -1112,6 +1136,7 @@ export async function getSpeciesSearchIndex(
       types: defaultForm.types as PokemonType[],
       baseStats: defaultForm.base_stats as unknown as BaseStats,
       formSlug: defaultForm.slug,
+      pokeapiPokemonId: defaultForm.pokeapi_pokemon_id,
     };
   });
 
@@ -1129,6 +1154,8 @@ export interface ComparablePokemonForm {
   types: PokemonType[];
   baseStats: BaseStats;
   abilities: AbilitySummary[];
+  /** See `SpeciesFormSummary.pokeapiPokemonId`'s own doc comment. */
+  pokeapiPokemonId: number | null;
 }
 
 /**
@@ -1147,7 +1174,9 @@ export async function getFormsBySlugs(
 
   const formsResult = await client
     .from('pokemon_form')
-    .select('id, species_id, slug, name_en, name_es, is_default, types, base_stats')
+    .select(
+      'id, species_id, slug, name_en, name_es, is_default, types, base_stats, pokeapi_pokemon_id',
+    )
     .in('slug', formSlugs);
   if (formsResult.error) {
     throw new Error(`getFormsBySlugs (forms) failed: ${formsResult.error.message}`);
@@ -1185,6 +1214,7 @@ export async function getFormsBySlugs(
       types: row.types as PokemonType[],
       baseStats: row.base_stats as unknown as BaseStats,
       abilities: abilitiesByFormId.get(row.id) ?? [],
+      pokeapiPokemonId: row.pokeapi_pokemon_id,
     });
   }
 

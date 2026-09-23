@@ -104,6 +104,13 @@ export function normalizeSpecies(params: {
  * - `regional`: compose `"{species} de {region}"` for Spanish — the real,
  *   consistent Nintendo localization pattern for every regional form, not a
  *   per-Pokémon hardcode.
+ * - Gigantamax (`form_name === 'gmax'`, PokéAPI's own consistent signal for
+ *   every Gigantamax form, generation-agnostic): compose "Gigantamax
+ *   {species}" / "{species} Gigamax" — the real Nintendo localization
+ *   pattern, not the raw technical descriptor ("Venusaur (gmax)"). English
+ *   already has this from PokéAPI's own `names` directly for every gmax form
+ *   as of this ingestion; the composed string is a defensive fallback plus
+ *   the actual fix for Spanish, which PokéAPI never localizes for gmax.
  * - anything else (`battle`, `cosmetic`): `names[lang] ?? form_names[lang]`,
  *   falling back further to `"{species} {form_names[lang]}"` when even that
  *   is missing, so a bare descriptor is never shown alone without the
@@ -136,6 +143,17 @@ export function resolveFormName(params: {
   const formNamesEn = findLocalized(params.form.form_names, 'en');
   const formNamesEs = findLocalized(params.form.form_names, 'es');
   const descriptor = params.form.form_name || params.form.name;
+
+  if (descriptor === 'gmax') {
+    return {
+      name: {
+        en: namesEn ?? formNamesEn ?? `Gigantamax ${params.speciesName.en}`,
+        es: namesEs ?? formNamesEs ?? `${params.speciesName.es} Gigamax`,
+      },
+      esSource: namesEs ? 'api' : formNamesEs ? 'api' : 'composed-fallback',
+    };
+  }
+
   return {
     name: {
       en: namesEn ?? formNamesEn ?? `${params.speciesName.en} (${descriptor})`,
@@ -268,6 +286,10 @@ export function normalizeSpeciesGroup(
         types,
         baseStats,
         source: { sourceId, externalId: String(form.id) },
+        // The variety's own `pokemon` resource id — never `form.id` above,
+        // which is the separate `pokemon-form` resource's id (see this
+        // field's own doc comment on `NormalizedForm`).
+        pokeapiPokemonId: variety.pokemon.id,
       };
       formAbilities.push(...normalizeFormAbilities(slug, variety.pokemon.abilities));
       formMoves.push(...normalizeFormMoves(slug, variety.pokemon.moves));

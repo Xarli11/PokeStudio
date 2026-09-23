@@ -44,6 +44,7 @@ function makeForm(overrides: Partial<NormalizedForm> = {}): NormalizedForm {
       speed: 45,
     },
     source: { sourceId: 'pokeapi', externalId: '1' },
+    pokeapiPokemonId: 1,
     ...overrides,
   };
 }

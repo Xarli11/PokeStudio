@@ -118,6 +118,7 @@ function toCardProps(
       speciesSlug: item.slug,
       nationalDexNumber: item.nationalDexNumber,
       isDefaultForm: true,
+      pokeapiPokemonId: item.pokeapiPokemonId,
     }),
   };
 }

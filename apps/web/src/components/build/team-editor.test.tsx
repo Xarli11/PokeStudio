@@ -218,6 +218,7 @@ const SEARCH_INDEX: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] 
         specialDefense: 85,
         speed: 102,
       },
+      pokeapiPokemonId: 445,
     },
     {
       slug: 'meowth',
@@ -233,6 +234,7 @@ const SEARCH_INDEX: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] 
         specialDefense: 40,
         speed: 90,
       },
+      pokeapiPokemonId: 52,
     },
   ],
   aliases: [],
@@ -246,6 +248,7 @@ const MEOWTH_ALOLA_ALIAS: SpeciesSearchAlias = {
   speciesSlug: 'meowth',
   types: ['dark'],
   formSlug: 'meowth-alola',
+  pokeapiPokemonId: 10102,
 };
 
 const GARCHOMP_FORM: ComparablePokemonForm = {
@@ -268,6 +271,7 @@ const GARCHOMP_FORM: ComparablePokemonForm = {
     { slug: 'sand-veil', nameEn: 'Sand Veil', isHidden: false, slot: 1 },
     { slug: 'rough-skin', nameEn: 'Rough Skin', isHidden: false, slot: 2 },
   ],
+  pokeapiPokemonId: 445,
 };
 
 const GARCHOMP_LEARNSET: FormLearnsetAllVersionGroups = {
@@ -415,6 +419,7 @@ describe('TeamEditor', () => {
         speed: 90,
       },
       abilities: [{ slug: 'pickup', nameEn: 'Pickup', isHidden: false, slot: 1 }],
+      pokeapiPokemonId: 52,
     };
     fetchTeamMemberReferenceData.mockImplementation(async (slugs: string[]) => ({
       forms: slugs.includes('meowth') ? [MEOWTH_FORM] : [GARCHOMP_FORM],
@@ -880,6 +885,7 @@ describe('preserve work, validate honestly (manual review v2, §1/§18/§20)', (
         speed: 90,
       },
       abilities: [{ slug: 'pickup', nameEn: 'Pickup', isHidden: false, slot: 1 }],
+      pokeapiPokemonId: 52,
     };
     fetchTeamMemberReferenceData.mockImplementation(async (slugs: string[]) => ({
       forms: slugs.includes('meowth') ? [MEOWTH_FORM] : [GARCHOMP_FORM],
