@@ -34,6 +34,15 @@ export interface DamageLocaleDraft {
   attackerConfig: DamageAdvancedConfig;
   defenderConfig: DamageAdvancedConfig;
   isCritical: boolean;
+  /**
+   * Matchup comparison primitive (Phase 3 roadmap) — the extra defenders'
+   * form slugs, in the order the user added them. Genuine user input, so it
+   * survives a locale switch like every other selection here; each extra
+   * defender's *configuration* is never persisted because it's never
+   * anything but Damage Lab's own default (see `createDefaultAdvancedConfig`)
+   * — there is nothing derived to recompute, so nothing else to store.
+   */
+  extraDefenderFormSlugs: string[];
 }
 
 interface StoredHandoff {
@@ -84,7 +93,9 @@ function isDraft(value: unknown): value is DamageLocaleDraft {
     isNullableString(draft.selectedMoveSlug) &&
     typeof draft.isCritical === 'boolean' &&
     isAdvancedConfig(draft.attackerConfig) &&
-    isAdvancedConfig(draft.defenderConfig)
+    isAdvancedConfig(draft.defenderConfig) &&
+    Array.isArray(draft.extraDefenderFormSlugs) &&
+    draft.extraDefenderFormSlugs.every((slug) => typeof slug === 'string')
   );
 }
 

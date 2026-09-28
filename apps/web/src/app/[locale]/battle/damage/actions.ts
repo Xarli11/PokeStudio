@@ -182,22 +182,19 @@ function toDamageCombatant(combatant: DamageLabCombatantRequest) {
 }
 
 /**
- * Damage Lab's calculation — builds the full slug-native
- * `DamageCalculationInput` from the two combatants' complete configuration
- * (task §17), calls `@pokestudio/damage` directly (never `@smogon/calc`),
- * and returns a plain serializable result. Simple Mode and Advanced share
- * this one path: Simple Mode's fixed assumptions (task §7) are just
- * `DamageAdvancedConfig`'s own default values (`apps/web/src/lib/damage-advanced.ts`'s
- * `createDefaultAdvancedConfig`) — the client builds the same request shape
- * either way, so there is no separate
- * "simple" code path here to keep in sync. `DamageInputError` maps to its
- * own `code` (+ `side` when present); anything else is logged server-side
- * and collapsed to a generic `'unknown'` code — no stack trace or internal
- * error string ever reaches the client (task §13).
+ * Builds the full slug-native `DamageCalculationInput` from the two
+ * combatants' complete configuration (task §17) and calls
+ * `@pokestudio/damage` directly (never `@smogon/calc`) — shared, synchronous
+ * core reused by both the single-matchup action and the matchup-comparison
+ * batch action below, so the exact same validation/error-mapping logic
+ * never has two copies to keep in sync (Phase 3 roadmap: "matchup
+ * comparison primitives" — composition over the existing calculation, no
+ * new domain API). `DamageInputError` maps to its own `code` (+ `side` when
+ * present); anything else is logged server-side and collapsed to a generic
+ * `'unknown'` code — no stack trace or internal error string ever reaches
+ * the client (task §13).
  */
-export async function calculateDamageAction(
-  request: DamageLabCalculationRequest,
-): Promise<DamageLabCalculationResponse> {
+function runDamageCalculation(request: DamageLabCalculationRequest): DamageLabCalculationResponse {
   try {
     const result = calculateDamage({
       generation: request.generation,
@@ -215,4 +212,34 @@ export async function calculateDamageAction(
     console.error('calculateDamageAction: unexpected error', error);
     return { ok: false, code: 'unknown', side: undefined };
   }
+}
+
+/**
+ * Damage Lab's single-matchup calculation (task §17). Simple Mode and
+ * Advanced share this one path: Simple Mode's fixed assumptions (task §7)
+ * are just `DamageAdvancedConfig`'s own default values
+ * (`apps/web/src/lib/damage-advanced.ts`'s `createDefaultAdvancedConfig`) —
+ * the client builds the same request shape either way, so there is no
+ * separate "simple" code path here to keep in sync.
+ */
+export async function calculateDamageAction(
+  request: DamageLabCalculationRequest,
+): Promise<DamageLabCalculationResponse> {
+  return runDamageCalculation(request);
+}
+
+/**
+ * Matchup comparison primitive (Phase 3 roadmap) — the same fixed
+ * attacker+move compared against several extra defenders in ONE round
+ * trip, never one Server Action call per defender. No new domain API: this
+ * is composition over `calculateDamage()`/`runDamageCalculation` above,
+ * called once per request, in order. A single invalid/unresolvable entry
+ * returns its own `{ ok: false, ... }` at that index — it never throws and
+ * never drops or reorders the other entries, so one bad defender can't take
+ * down the rest of the comparison (task §8).
+ */
+export async function calculateDamageBatchAction(
+  requests: DamageLabCalculationRequest[],
+): Promise<DamageLabCalculationResponse[]> {
+  return requests.map(runDamageCalculation);
 }

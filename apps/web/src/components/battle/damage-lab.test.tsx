@@ -1,3 +1,5 @@
+import { StrictMode } from 'react';
+
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,6 +16,7 @@ import type { DamageCalculationResult } from '@pokestudio/damage';
 
 import {
   calculateDamageAction,
+  calculateDamageBatchAction,
   fetchAdvancedReferenceData,
   fetchAttackerReferenceData,
   fetchDefenderReferenceData,
@@ -31,6 +34,7 @@ vi.mock('@/app/[locale]/battle/damage/actions', () => ({
   fetchAdvancedReferenceData: vi.fn(),
   fetchFormSupportedVersionGroups: vi.fn(),
   calculateDamageAction: vi.fn(),
+  calculateDamageBatchAction: vi.fn(),
 }));
 
 vi.mock('@/lib/team-storage', () => ({ loadTeamDraft: vi.fn() }));
@@ -40,6 +44,7 @@ const mockFetchDefender = vi.mocked(fetchDefenderReferenceData);
 const mockFetchAdvancedReferenceData = vi.mocked(fetchAdvancedReferenceData);
 const mockFetchFormSupportedVersionGroups = vi.mocked(fetchFormSupportedVersionGroups);
 const mockCalculate = vi.mocked(calculateDamageAction);
+const mockCalculateBatch = vi.mocked(calculateDamageBatchAction);
 const mockLoadTeamDraft = vi.mocked(loadTeamDraft);
 
 const JOLLY: Nature = {
@@ -63,6 +68,8 @@ beforeEach(() => {
   // in the default game" fallback override this per-test.
   mockFetchFormSupportedVersionGroups.mockResolvedValue(VERSION_GROUPS);
   mockCalculate.mockReset();
+  mockCalculateBatch.mockReset();
+  mockCalculateBatch.mockResolvedValue([]);
   mockLoadTeamDraft.mockReset();
   sessionStorage.clear();
   window.history.replaceState({}, '', '/en/battle/damage');
@@ -102,6 +109,35 @@ const SEARCH_INDEX: { items: SpeciesSearchItem[]; aliases: SpeciesSearchAlias[] 
       types: ['normal'],
       baseStats: STATS,
       pokeapiPokemonId: 52,
+    },
+    // Matchup comparison primitive fixtures (Phase 3 roadmap) — distinct
+    // from the attacker/principal defender above, used as "extra" defenders.
+    {
+      slug: 'corviknight',
+      formSlug: 'corviknight',
+      nationalDexNumber: 823,
+      name: { en: 'Corviknight', es: 'Corviknight' },
+      types: ['flying', 'steel'],
+      baseStats: STATS,
+      pokeapiPokemonId: 823,
+    },
+    {
+      slug: 'toxapex',
+      formSlug: 'toxapex',
+      nationalDexNumber: 748,
+      name: { en: 'Toxapex', es: 'Toxapex' },
+      types: ['poison', 'water'],
+      baseStats: STATS,
+      pokeapiPokemonId: 748,
+    },
+    {
+      slug: 'ferrothorn',
+      formSlug: 'ferrothorn',
+      nationalDexNumber: 598,
+      name: { en: 'Ferrothorn', es: 'Ferrothorn' },
+      types: ['grass', 'steel'],
+      baseStats: STATS,
+      pokeapiPokemonId: 598,
     },
   ],
   aliases: [
@@ -165,6 +201,11 @@ const MEOWTH_ALOLA_FORM: ComparablePokemonForm = {
 const EARTHQUAKE: MoveSummary = {
   slug: 'earthquake',
   nameEn: 'Earthquake',
+  // Real bilingual name — needed to actually prove label localization
+  // across a locale switch (task: "no reproducen exactamente la
+  // reconstrucción del label localizado"), not just that the same English
+  // text happens to render under a `locale="en"` fixture on both sides.
+  nameEs: 'Terremoto',
   type: 'ground',
   damageClass: 'physical',
   power: 100,
@@ -239,6 +280,15 @@ const LABELS: DamageLabLabels = {
   defenderReferenceError: "Couldn't load the defender's data.",
   retry: 'Retry',
   resultHeading: 'Result',
+  compareToggleLabel: 'Compare against more Pokémon',
+  compareSectionTitle: 'Compare defenders',
+  compareSectionPurpose:
+    'Check this same attack against multiple Pokémon without changing the primary defender.',
+  addDefenderLabel: 'Add defender',
+  defaultSettingsNote: "Compared defenders use Damage Lab's default settings.",
+  maxExtraDefendersReached: 'Maximum of 4 additional defenders.',
+  removeExtraDefenderTemplate: 'Remove {name} from comparison',
+  extraDefenderErrorLabel: 'This matchup could not be calculated.',
   importBanner: {
     importedFromBuildLabel: 'Imported from Team Builder',
     importedMemberTeamTemplate: '{member} · {team}',
@@ -399,6 +449,10 @@ const TYPE_LABELS: Record<string, string> = {
   ground: 'Ground',
   fire: 'Fire',
   steel: 'Steel',
+  flying: 'Flying',
+  poison: 'Poison',
+  water: 'Water',
+  grass: 'Grass',
 };
 
 const STAT_LABELS = {
@@ -429,6 +483,37 @@ function renderDamageLab(
       labels={LABELS}
     />,
   );
+}
+
+/**
+ * Locale-parametrized variant of `renderDamageLab` — the plain helper above
+ * hardcodes `locale="en"` on every call, which cannot exercise a REAL
+ * locale change (both "sides" of a switch rendered identically in English)
+ * and therefore cannot catch a bug specific to the localized move label
+ * reconstruction. `strict` wraps the tree in `<StrictMode>` — the real app
+ * runs with `reactStrictMode: true` (`next.config.mjs`), which double-
+ * invokes every effect on mount in development; plain `render()` from
+ * Testing Library does NOT do this unless asked, so a bug that only
+ * manifests under that double-invocation (the manual repro ran against a
+ * real `next dev`, Strict Mode on) is invisible to every test in this file
+ * that doesn't opt in here.
+ */
+function renderDamageLabAtLocale(locale: 'en' | 'es', options?: { strict?: boolean }) {
+  const tree = (
+    <DamageLab
+      locale={locale}
+      searchIndex={SEARCH_INDEX}
+      versionGroups={VERSION_GROUPS}
+      defaultVersionGroupSlug="scarlet-violet"
+      typeLabels={TYPE_LABELS as never}
+      statLabels={STAT_LABELS}
+      teamId={null}
+      memberId={null}
+      exploreAttackerFormSlug={null}
+      labels={LABELS}
+    />
+  );
+  return render(options?.strict ? <StrictMode>{tree}</StrictMode> : tree);
 }
 
 async function selectAttacker(name: RegExp = /Garchomp/) {
@@ -1800,4 +1885,338 @@ describe('Explore → Damage Lab compatible-game fallback (Phase 3 roadmap)', ()
     );
     expect(await screen.findByText('Alolan Meowth')).not.toBeNull();
   });
+});
+
+// Matchup comparison primitive (Phase 3 roadmap) — fixed attacker+move,
+// compared against up to 4 extra defenders, each using Damage Lab's own
+// default Advanced config (never inherited from the principal defender).
+function openCompareSection(): void {
+  fireEvent.click(screen.getByRole('button', { name: /Compare against more Pokémon/ }));
+}
+
+async function addExtraDefender(query: string, optionName: RegExp): Promise<void> {
+  const input = await screen.findByRole('combobox', { name: 'Add defender' });
+  fireEvent.change(input, { target: { value: query } });
+  fireEvent.click(await screen.findByRole('option', { name: optionName }));
+}
+
+const HEATRAN_RESULT: DamageCalculationResult = RESULT;
+const CORVIKNIGHT_IMMUNE_RESULT: DamageCalculationResult = {
+  ...RESULT,
+  distribution: { kind: 'fixed', damage: 0 },
+  minDamage: 0,
+  maxDamage: 0,
+  minPercent: 0,
+  maxPercent: 0,
+  ko: { chance: undefined, hitsToKo: undefined },
+  effectiveness: 'immune',
+  isSTAB: true,
+  explanation: [{ kind: 'type-effectiveness', multiplier: 0, tier: 'immune' }, { kind: 'stab' }],
+};
+
+describe('Damage Lab — matchup comparison primitive (Phase 3 roadmap)', () => {
+  beforeEach(() => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockCalculate.mockResolvedValue({ ok: true, result: RESULT });
+  });
+
+  it('the comparison section is closed initially', () => {
+    renderDamageLab();
+    expect(screen.queryByRole('heading', { name: 'Compare defenders' })).toBeNull();
+  });
+
+  it('opening "Compare against more Pokémon" reveals the section, its purpose copy, and the add-defender input', async () => {
+    renderDamageLab();
+    openCompareSection();
+    expect(await screen.findByText('Compare defenders')).not.toBeNull();
+    expect(
+      screen.getByText(
+        'Check this same attack against multiple Pokémon without changing the primary defender.',
+      ),
+    ).not.toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Add defender' })).not.toBeNull();
+  });
+
+  it('adds a single extra defender and shows its compact result after Calculate', async () => {
+    mockCalculateBatch.mockResolvedValue([{ ok: true, result: CORVIKNIGHT_IMMUNE_RESULT }]);
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+    openCompareSection();
+    await addExtraDefender('corviknight', /Corviknight/);
+    await clickCalculate();
+
+    expect(mockCalculateBatch).toHaveBeenCalledTimes(1);
+    const batchRequest = mockCalculateBatch.mock.calls[0]![0];
+    expect(batchRequest).toHaveLength(1);
+    expect(batchRequest[0]!.defender.formSlug).toBe('corviknight');
+    // Extra defenders always use Damage Lab's own default config (task §9).
+    expect(batchRequest[0]!.defender.abilitySlug).toBeNull();
+    expect(batchRequest[0]!.defender.itemSlug).toBeNull();
+
+    expect(await screen.findByText('Immune')).not.toBeNull();
+  });
+
+  it('adds several extra defenders, preserving the order they were added in', async () => {
+    mockCalculateBatch.mockResolvedValue([
+      { ok: true, result: HEATRAN_RESULT },
+      { ok: true, result: CORVIKNIGHT_IMMUNE_RESULT },
+    ]);
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+    openCompareSection();
+    await addExtraDefender('toxapex', /Toxapex/);
+    await addExtraDefender('corviknight', /Corviknight/);
+    await clickCalculate();
+
+    const batchRequest = mockCalculateBatch.mock.calls[0]![0];
+    expect(batchRequest.map((request) => request.defender.formSlug)).toEqual([
+      'toxapex',
+      'corviknight',
+    ]);
+  });
+
+  it('removes an extra defender via its accessible remove button', async () => {
+    renderDamageLab();
+    openCompareSection();
+    await addExtraDefender('toxapex', /Toxapex/);
+    expect(await screen.findByText('Toxapex')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Toxapex from comparison' }));
+    expect(screen.queryByText('Toxapex')).toBeNull();
+  });
+
+  it('rejects adding the same extra defender twice', async () => {
+    renderDamageLab();
+    openCompareSection();
+    await addExtraDefender('toxapex', /Toxapex/);
+    await addExtraDefender('toxapex', /Toxapex/);
+
+    expect(screen.getAllByText('Toxapex')).toHaveLength(1);
+  });
+
+  it('rejects adding the same form that is already the principal defender', async () => {
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    renderDamageLab();
+    await selectDefender();
+    openCompareSection();
+    await addExtraDefender('heatran', /Heatran/);
+
+    // Still only the principal defender's "Heatran" — no extra row for it.
+    expect(screen.getAllByText('Heatran')).toHaveLength(1);
+  });
+
+  it('enforces a maximum of 4 extra defenders and shows the limit message', async () => {
+    renderDamageLab();
+    openCompareSection();
+    await addExtraDefender('toxapex', /Toxapex/);
+    await addExtraDefender('corviknight', /Corviknight/);
+    await addExtraDefender('garchomp', /Garchomp/);
+    await addExtraDefender('ferrothorn', /Ferrothorn/);
+
+    expect(screen.queryByRole('combobox', { name: 'Add defender' })).toBeNull();
+    expect(await screen.findByText('Maximum of 4 additional defenders.')).not.toBeNull();
+  });
+
+  it('isolates an error for one defender without affecting the others', async () => {
+    mockCalculateBatch.mockResolvedValue([
+      { ok: true, result: HEATRAN_RESULT },
+      { ok: false, code: 'unknown-form', side: 'defender' },
+    ]);
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+    openCompareSection();
+    await addExtraDefender('toxapex', /Toxapex/);
+    await addExtraDefender('corviknight', /Corviknight/);
+    await clickCalculate();
+
+    expect(await screen.findAllByText('This matchup could not be calculated.')).toHaveLength(1);
+    // The other, successful row still renders its own real result (the
+    // principal matchup renders the same "Guaranteed 2HKO" copy too, since
+    // it shares the same pinned `RESULT` fixture — at least one instance
+    // proves the successful extra row wasn't swallowed by the error).
+    expect(screen.getAllByText('Guaranteed 2HKO').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('recalculating after an attacker/move change updates the comparison batch request, not just the principal matchup', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE, DIG] });
+    mockCalculateBatch.mockResolvedValue([{ ok: true, result: CORVIKNIGHT_IMMUNE_RESULT }]);
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+    openCompareSection();
+    await addExtraDefender('corviknight', /Corviknight/);
+    await clickCalculate();
+    expect(mockCalculateBatch.mock.calls[0]![0][0]!.moveSlug).toBe('earthquake');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change Earthquake' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Dig/ }));
+    await clickCalculate();
+
+    expect(mockCalculateBatch).toHaveBeenCalledTimes(2);
+    expect(mockCalculateBatch.mock.calls[1]![0][0]!.moveSlug).toBe('dig');
+  });
+
+  it('a defender added but never calculated shows identity only, no fabricated result', async () => {
+    renderDamageLab();
+    openCompareSection();
+    await addExtraDefender('toxapex', /Toxapex/);
+
+    expect(screen.getByText('Toxapex')).not.toBeNull();
+    expect(mockCalculateBatch).not.toHaveBeenCalled();
+  });
+
+  it('the comparison UI never renders as a table — a mobile-safe list structure instead', async () => {
+    mockCalculateBatch.mockResolvedValue([{ ok: true, result: CORVIKNIGHT_IMMUNE_RESULT }]);
+    renderDamageLab();
+    await selectAttackerMoveAndDefender();
+    openCompareSection();
+    await addExtraDefender('corviknight', /Corviknight/);
+    await clickCalculate();
+
+    await screen.findByText('Immune');
+    expect(document.querySelector('table')).toBeNull();
+  });
+
+  it('locale handoff preserves the extra defenders across a real unmount/remount', async () => {
+    const view = renderDamageLab();
+    openCompareSection();
+    await addExtraDefender('toxapex', /Toxapex/);
+
+    switchLocale(view, '/es/battle/damage');
+    renderDamageLab();
+
+    expect(await screen.findByText('Toxapex')).not.toBeNull();
+  });
+
+  /**
+   * This test previously ran under plain `renderDamageLab()` (no
+   * `<StrictMode>`, hardcoded `locale="en"` on both "sides" of the
+   * switch) and passed even while the real app had a genuine bug here —
+   * false coverage. `next.config.mjs` sets `reactStrictMode: true`, which
+   * double-invokes the `setSelectedMoveSlug` functional updater in
+   * `loadAttackerReference`'s fetch `.then()`; that updater used to mutate
+   * `pendingImportedMoveSlugsRef.current` as a side effect, so its second,
+   * "throwaway-looking" invocation saw an already-cleared ref and silently
+   * produced `null`. Wrapping the render in `<StrictMode>` (see
+   * `renderDamageLabAtLocale`) is what actually exercises that path — see
+   * the dedicated "selected move survives" describe block below for the
+   * full set of regression tests this bug now has.
+   */
+  it('locale handoff preserves extra defenders AND the selected move together, including under React Strict Mode', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    const view = renderDamageLabAtLocale('en', { strict: true });
+    await selectAttackerMoveAndDefender();
+    openCompareSection();
+    await addExtraDefender('toxapex', /Toxapex/);
+
+    switchLocale(view, '/es/battle/damage');
+    renderDamageLabAtLocale('es', { strict: true });
+
+    expect(await screen.findByText('Toxapex')).not.toBeNull();
+    // The move must still be selected — never reverted to the placeholder
+    // (this fixture's `labels` object is a fixed English copy set, shared
+    // across both locale renders — only the move's own localized name,
+    // resolved from real ES/EN `MoveSummary` data, changes with `locale`).
+    expect(screen.queryByRole('button', { name: 'Select move' })).toBeNull();
+    expect(await screen.findByRole('button', { name: /Terremoto/ })).not.toBeNull();
+  });
+});
+
+describe('Locale handoff — selected move survives with its real localized label (manual repro fix)', () => {
+  it('ES -> EN: same moveSlug survives even when the post-remount attacker refetch resolves LATER than the restore effect, and the visible label switches to Earthquake', async () => {
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    const view = renderDamageLabAtLocale('es');
+    await selectAttacker();
+    fireEvent.click(await screen.findByRole('button', { name: 'Select move' }));
+    // The move picker itself shows the ES-localized name at this locale.
+    fireEvent.click(await screen.findByRole('option', { name: /Terremoto/ }));
+    await selectDefender();
+    // Sanity check: this fixture actually exercises a real Spanish label,
+    // not just English text reused under an `locale="es"` prop.
+    expect(screen.getByRole('button', { name: /Terremoto/ })).not.toBeNull();
+
+    // The attacker refetch that follows the remount does NOT resolve
+    // immediately — a real network fetch never does. `mockResolvedValue`
+    // alone (auto-resolved on the next microtask) can never model this gap;
+    // a `deferred()` promise held open under our control can.
+    const attackerFetch = deferred<{ form: ComparablePokemonForm; moves: MoveSummary[] }>();
+    mockFetchAttacker.mockReturnValueOnce(attackerFetch.promise);
+
+    switchLocale(view, '/en/battle/damage');
+    renderDamageLabAtLocale('en');
+
+    // While attackerMoves hasn't arrived yet: an ordinary loading state,
+    // never a premature "nothing is selected" placeholder — "moves not
+    // loaded yet" must never be treated as "move is invalid".
+    expect(screen.queryByRole('button', { name: 'Select move' })).toBeNull();
+
+    attackerFetch.resolve({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+
+    // Same moveSlug, now shown with its English label.
+    expect(await screen.findByRole('button', { name: /Earthquake/ })).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Select move' })).toBeNull();
+  });
+
+  it('EN -> ES: same moveSlug survives, visible label switches to Terremoto', async () => {
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    const view = renderDamageLabAtLocale('en');
+    await selectAttackerMoveAndDefender();
+    expect(screen.getByRole('button', { name: /Earthquake/ })).not.toBeNull();
+
+    switchLocale(view, '/es/battle/damage');
+    renderDamageLabAtLocale('es');
+
+    expect(await screen.findByRole('button', { name: /Terremoto/ })).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Elegir movimiento' })).toBeNull();
+  });
+
+  it('a moveSlug that is genuinely illegal for the restored attacker/game is NOT force-restored', async () => {
+    // Earthquake was selected, but the restored game's real legal moves
+    // (fetched fresh after remount) no longer include it — Dig only.
+    mockFetchAttacker.mockResolvedValueOnce({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    const view = renderDamageLabAtLocale('en');
+    await selectAttackerMoveAndDefender();
+
+    mockFetchAttacker.mockResolvedValueOnce({ form: GARCHOMP_FORM, moves: [DIG] });
+    switchLocale(view, '/es/battle/damage');
+    renderDamageLabAtLocale('es');
+
+    await screen.findByText('Garchomp');
+    // Never force an illegal move into the selection.
+    expect(screen.queryByRole('button', { name: /Terremoto|Earthquake/ })).toBeNull();
+  });
+
+  it("STRICT MODE: ES -> EN survives the real app's reactStrictMode double-invoked mount effects", async () => {
+    mockFetchDefender.mockResolvedValue(HEATRAN_FORM);
+    mockFetchAttacker.mockResolvedValue({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+    const view = renderDamageLabAtLocale('es', { strict: true });
+    await selectAttacker();
+    fireEvent.click(await screen.findByRole('button', { name: 'Select move' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Terremoto/ }));
+    await selectDefender();
+    expect(screen.getByRole('button', { name: /Terremoto/ })).not.toBeNull();
+
+    const attackerFetch = deferred<{ form: ComparablePokemonForm; moves: MoveSummary[] }>();
+    mockFetchAttacker.mockReturnValueOnce(attackerFetch.promise);
+
+    switchLocale(view, '/en/battle/damage');
+    renderDamageLabAtLocale('en', { strict: true });
+
+    attackerFetch.resolve({ form: GARCHOMP_FORM, moves: [EARTHQUAKE] });
+
+    expect(await screen.findByRole('button', { name: /Earthquake/ })).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Select move' })).toBeNull();
+  });
+
+  // A non-Strict-Mode variant of "move + extra defenders survive together"
+  // used to live here — removed as obvious redundancy: the
+  // "matchup comparison primitive" describe block's own StrictMode test
+  // ("locale handoff preserves extra defenders AND the selected move
+  // together, including under React Strict Mode") covers the exact same
+  // scenario under a strictly harder condition, so it already proves the
+  // non-Strict-Mode case too.
 });

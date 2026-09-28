@@ -23,6 +23,7 @@ import type { BaseStats, PokemonType } from '@pokestudio/pokemon-data';
 
 import {
   calculateDamageAction,
+  calculateDamageBatchAction,
   fetchAdvancedReferenceData,
   fetchAttackerReferenceData,
   fetchDefenderReferenceData,
@@ -33,6 +34,7 @@ import {
 } from '@/app/[locale]/battle/damage/actions';
 import { advancedConfigFromTeamMember, preferredDamageMoveSlug } from '@/lib/build-damage-import';
 import { MovePicker, type MovePickerLabels } from '@/components/build/move-picker';
+import { CompareAddInput } from '@/components/pokemon/compare-add-input';
 import { PopoverDisclosure } from '@/components/popover-disclosure';
 import {
   resolveBuildGameCapabilities,
@@ -60,8 +62,18 @@ import {
   type DamageLabImportBannerLabels,
   type DamageLabImportStatus,
 } from './damage-lab-import-banner';
+import { DamageMatchupRow } from './damage-matchup-row';
 import { DamagePokemonSlot, type DamagePokemonSlotLabels } from './damage-pokemon-slot';
 import { DamageResult, type DamageResultLabels } from './damage-result';
+
+/**
+ * Matchup comparison primitive (Phase 3 roadmap) — the extra defenders
+ * compared against the same fixed attacker+move, on top of the one
+ * principal defender Damage Lab already has. Deliberately small and fixed
+ * for this first primitive (product decision) — not a "load more" pattern,
+ * not a generic N-item list.
+ */
+const MAX_EXTRA_DEFENDERS = 4;
 
 export interface DamageLabLabels {
   gameLabel: string;
@@ -87,6 +99,15 @@ export interface DamageLabLabels {
   /** `statLabels`/`typeLabels` are supplied separately (`DamageLab`'s own props, shared with the rest of the page) rather than duplicated in here. */
   advancedPanel: Omit<DamageAdvancedPanelLabels, 'statLabels' | 'typeLabels'>;
   importBanner: DamageLabImportBannerLabels;
+  /** Matchup comparison primitive (Phase 3 roadmap) — "Compare against more Pokémon". */
+  compareToggleLabel: string;
+  compareSectionTitle: string;
+  compareSectionPurpose: string;
+  addDefenderLabel: string;
+  defaultSettingsNote: string;
+  maxExtraDefendersReached: string;
+  removeExtraDefenderTemplate: string;
+  extraDefenderErrorLabel: string;
   errors: Record<
     | Exclude<DamageInputErrorCode, 'natures-not-available-in-generation'>
     | 'naturesNotAvailableInGeneration'
@@ -128,10 +149,20 @@ function errorMessageFor(
   }
 }
 
-function toCombatantRequest(form: ComparablePokemonForm, config: DamageAdvancedConfig) {
+/**
+ * Accepts anything with a form/species slug pair — `ComparablePokemonForm`
+ * (attacker/defender's full reference data) and `RosterVisualIdentity`
+ * (an extra defender's search-index-only identity, task §12: no new fetch,
+ * no `packages/damage` change) both satisfy this structurally, with zero
+ * call-site changes for the two existing callers.
+ */
+function toCombatantRequest(
+  identity: { formSlug: string; speciesSlug: string },
+  config: DamageAdvancedConfig,
+) {
   return {
-    formSlug: form.formSlug,
-    speciesSlug: form.speciesSlug,
+    formSlug: identity.formSlug,
+    speciesSlug: identity.speciesSlug,
     level: config.level,
     abilitySlug: config.abilitySlug,
     itemSlug: config.itemSlug,
@@ -141,6 +172,25 @@ function toCombatantRequest(form: ComparablePokemonForm, config: DamageAdvancedC
     teraType: effectiveTeraType(config),
   };
 }
+
+/**
+ * One extra defender's own calculation entry within a batch — its
+ * `requestKey` (the exact request it was calculated against) is what lets
+ * the row detect staleness independently of the main matchup (task §6),
+ * the same way `lastCalculatedKey`/`currentRequestKey` already do for it.
+ */
+interface ExtraDefenderResultEntry {
+  formSlug: string;
+  requestKey: string;
+  response: DamageLabCalculationResponse;
+}
+
+interface DamageLabCalculationState {
+  main: DamageLabCalculationResponse | null;
+  extras: ExtraDefenderResultEntry[];
+}
+
+const INITIAL_CALCULATION_STATE: DamageLabCalculationState = { main: null, extras: [] };
 
 export function DamageLab({
   locale,
@@ -226,6 +276,14 @@ export function DamageLab({
 
   const [selectedMoveSlug, setSelectedMoveSlug] = useState<string | null>(null);
   const [movePickerOpen, setMovePickerOpen] = useState(false);
+
+  // Matchup comparison primitive (Phase 3 roadmap) — order-preserving list
+  // of extra defenders' form slugs, up to `MAX_EXTRA_DEFENDERS`. Each one
+  // always uses Damage Lab's own default Advanced config (task §9: no
+  // per-row Advanced, no second defaults system) — there is deliberately
+  // no config state per extra defender at all.
+  const [extraDefenderFormSlugs, setExtraDefenderFormSlugs] = useState<string[]>([]);
+  const [compareSectionOpen, setCompareSectionOpen] = useState(false);
 
   // Build import (Fase M3.2) — `importStatus` drives the banner; the two
   // refs below are the "apply exactly once" guards: `teamImportAppliedRef`
@@ -315,6 +373,10 @@ export function DamageLab({
     setAttackerConfig(draft.attackerConfig);
     setDefenderConfig(draft.defenderConfig);
     setIsCritical(draft.isCritical);
+    setExtraDefenderFormSlugs(draft.extraDefenderFormSlugs);
+    // Restoring a non-empty comparison implies the user had it open —
+    // never restore the slugs into a collapsed, seemingly-empty section.
+    if (draft.extraDefenderFormSlugs.length > 0) setCompareSectionOpen(true);
     // Reuses the exact same "consume once, once real legal moves exist to
     // check it against" mechanism the Build import already relies on
     // (task: "reuse existing reference-data/Pokémon-loading infrastructure,
@@ -349,6 +411,7 @@ export function DamageLab({
         attackerConfig,
         defenderConfig,
         isCritical,
+        extraDefenderFormSlugs,
       });
     }
     window.addEventListener(LOCALE_CHANGE_EVENT, handleLocaleChange);
@@ -361,6 +424,7 @@ export function DamageLab({
     attackerConfig,
     defenderConfig,
     isCritical,
+    extraDefenderFormSlugs,
   ]);
 
   // Build import (Fase M3.2) — runs once per mount, only when both
@@ -531,17 +595,29 @@ export function DamageLab({
           if (attackerRequestIdRef.current !== requestId) return; // superseded — task §5/§6
           setAttackerForm(data.form);
           setAttackerMoves(data.moves);
+          // Read once, as a plain local — NOT inside the `setSelectedMoveSlug`
+          // updater below. React Strict Mode calls a functional state
+          // updater TWICE in development to catch exactly this: an updater
+          // that mutates something outside itself (`pendingImportedMoveSlugsRef
+          // .current = null`) is impure, so its second, discarded-looking
+          // invocation actually ran too — and since the ref was already
+          // cleared by the first call, the second call falls through to
+          // `return null`, silently reverting a real locale-handoff/Build
+          // import move restoration back to "no move selected" (confirmed by
+          // reproducing under `<StrictMode>`, which matches this app's own
+          // `reactStrictMode: true`). Capturing `pending` here and clearing
+          // the ref here — both outside the updater — makes the updater a
+          // pure function of `current` alone, safe to call any number of
+          // times with the same result.
+          const pending = pendingImportedMoveSlugsRef.current;
+          pendingImportedMoveSlugsRef.current = null;
           setSelectedMoveSlug((current) => {
             if (current && data.moves.some((move) => move.slug === current)) return current;
             // Imported move preference (task §12/§13) — consumed exactly
             // once, the first time real legal moves exist to check it
             // against, win or lose. A later manual attacker/game change
             // that re-runs this same effect must never re-apply it.
-            const pending = pendingImportedMoveSlugsRef.current;
-            if (pending) {
-              pendingImportedMoveSlugsRef.current = null;
-              return preferredDamageMoveSlug(pending, data.moves);
-            }
+            if (pending) return preferredDamageMoveSlug(pending, data.moves);
             return null;
           });
           setAttackerConfig((config) => revalidateAdvancedConfigForForm(config, data.form));
@@ -639,32 +715,107 @@ export function DamageLab({
     };
   }
 
+  // Matchup comparison primitive (Phase 3 roadmap) — same fixed
+  // attacker+move as `buildRequest()` above, paired with one extra
+  // defender's identity and Damage Lab's own default config (task §9: no
+  // per-row Advanced). `identity` is resolved from the search index already
+  // in memory, not fetched — an extra defender never needs its full
+  // `ComparablePokemonForm` because it never has its own Advanced state to
+  // validate against (unlike the principal defender).
+  function buildExtraDefenderRequest(identity: {
+    formSlug: string;
+    speciesSlug: string;
+  }): DamageLabCalculationRequest | null {
+    if (!attackerForm || !selectedMoveSlug || !capabilities) return null;
+    return {
+      generation: capabilities.generation,
+      attacker: toCombatantRequest(attackerForm, attackerConfig),
+      defender: toCombatantRequest(identity, createDefaultAdvancedConfig()),
+      moveSlug: selectedMoveSlug,
+      isCritical,
+    };
+  }
+
+  function handleAddExtraDefender(formSlug: string): void {
+    setExtraDefenderFormSlugs((current) => {
+      if (current.length >= MAX_EXTRA_DEFENDERS) return current;
+      if (formSlug === defenderFormSlug) return current; // already the principal defender
+      if (current.includes(formSlug)) return current; // no duplicates
+      return [...current, formSlug];
+    });
+  }
+
+  function handleRemoveExtraDefender(formSlug: string): void {
+    setExtraDefenderFormSlugs((current) => current.filter((slug) => slug !== formSlug));
+  }
+
   const currentRequest = buildRequest();
   const configsValid =
     capabilities !== null &&
     isAdvancedConfigValid(attackerConfig, capabilities, attackerForm) &&
     isAdvancedConfigValid(defenderConfig, capabilities, defenderForm);
+  // Unchanged: gated on the principal matchup only (task §7/§8) — an extra
+  // defender that can't yet be resolved/calculated never blocks Calculate
+  // for the principal matchup or for the other, valid extra defenders.
   const canCalculate = Boolean(currentRequest) && configsValid;
 
   const [lastCalculatedKey, setLastCalculatedKey] = useState<string | null>(null);
 
   const [calcState, submitCalculate, isCalculating] = useActionState<
-    DamageLabCalculationResponse | null,
+    DamageLabCalculationState,
     void
   >(async () => {
     const request = buildRequest();
-    if (!request) return null;
-    const response = await calculateDamageAction(request);
-    setLastCalculatedKey(JSON.stringify(request));
-    return response;
-  }, null);
+
+    // One batched Server Action call for every resolvable extra defender —
+    // never one round trip per defender (task §7). A slug that can't be
+    // resolved against the search index (stale/unknown) or has nothing to
+    // pair it with yet (no attacker/move selected) is simply left out of
+    // the batch; its row shows that as its own isolated state, it never
+    // fails the whole comparison (task §8).
+    const extraEntries = extraDefenderFormSlugs
+      .map((formSlug) => {
+        const identity = resolveRosterVisualIdentity(searchIndex, formSlug);
+        if (!identity) return null;
+        const extraRequest = buildExtraDefenderRequest(identity);
+        if (!extraRequest) return null;
+        return { formSlug, request: extraRequest };
+      })
+      .filter(
+        (entry): entry is { formSlug: string; request: DamageLabCalculationRequest } =>
+          entry !== null,
+      );
+
+    const [mainResponse, extraResponses] = await Promise.all([
+      request ? calculateDamageAction(request) : Promise.resolve(null),
+      extraEntries.length > 0
+        ? calculateDamageBatchAction(extraEntries.map((entry) => entry.request))
+        : Promise.resolve([]),
+    ]);
+
+    if (request) setLastCalculatedKey(JSON.stringify(request));
+
+    const extras: ExtraDefenderResultEntry[] = extraEntries.map((entry, index) => ({
+      formSlug: entry.formSlug,
+      requestKey: JSON.stringify(entry.request),
+      // `extraResponses` is always exactly `extraEntries.length` long (one
+      // response per request, same order, see `calculateDamageBatchAction`)
+      // — the fallback only satisfies `noUncheckedIndexedAccess`, it's never
+      // meant to be reachable.
+      response: extraResponses[index] ?? { ok: false, code: 'unknown', side: undefined },
+    }));
+
+    return { main: mainResponse, extras };
+  }, INITIAL_CALCULATION_STATE);
 
   // Stale-result detection (task §20): a visible result stays visible, but
   // is clearly marked outdated the instant any input it depended on changes
   // — never a silently-wrong number left looking current.
   const currentRequestKey = currentRequest ? JSON.stringify(currentRequest) : null;
   const isStale =
-    calcState?.ok === true && lastCalculatedKey !== null && currentRequestKey !== lastCalculatedKey;
+    calcState.main?.ok === true &&
+    lastCalculatedKey !== null &&
+    currentRequestKey !== lastCalculatedKey;
 
   return (
     <div className="flex flex-col gap-8">
@@ -918,12 +1069,12 @@ export function DamageLab({
       </button>
 
       <div aria-live="polite">
-        {calcState?.ok === false ? (
+        {calcState.main?.ok === false ? (
           <p role="alert" className="m-0 text-center text-sm font-semibold text-danger">
-            {errorMessageFor(calcState.code, labels.errors)}
+            {errorMessageFor(calcState.main.code, labels.errors)}
           </p>
         ) : null}
-        {calcState?.ok === true ? (
+        {calcState.main?.ok === true ? (
           <div className="flex flex-col items-center gap-3">
             {isStale ? (
               <div className="flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs font-semibold text-muted">
@@ -941,7 +1092,7 @@ export function DamageLab({
             <div className={isCalculating || isStale ? 'opacity-60 transition-opacity' : undefined}>
               <h2 className="sr-only">{labels.resultHeading}</h2>
               <DamageResult
-                result={calcState.result}
+                result={calcState.main.result}
                 locale={locale}
                 labels={labels.result}
                 attackerAbilities={attackerForm?.abilities ?? []}
@@ -954,6 +1105,91 @@ export function DamageLab({
                 typeLabels={typeLabels}
               />
             </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Matchup comparison primitive (Phase 3 roadmap) — deliberately below
+          the principal matchup/result (task §3: "no como otro laboratorio"),
+          an inline disclosure rather than a popover/tab, matching the exact
+          pattern `DamageResult`'s own "How this damage is calculated"
+          disclosure already established. Always rendered (not gated on
+          `calcState.main`) — a user can start adding comparison targets
+          before ever pressing Calculate, same as the principal defender
+          slot itself. */}
+      <div className="mx-auto w-full max-w-md">
+        <button
+          type="button"
+          onClick={() => setCompareSectionOpen((open) => !open)}
+          aria-expanded={compareSectionOpen}
+          className="text-xs font-semibold text-brand hover:underline"
+        >
+          {labels.compareToggleLabel} {compareSectionOpen ? '▲' : '▾'}
+        </button>
+        {compareSectionOpen ? (
+          <div className="mt-3 flex flex-col gap-3 rounded-lg border border-border-subtle bg-surface-raised p-4">
+            <div className="flex flex-col gap-1">
+              <h3 className="m-0 text-sm font-semibold text-foreground">
+                {labels.compareSectionTitle}
+              </h3>
+              <p className="m-0 text-xs text-muted">{labels.compareSectionPurpose}</p>
+            </div>
+
+            {extraDefenderFormSlugs.length < MAX_EXTRA_DEFENDERS ? (
+              <CompareAddInput
+                locale={locale}
+                searchIndex={searchIndex}
+                typeLabels={typeLabels}
+                onAdd={handleAddExtraDefender}
+                searchLabel={labels.addDefenderLabel}
+                searchPlaceholder={labels.addDefenderLabel}
+                multipleFormsMatchTemplate={labels.pokemonSlot.multipleFormsMatchTemplate}
+                ambiguousHintLabel={labels.pokemonSlot.ambiguousHint}
+                noResultsLabel={labels.pokemonSlot.noResultsLabel}
+                widthClassName="w-full"
+              />
+            ) : (
+              <p className="m-0 text-xs font-semibold text-muted">
+                {labels.maxExtraDefendersReached}
+              </p>
+            )}
+
+            {extraDefenderFormSlugs.length > 0 ? (
+              <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                {extraDefenderFormSlugs.map((formSlug) => {
+                  const identity = resolveRosterVisualIdentity(searchIndex, formSlug);
+                  const entry = calcState.extras.find(
+                    (candidate) => candidate.formSlug === formSlug,
+                  );
+                  const currentExtraRequest = identity ? buildExtraDefenderRequest(identity) : null;
+                  const currentExtraKey = currentExtraRequest
+                    ? JSON.stringify(currentExtraRequest)
+                    : null;
+                  const isRowStale = entry
+                    ? currentExtraKey !== entry.requestKey || isCalculating
+                    : false;
+                  return (
+                    <li key={formSlug}>
+                      <DamageMatchupRow
+                        locale={locale}
+                        formSlug={formSlug}
+                        identity={identity}
+                        response={entry?.response}
+                        stale={isRowStale}
+                        onRemove={() => handleRemoveExtraDefender(formSlug)}
+                        labels={{
+                          result: labels.result,
+                          removeTemplate: labels.removeExtraDefenderTemplate,
+                          errorLabel: labels.extraDefenderErrorLabel,
+                        }}
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+
+            <p className="m-0 text-xs text-muted">{labels.defaultSettingsNote}</p>
           </div>
         ) : null}
       </div>

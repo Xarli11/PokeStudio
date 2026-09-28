@@ -76,8 +76,13 @@ export interface DamageResultLabels {
  * `hitWord` is threaded through as a template var rather than a second
  * template set. `hitsToKo` is never 0, so the singular/plural check only
  * needs to distinguish exactly 1 hit from everything else.
+ *
+ * Exported (not just local to `DamageResult`) — the matchup-comparison
+ * primitive's compact row (`damage-matchup-row.tsx`) reuses it verbatim
+ * rather than duplicating KO copy logic for a second, compact presentation
+ * of the same `DamageCalculationResult` shape.
  */
-function koSummary(
+export function koSummary(
   result: DamageCalculationResult,
   locale: Locale,
   labels: DamageResultLabels,

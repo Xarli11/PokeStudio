@@ -102,7 +102,18 @@ silently treated as complete.
   `modifiers`; Damage Lab's result replaces the old, often-empty "Details" disclosure with "Cómo
   se calcula" / "How this damage is calculated", always available for a real damaging calculation,
   never built from `debugDescription`,
-- matchup comparison primitives.
+- matchup comparison primitives — shipped: a fixed attacker+move compared against up to 4 extra
+  defenders alongside the existing principal defender (which keeps its full card, Advanced and
+  explanation trace unchanged); extra defenders always use Damage Lab's own default Advanced
+  config, never a per-row Advanced panel; one batched Server Action calculates every extra
+  defender in a single round trip (`calculateDamage()` called once per defender, composed at the
+  web layer — no batch API added to `@pokestudio/damage`), with an invalid/unresolvable defender
+  isolated to its own row rather than failing the whole comparison; results render as compact rows
+  (damage range, %, effectiveness, KO), never a second full result card; locale handoff preserves
+  the extra defenders' identities and order the same way it already preserves the rest of Damage
+  Lab's inputs. This is a Phase 3 primitive, not Matchup Lab (Phase 9): no N attackers, no N
+  moves, no N×M matrix, no rankings/recommendations/simulation, no shareable matchup URLs, no
+  programmatic SEO.
 
 ## Phase 4 — Battle Engine + Battle UI
 
