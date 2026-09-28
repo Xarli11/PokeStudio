@@ -940,7 +940,19 @@ export function DamageLab({
             ) : null}
             <div className={isCalculating || isStale ? 'opacity-60 transition-opacity' : undefined}>
               <h2 className="sr-only">{labels.resultHeading}</h2>
-              <DamageResult result={calcState.result} locale={locale} labels={labels.result} />
+              <DamageResult
+                result={calcState.result}
+                locale={locale}
+                labels={labels.result}
+                attackerAbilities={attackerForm?.abilities ?? []}
+                defenderAbilities={defenderForm?.abilities ?? []}
+                items={
+                  advancedReferenceStatus.status === 'success'
+                    ? advancedReferenceStatus.data.items
+                    : []
+                }
+                typeLabels={typeLabels}
+              />
             </div>
           </div>
         ) : null}

@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 
-import type { DamageCalculationResult } from '@pokestudio/damage';
+import type { AbilitySummary, Item } from '@pokestudio/database';
+import type { DamageCalculationResult, DamageExplanationFactor } from '@pokestudio/damage';
 import { formatMessage, type Locale } from '@pokestudio/i18n';
+import type { PokemonType } from '@pokestudio/pokemon-data';
 
 import { formatDecimal } from '@/lib/number-format';
 
@@ -24,8 +26,25 @@ export interface DamageResultLabels {
   koHitWordSingular: string;
   koHitWordPlural: string;
   koNoDamage: string;
-  detailsLabel: string;
+  /** The "Cómo se calcula" / "How this damage is calculated" disclosure trigger (task §7 — replaces the old, often-empty `detailsLabel` control). */
+  explanationLabel: string;
   debugDescriptionLabel: string;
+  /** Reused as-is from the Advanced panel's own Tera summary (task §6) — never a second "Tera {type}" template. */
+  teraSummaryTemplate: string;
+  explanation: {
+    typeEffectivenessLabel: string;
+    typeEffectivenessValueTemplate: string;
+    stabDescription: string;
+    criticalDescription: string;
+    multiHitLabel: string;
+    multiHitValueTemplate: string;
+    attackerItemDescription: string;
+    attackerAbilityDescription: string;
+    attackerTeraDescription: string;
+    defenderItemDescription: string;
+    defenderAbilityDescription: string;
+    defenderTeraDescription: string;
+  };
   modifiers: {
     hitsTemplate: string;
     burned: string;
@@ -76,63 +95,208 @@ function koSummary(
   });
 }
 
-/** Every modifier `DamageResultModifiers` can carry that's actually present — Simple Mode will only ever show a small subset of these (critical/hits), Advanced mode will populate the rest later without this component changing. */
-function activeModifierLabels(
-  result: DamageCalculationResult,
-  labels: DamageResultLabels,
-): string[] {
-  const { modifiers } = result;
-  const active: string[] = [];
-  if (modifiers.hits && modifiers.hits > 1) {
-    active.push(formatMessage(labels.modifiers.hitsTemplate, { count: modifiers.hits }));
-  }
-  if (modifiers.isBurned) active.push(labels.modifiers.burned);
-  if (modifiers.isProtected) active.push(labels.modifiers.protected);
-  if (modifiers.isDefenderDynamaxed) active.push(labels.modifiers.defenderDynamaxed);
-  if (modifiers.weather) active.push(labels.modifiers.weather[modifiers.weather]);
-  if (modifiers.terrain) active.push(labels.modifiers.terrain[modifiers.terrain]);
-  if (modifiers.isReflect) active.push(labels.modifiers.reflect);
-  if (modifiers.isLightScreen) active.push(labels.modifiers.lightScreen);
-  if (modifiers.isAuroraVeil) active.push(labels.modifiers.auroraVeil);
-  if (modifiers.isHelpingHand) active.push(labels.modifiers.helpingHand);
-  if (modifiers.isFriendGuard) active.push(labels.modifiers.friendGuard);
-  if (modifiers.isBattery) active.push(labels.modifiers.battery);
-  if (modifiers.isPowerSpot) active.push(labels.modifiers.powerSpot);
-  if (modifiers.ruinAbilityActive)
-    active.push(labels.modifiers.ruinAbility[modifiers.ruinAbilityActive]);
-  return active;
+/**
+ * A PokeStudio slug is never guaranteed to resolve against whatever
+ * item/ability list happens to be loaded (Advanced's own data is fetched
+ * lazily) — falls back to a readable rendering of the slug itself rather
+ * than showing nothing or an upstream English name (task §5's
+ * localization requirement is about never showing Smogon's raw name, not
+ * about hiding a real fact just because its display name isn't loaded
+ * yet).
+ */
+function fallbackSlugLabel(slug: string): string {
+  return slug
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function itemName(items: readonly Item[], slug: string, locale: Locale): string {
+  const item = items.find((candidate) => candidate.slug === slug);
+  if (!item) return fallbackSlugLabel(slug);
+  return locale === 'es' ? (item.nameEs ?? item.nameEn) : item.nameEn;
+}
+
+function abilityName(abilities: readonly AbilitySummary[], slug: string, locale: Locale): string {
+  const ability = abilities.find((candidate) => candidate.slug === slug);
+  if (!ability) return fallbackSlugLabel(slug);
+  return locale === 'es' ? (ability.nameEs ?? ability.nameEn) : ability.nameEn;
+}
+
+export interface DamageExplanationRow {
+  key: string;
+  primary: string;
+  secondary?: string;
 }
 
 /**
- * The structured result display (task §15/§16) — built entirely from
+ * The presentation context `@pokestudio/damage` itself never gets (task
+ * §5/§10: no React/UI concepts, no database objects in the domain
+ * package) — threaded from `DamageLab`'s own already-loaded reference
+ * data instead of a second, parallel localization table.
+ */
+export interface DamageExplanationContext {
+  attackerAbilities: readonly AbilitySummary[];
+  defenderAbilities: readonly AbilitySummary[];
+  items: readonly Item[];
+  typeLabels: Record<PokemonType, string>;
+}
+
+/**
+ * Turns one structured `DamageExplanationFactor` into a two-line row
+ * (task §7's compact layout). Deterministic ordering is inherited
+ * directly from `result.explanation` — never re-sorted here.
+ */
+function explanationRow(
+  factor: DamageExplanationFactor,
+  locale: Locale,
+  labels: DamageResultLabels,
+  context: DamageExplanationContext,
+): DamageExplanationRow {
+  switch (factor.kind) {
+    case 'type-effectiveness':
+      return {
+        key: 'type-effectiveness',
+        primary: labels.explanation.typeEffectivenessLabel,
+        secondary: formatMessage(labels.explanation.typeEffectivenessValueTemplate, {
+          multiplier: formatDecimal(locale, factor.multiplier, 2),
+          tier: labels.effectiveness[factor.tier],
+        }),
+      };
+    case 'stab':
+      return {
+        key: 'stab',
+        primary: labels.stabLabel,
+        secondary: labels.explanation.stabDescription,
+      };
+    case 'critical':
+      return {
+        key: 'critical',
+        primary: labels.criticalLabel,
+        secondary: labels.explanation.criticalDescription,
+      };
+    case 'multi-hit':
+      return {
+        key: 'multi-hit',
+        primary: labels.explanation.multiHitLabel,
+        secondary: formatMessage(labels.explanation.multiHitValueTemplate, { count: factor.hits }),
+      };
+    case 'burn':
+      return { key: 'burn', primary: labels.modifiers.burned };
+    case 'attacker-item':
+      return {
+        key: 'attacker-item',
+        primary: itemName(context.items, factor.slug, locale),
+        secondary: labels.explanation.attackerItemDescription,
+      };
+    case 'attacker-ability':
+      return {
+        key: 'attacker-ability',
+        primary: abilityName(context.attackerAbilities, factor.slug, locale),
+        secondary: labels.explanation.attackerAbilityDescription,
+      };
+    case 'attacker-tera':
+      return {
+        key: 'attacker-tera',
+        primary: formatMessage(labels.teraSummaryTemplate, {
+          type: context.typeLabels[factor.teraType],
+        }),
+        secondary: labels.explanation.attackerTeraDescription,
+      };
+    case 'defender-item':
+      return {
+        key: 'defender-item',
+        primary: itemName(context.items, factor.slug, locale),
+        secondary: labels.explanation.defenderItemDescription,
+      };
+    case 'defender-ability':
+      return {
+        key: 'defender-ability',
+        primary: abilityName(context.defenderAbilities, factor.slug, locale),
+        secondary: labels.explanation.defenderAbilityDescription,
+      };
+    case 'defender-tera':
+      return {
+        key: 'defender-tera',
+        primary: formatMessage(labels.teraSummaryTemplate, {
+          type: context.typeLabels[factor.teraType],
+        }),
+        secondary: labels.explanation.defenderTeraDescription,
+      };
+    case 'weather':
+      return { key: 'weather', primary: labels.modifiers.weather[factor.weather] };
+    case 'terrain':
+      return { key: 'terrain', primary: labels.modifiers.terrain[factor.terrain] };
+    case 'reflect':
+      return { key: 'reflect', primary: labels.modifiers.reflect };
+    case 'light-screen':
+      return { key: 'light-screen', primary: labels.modifiers.lightScreen };
+    case 'aurora-veil':
+      return { key: 'aurora-veil', primary: labels.modifiers.auroraVeil };
+    case 'helping-hand':
+      return { key: 'helping-hand', primary: labels.modifiers.helpingHand };
+    case 'friend-guard':
+      return { key: 'friend-guard', primary: labels.modifiers.friendGuard };
+    case 'battery':
+      return { key: 'battery', primary: labels.modifiers.battery };
+    case 'power-spot':
+      return { key: 'power-spot', primary: labels.modifiers.powerSpot };
+    case 'ruin-ability':
+      return { key: 'ruin-ability', primary: labels.modifiers.ruinAbility[factor.ability] };
+    case 'protected':
+      return { key: 'protected', primary: labels.modifiers.protected };
+    case 'defender-dynamax':
+      return { key: 'defender-dynamax', primary: labels.modifiers.defenderDynamaxed };
+  }
+}
+
+/**
+ * The structured result display (task §15/§16 of the earlier phase, now
+ * extended by the explanation-trace roadmap item) — built entirely from
  * `DamageCalculationResult`'s typed fields, never from `debugDescription`
- * (kept only inside the collapsed Details section, clearly labeled as a
- * debug trace, never the primary representation).
+ * (kept only inside the collapsed disclosure, clearly labeled as a debug
+ * trace, never the primary representation — task §10).
  */
 export function DamageResult({
   result,
   locale,
   labels,
+  attackerAbilities = [],
+  defenderAbilities = [],
+  items = [],
+  typeLabels,
 }: {
   result: DamageCalculationResult;
   locale: Locale;
   labels: DamageResultLabels;
+  attackerAbilities?: readonly AbilitySummary[];
+  defenderAbilities?: readonly AbilitySummary[];
+  items?: readonly Item[];
+  typeLabels: Record<PokemonType, string>;
 }) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [explanationOpen, setExplanationOpen] = useState(false);
   const ko = koSummary(result, locale, labels);
-  const modifierLabels = activeModifierLabels(result, labels);
 
-  // `result.debugDescription` is populated on every result (task §15's
-  // upstream trace string), not just ones with something to show — so
-  // using its mere presence to decide whether `Details` has content (the
-  // pre-existing condition below) made the disclosure open to an empty
-  // panel in production for the common case where no modifier is active
-  // (visual review after PR #25: none of weather/terrain/screens/status/
-  // Dynamax have a control wired up yet, so `modifierLabels` is normally
-  // empty). The debug trace itself only ever renders outside production,
-  // so only count it as "content" under that same condition.
+  const explanationContext: DamageExplanationContext = {
+    attackerAbilities,
+    defenderAbilities,
+    items,
+    typeLabels,
+  };
+  const explanationRows = result.explanation.map((factor) =>
+    explanationRow(factor, locale, labels, explanationContext),
+  );
+
+  // Real production trace, never parsed/derived text (task §10) — dev-only,
+  // shown below the structured explanation, clearly separated from it.
   const showDebugTrace = process.env.NODE_ENV !== 'production' && Boolean(result.debugDescription);
-  const hasDetails = modifierLabels.length > 0 || showDebugTrace;
+
+  // The explanation is available for every real damaging calculation (task
+  // §8: type effectiveness, including neutral ×1, is always present), so
+  // this is effectively always true — kept as an explicit check rather than
+  // an assumption, and it's what still gates the debug trace's visibility
+  // in the rare case `result.explanation` were ever empty.
+  const hasExplanation = explanationRows.length > 0 || showDebugTrace;
 
   // Visual clamp only — the headline text below always shows the real
   // (possibly >100%) percent (task §20: "no clamping del dato").
@@ -183,22 +347,27 @@ export function DamageResult({
         ) : null}
       </div>
 
-      {hasDetails ? (
+      {hasExplanation ? (
         <div className="w-full max-w-xs text-left">
           <button
             type="button"
-            onClick={() => setDetailsOpen((open) => !open)}
-            aria-expanded={detailsOpen}
+            onClick={() => setExplanationOpen((open) => !open)}
+            aria-expanded={explanationOpen}
             className="text-xs font-semibold text-brand hover:underline"
           >
-            {labels.detailsLabel} {detailsOpen ? '▲' : '▾'}
+            {labels.explanationLabel} {explanationOpen ? '▲' : '▾'}
           </button>
-          {detailsOpen ? (
+          {explanationOpen ? (
             <div className="mt-2 flex flex-col gap-2">
-              {modifierLabels.length > 0 ? (
-                <ul className="m-0 flex list-none flex-col gap-1 p-0 text-xs text-muted">
-                  {modifierLabels.map((label) => (
-                    <li key={label}>{label}</li>
+              {explanationRows.length > 0 ? (
+                <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-xs">
+                  {explanationRows.map((row) => (
+                    <li key={row.key} className="flex items-baseline justify-between gap-3">
+                      <span className="font-semibold text-foreground">{row.primary}</span>
+                      {row.secondary ? (
+                        <span className="text-right text-muted">{row.secondary}</span>
+                      ) : null}
+                    </li>
                   ))}
                 </ul>
               ) : null}

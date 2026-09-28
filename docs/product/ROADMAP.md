@@ -95,7 +95,13 @@ silently treated as complete.
   from a configured team member) shipped; Explore → Damage Lab (attacker-only: the exact
   Pokémon/form being viewed on its Explore detail page preselects as attacker) shipped; both
   remain attacker-only, with defender/matchup-matrix import from either source not yet built,
-- explanation trace for modifiers,
+- explanation trace for modifiers — shipped: `@pokestudio/damage` returns a deterministic,
+  localizable `DamageExplanationFactor[]` (type effectiveness with its real generation-aware
+  multiplier, STAB/critical/multi-hit/burn without a fabricated numeric multiplier, attacker/
+  defender item/ability/Tera by PokeStudio slug, and field-state facts) alongside the existing
+  `modifiers`; Damage Lab's result replaces the old, often-empty "Details" disclosure with "Cómo
+  se calcula" / "How this damage is calculated", always available for a real damaging calculation,
+  never built from `debugDescription`,
 - matchup comparison primitives.
 
 ## Phase 4 — Battle Engine + Battle UI

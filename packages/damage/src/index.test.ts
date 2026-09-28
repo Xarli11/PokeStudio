@@ -334,6 +334,198 @@ describe('calculateDamage — identity bridge, exercised end-to-end (not via pri
   });
 });
 
+describe('calculateDamage — explanation trace (Phase 3 roadmap)', () => {
+  const ferrothorn = combatant('ferrothorn', 'ferrothorn', {
+    natureSlug: 'relaxed',
+    evs: { ...ZERO_EVS, hp: 252, defense: 252 },
+  });
+
+  it('neutral effectiveness produces a type-effectiveness factor with ×1', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('garchomp', 'garchomp'),
+      defender: combatant('snorlax', 'snorlax'),
+      moveSlug: 'earthquake',
+    });
+    expect(result.explanation[0]).toEqual({
+      kind: 'type-effectiveness',
+      multiplier: 1,
+      tier: 'neutral',
+    });
+  });
+
+  it('super-effective produces ×2', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('alakazam', 'alakazam'),
+      defender: combatant('machamp', 'machamp'),
+      moveSlug: 'psychic',
+    });
+    expect(result.explanation[0]).toEqual({
+      kind: 'type-effectiveness',
+      multiplier: 2,
+      tier: 'super-effective',
+    });
+  });
+
+  it('4× weakness produces ×4', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('darmanitan-galar-standard', 'darmanitan'),
+      defender: combatant('garchomp', 'garchomp'),
+      moveSlug: 'icicle-crash',
+    });
+    expect(result.explanation[0]).toEqual({
+      kind: 'type-effectiveness',
+      multiplier: 4,
+      tier: 'super-effective',
+    });
+  });
+
+  it('resistance produces ×0.5', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('alakazam', 'alakazam'),
+      defender: combatant('metagross', 'metagross'),
+      moveSlug: 'psychic',
+    });
+    expect(result.explanation[0]).toEqual({
+      kind: 'type-effectiveness',
+      multiplier: 0.25,
+      tier: 'not-very-effective',
+    });
+  });
+
+  it('immunity produces ×0, still as a real explanation factor (task §8)', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('gengar', 'gengar'),
+      defender: combatant('snorlax', 'snorlax'),
+      moveSlug: 'shadow-ball',
+    });
+    expect(result.explanation[0]).toEqual({
+      kind: 'type-effectiveness',
+      multiplier: 0,
+      tier: 'immune',
+    });
+  });
+
+  it('historical generation-specific effectiveness remains correct in the explanation trace', () => {
+    const gen4 = calculateDamage({
+      generation: 4,
+      attacker: combatant('gengar', 'gengar'),
+      defender: combatant('skarmory', 'skarmory'),
+      moveSlug: 'shadow-ball',
+    });
+    const gen9 = calculateDamage({
+      generation: 9,
+      attacker: combatant('gengar', 'gengar'),
+      defender: combatant('skarmory', 'skarmory'),
+      moveSlug: 'shadow-ball',
+    });
+    expect(gen4.explanation[0]).toEqual({
+      kind: 'type-effectiveness',
+      multiplier: 0.5,
+      tier: 'not-very-effective',
+    });
+    expect(gen9.explanation[0]).toEqual({
+      kind: 'type-effectiveness',
+      multiplier: 1,
+      tier: 'neutral',
+    });
+  });
+
+  it('STAB appears only when active', () => {
+    const withStab = calculateDamage({
+      generation: 9,
+      attacker: combatant('garchomp', 'garchomp'),
+      defender: ferrothorn,
+      moveSlug: 'earthquake',
+    });
+    expect(withStab.explanation.some((factor) => factor.kind === 'stab')).toBe(true);
+
+    const withoutStab = calculateDamage({
+      generation: 9,
+      attacker: combatant('garchomp', 'garchomp'),
+      defender: combatant('machamp', 'machamp'),
+      moveSlug: 'psychic',
+    });
+    expect(withoutStab.explanation.some((factor) => factor.kind === 'stab')).toBe(false);
+  });
+
+  it('critical appears when applied', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('garchomp', 'garchomp'),
+      defender: ferrothorn,
+      moveSlug: 'earthquake',
+      isCritical: true,
+    });
+    expect(result.explanation.some((factor) => factor.kind === 'critical')).toBe(true);
+  });
+
+  it('multi-hit exposes hit count', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('kingler', 'kingler'),
+      defender: ferrothorn,
+      moveSlug: 'rock-blast',
+    });
+    expect(result.explanation).toContainEqual({ kind: 'multi-hit', hits: 3 });
+  });
+
+  it('an active attacker item is represented by its PokeStudio slug, not raw English text', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('garchomp', 'garchomp', {
+        natureSlug: 'jolly',
+        itemSlug: 'choice-band',
+        evs: { ...ZERO_EVS, attack: 252 },
+      }),
+      defender: ferrothorn,
+      moveSlug: 'earthquake',
+    });
+    expect(result.explanation).toContainEqual({ kind: 'attacker-item', slug: 'choice-band' });
+    expect(JSON.stringify(result.explanation)).not.toMatch(/Choice Band/);
+  });
+
+  it('an active defender ability is represented by its PokeStudio slug when RawDesc confirms it', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('charizard', 'charizard'),
+      defender: combatant('azumarill', 'azumarill', {
+        natureSlug: 'adamant',
+        abilitySlug: 'thick-fat',
+      }),
+      moveSlug: 'flamethrower',
+    });
+    expect(result.explanation).toContainEqual({ kind: 'defender-ability', slug: 'thick-fat' });
+    expect(JSON.stringify(result.explanation)).not.toMatch(/Thick Fat/);
+  });
+
+  it('Tera is semantic/localizable — a PokeStudio PokemonType, never Smogon’s English type string', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('garchomp', 'garchomp', { teraType: 'fire' }),
+      defender: ferrothorn,
+      moveSlug: 'earthquake',
+    });
+    expect(result.explanation).toContainEqual({ kind: 'attacker-tera', teraType: 'fire' });
+  });
+
+  it('no production explanation factor depends on debugDescription — the two are built independently', () => {
+    const result = calculateDamage({
+      generation: 9,
+      attacker: combatant('garchomp', 'garchomp'),
+      defender: ferrothorn,
+      moveSlug: 'earthquake',
+    });
+    for (const factor of result.explanation) {
+      expect(JSON.stringify(factor)).not.toEqual(result.debugDescription);
+    }
+  });
+});
+
 describe('calculateDamage — input validation (mechanical/identity compatibility, not tournament legality)', () => {
   const validAttacker = combatant('garchomp', 'garchomp');
   const validDefender = combatant('ferrothorn', 'ferrothorn');

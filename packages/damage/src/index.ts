@@ -156,6 +156,53 @@ export interface DamageResultModifiers {
   hits: number | undefined;
 }
 
+/**
+ * A single semantic, localizable fact about why a calculation produced the
+ * damage it did (Phase 3 roadmap: "explanation trace for modifiers").
+ *
+ * Deliberately never carries a fabricated numeric multiplier for anything
+ * `@smogon/calc` itself doesn't expose an exact value for (STAB, critical,
+ * ability/item modifiers, …) — Adaptability, Tera/STAB interactions,
+ * generation-specific critical mechanics and plenty of ability/item
+ * exceptions make a generic "×1.5"/"×2" a lie for *some* real calculation
+ * this same factor kind also describes. `type-effectiveness` is the sole
+ * exception: PokeStudio already computes that multiplier itself from
+ * `@smogon/calc`'s own generation-specific `TYPE_CHART` (see
+ * `effectivenessMultiplier` below), so it's a real, trustworthy number, not
+ * a guess.
+ *
+ * Every slug/type field here is a PokeStudio identity the caller already
+ * supplied (`DamageCombatant.itemSlug`/`abilitySlug`/`teraType`) — never an
+ * upstream English name parsed out of `RawDesc`. `RawDesc`'s own string
+ * fields are only ever used as a boolean gate ("did @smogon/calc's own
+ * description decide this actually participated in the calculation?"),
+ * never as the displayed value.
+ */
+export type DamageExplanationFactor =
+  | { kind: 'type-effectiveness'; multiplier: number; tier: DamageEffectiveness }
+  | { kind: 'stab' }
+  | { kind: 'critical' }
+  | { kind: 'multi-hit'; hits: number }
+  | { kind: 'burn' }
+  | { kind: 'attacker-item'; slug: string }
+  | { kind: 'attacker-ability'; slug: string }
+  | { kind: 'attacker-tera'; teraType: PokemonType }
+  | { kind: 'defender-item'; slug: string }
+  | { kind: 'defender-ability'; slug: string }
+  | { kind: 'defender-tera'; teraType: PokemonType }
+  | { kind: 'weather'; weather: NonNullable<DamageResultModifiers['weather']> }
+  | { kind: 'terrain'; terrain: NonNullable<DamageResultModifiers['terrain']> }
+  | { kind: 'reflect' }
+  | { kind: 'light-screen' }
+  | { kind: 'aurora-veil' }
+  | { kind: 'helping-hand' }
+  | { kind: 'friend-guard' }
+  | { kind: 'battery' }
+  | { kind: 'power-spot' }
+  | { kind: 'ruin-ability'; ability: NonNullable<DamageResultModifiers['ruinAbilityActive']> }
+  | { kind: 'protected' }
+  | { kind: 'defender-dynamax' };
+
 export interface DamageCalculationResult {
   distribution: DamageDistribution;
   minDamage: number;
@@ -167,6 +214,16 @@ export interface DamageCalculationResult {
   effectiveness: DamageEffectiveness;
   isSTAB: boolean;
   modifiers: DamageResultModifiers;
+  /**
+   * The structured explanation trace, deterministically ordered: headline
+   * facts (type effectiveness, STAB, critical, multi-hit, burn), then
+   * attacker-side item/ability/Tera, then defender-side item/ability/Tera,
+   * then field state (weather/terrain/screens/support/ruin abilities/
+   * Protect/Dynamax). Always contains at least the `type-effectiveness`
+   * factor, including for a neutral or immune matchup (task §8) — never
+   * empty for a real damaging calculation.
+   */
+  explanation: DamageExplanationFactor[];
   /** Upstream's own English sentence — debug/audit only, never the primary UI representation (task §5/§9). */
   debugDescription: string;
 }
@@ -414,6 +471,70 @@ function toModifiers(rawDesc: Record<string, unknown>): DamageResultModifiers {
 }
 
 /**
+ * Builds the deterministic explanation trace (task §2). `rawDesc` is read
+ * only as a participation gate for item/ability/Tera facts — "did
+ * `@smogon/calc`'s own description decide this mattered?" — never as the
+ * displayed value, which always comes from the PokeStudio slug/type the
+ * caller passed in (`input.attacker`/`input.defender`), matching task §5's
+ * localization requirement.
+ */
+function buildExplanation(
+  rawDesc: Record<string, unknown>,
+  input: DamageCalculationInput,
+  modifiers: DamageResultModifiers,
+  effectiveness: { multiplier: number; tier: DamageEffectiveness },
+  isSTAB: boolean,
+): DamageExplanationFactor[] {
+  const factors: DamageExplanationFactor[] = [
+    { kind: 'type-effectiveness', multiplier: effectiveness.multiplier, tier: effectiveness.tier },
+  ];
+
+  if (isSTAB) factors.push({ kind: 'stab' });
+  if (modifiers.isCritical) factors.push({ kind: 'critical' });
+  if (modifiers.hits && modifiers.hits > 1) {
+    factors.push({ kind: 'multi-hit', hits: modifiers.hits });
+  }
+  if (modifiers.isBurned) factors.push({ kind: 'burn' });
+
+  if (rawDesc.attackerItem && input.attacker.itemSlug) {
+    factors.push({ kind: 'attacker-item', slug: input.attacker.itemSlug });
+  }
+  if (rawDesc.attackerAbility && input.attacker.abilitySlug) {
+    factors.push({ kind: 'attacker-ability', slug: input.attacker.abilitySlug });
+  }
+  if (rawDesc.attackerTera && input.attacker.teraType) {
+    factors.push({ kind: 'attacker-tera', teraType: input.attacker.teraType });
+  }
+
+  if (rawDesc.defenderItem && input.defender.itemSlug) {
+    factors.push({ kind: 'defender-item', slug: input.defender.itemSlug });
+  }
+  if (rawDesc.defenderAbility && input.defender.abilitySlug) {
+    factors.push({ kind: 'defender-ability', slug: input.defender.abilitySlug });
+  }
+  if (rawDesc.defenderTera && input.defender.teraType) {
+    factors.push({ kind: 'defender-tera', teraType: input.defender.teraType });
+  }
+
+  if (modifiers.weather) factors.push({ kind: 'weather', weather: modifiers.weather });
+  if (modifiers.terrain) factors.push({ kind: 'terrain', terrain: modifiers.terrain });
+  if (modifiers.isReflect) factors.push({ kind: 'reflect' });
+  if (modifiers.isLightScreen) factors.push({ kind: 'light-screen' });
+  if (modifiers.isAuroraVeil) factors.push({ kind: 'aurora-veil' });
+  if (modifiers.isHelpingHand) factors.push({ kind: 'helping-hand' });
+  if (modifiers.isFriendGuard) factors.push({ kind: 'friend-guard' });
+  if (modifiers.isBattery) factors.push({ kind: 'battery' });
+  if (modifiers.isPowerSpot) factors.push({ kind: 'power-spot' });
+  if (modifiers.ruinAbilityActive) {
+    factors.push({ kind: 'ruin-ability', ability: modifiers.ruinAbilityActive });
+  }
+  if (modifiers.isProtected) factors.push({ kind: 'protected' });
+  if (modifiers.isDefenderDynamaxed) factors.push({ kind: 'defender-dynamax' });
+
+  return factors;
+}
+
+/**
  * PokeStudio's damage calculation — slugs in, structured/localizable data
  * out. Never accepts or returns raw `@smogon/calc` identities/objects.
  */
@@ -466,6 +587,10 @@ export function calculateDamage(input: DamageCalculationInput): DamageCalculatio
     result.move.type,
     result.defender.types,
   );
+  const tier = effectivenessTier(multiplier);
+  const isSTAB = result.attacker.hasType(result.move.type);
+  const rawDesc = result.rawDesc as unknown as Record<string, unknown>;
+  const modifiers = toModifiers(rawDesc);
 
   return {
     distribution: toDistribution(result.damage),
@@ -478,9 +603,10 @@ export function calculateDamage(input: DamageCalculationInput): DamageCalculatio
       chance: ko.chance,
       hitsToKo: ko.n > 0 ? ko.n : undefined,
     },
-    effectiveness: effectivenessTier(multiplier),
-    isSTAB: result.attacker.hasType(result.move.type),
-    modifiers: toModifiers(result.rawDesc as unknown as Record<string, unknown>),
+    effectiveness: tier,
+    isSTAB,
+    modifiers,
+    explanation: buildExplanation(rawDesc, input, modifiers, { multiplier, tier }, isSTAB),
     debugDescription: result.fullDesc('%', false),
   };
 }
