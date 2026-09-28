@@ -6,6 +6,31 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Damage Lab explanation trace for modifiers (2026-09-28)
+
+Phase 3 roadmap item shipped: Damage Lab's result view replaces the old "Details" disclosure —
+which used to render nothing for the common case where no field-state modifier was active — with
+"Cómo se calcula" / "How this damage is calculated", always available for a real damaging
+calculation and showing a compact, localized list of the factors that actually produced the
+result (type effectiveness — including neutral ×1 and immune ×0 — STAB, critical, multi-hit,
+burn, attacker/defender item, ability, and Terastallization, plus every existing field-state
+modifier).
+
+`@pokestudio/damage` gained a new `DamageExplanationFactor` discriminated union and a deterministic
+`explanation: DamageExplanationFactor[]` field on `DamageCalculationResult`, built from an audit of
+the installed `@smogon/calc@0.11.0`'s own `RawDesc` shape (never `fullDesc()`'s English sentence).
+Type effectiveness is the one factor that carries a real multiplier — computed from `@smogon/calc`'s
+own generation-specific `TYPE_CHART`, already trustworthy and exact — because Adaptability,
+Tera/STAB interactions and generation-specific critical mechanics make a generic "STAB ×1.5"/
+"Critical ×1.5" a lie for some real calculation the same factor kind also describes; STAB, critical
+and burn are represented as plain semantic facts instead. An attacker/defender item, ability or Tera
+type is only ever exposed as the PokeStudio slug/type the caller already supplied — `RawDesc`'s own
+English fields are read only as a boolean "did this actually participate" gate, never as the
+displayed value — so the web layer resolves display names from data it already has (the selected
+form's own `abilities`, and Advanced's lazily-fetched `items`), with a readable slug fallback if that
+data hasn't loaded yet, never Smogon's raw English name. The upstream `debugDescription` trace stays
+development-only, rendered separately below the structured explanation, never used to build it.
+
 ### Explore → Damage Lab, attacker-only (2026-09-23)
 
 Phase 3 roadmap item shipped: from a Pokémon/form's Explore detail page, "Open in Damage Lab" /

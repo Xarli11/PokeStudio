@@ -510,8 +510,22 @@
       "koHitWordSingular": "golpe",
       "koHitWordPlural": "golpes",
       "koNoDamage": "Sin daño en este cálculo.",
-      "detailsLabel": "Detalles",
+      "explanationLabel": "Cómo se calcula",
       "debugDescriptionLabel": "Traza de cálculo original (depuración)",
+      "explanation": {
+        "typeEffectivenessLabel": "Eficacia de tipo",
+        "typeEffectivenessValueTemplate": "×{multiplier} · {tier}",
+        "stabDescription": "El atacante comparte el tipo del movimiento",
+        "criticalDescription": "Aplicado",
+        "multiHitLabel": "Golpes múltiples",
+        "multiHitValueTemplate": "{count} golpes",
+        "attackerItemDescription": "Objeto del atacante",
+        "attackerAbilityDescription": "Habilidad del atacante",
+        "attackerTeraDescription": "Teracristalización del atacante",
+        "defenderItemDescription": "Objeto del defensor",
+        "defenderAbilityDescription": "Habilidad del defensor",
+        "defenderTeraDescription": "Teracristalización del defensor"
+      },
       "modifiers": {
         "hitsTemplate": "{count} golpes",
         "burned": "Quemado",

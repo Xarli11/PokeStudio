@@ -214,6 +214,10 @@ const RESULT: DamageCalculationResult = {
     isDefenderDynamaxed: false,
     hits: undefined,
   },
+  explanation: [
+    { kind: 'type-effectiveness', multiplier: 2, tier: 'super-effective' },
+    { kind: 'stab' },
+  ],
   debugDescription: 'Garchomp Earthquake vs. Heatran: 184-228 (78.3 - 97.0%) -- guaranteed 2HKO',
 };
 
@@ -321,8 +325,23 @@ const LABELS: DamageLabLabels = {
     koHitWordSingular: 'hit',
     koHitWordPlural: 'hits',
     koNoDamage: 'No damage this calculation.',
-    detailsLabel: 'Details',
+    explanationLabel: 'How this damage is calculated',
     debugDescriptionLabel: 'Upstream calculation trace (debug)',
+    teraSummaryTemplate: 'Tera {type}',
+    explanation: {
+      typeEffectivenessLabel: 'Type effectiveness',
+      typeEffectivenessValueTemplate: '×{multiplier} · {tier}',
+      stabDescription: "The attacker shares the move's type",
+      criticalDescription: 'Applied',
+      multiHitLabel: 'Multiple hits',
+      multiHitValueTemplate: '{count} hits',
+      attackerItemDescription: "Attacker's item",
+      attackerAbilityDescription: "Attacker's ability",
+      attackerTeraDescription: "Attacker's Terastallization",
+      defenderItemDescription: "Defender's item",
+      defenderAbilityDescription: "Defender's ability",
+      defenderTeraDescription: "Defender's Terastallization",
+    },
     modifiers: {
       hitsTemplate: '{count} hits',
       burned: 'Burned',
