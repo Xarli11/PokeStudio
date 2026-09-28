@@ -24,6 +24,7 @@ function makeDraft(): DamageLocaleDraft {
     attackerConfig: createDefaultAdvancedConfig(),
     defenderConfig: createDefaultAdvancedConfig(),
     isCritical: true,
+    extraDefenderFormSlugs: ['heatran', 'corviknight'],
   };
 }
 
@@ -78,6 +79,16 @@ describe('damage-locale-handoff', () => {
   it('rejects a stray value with the right shape but an invalid Tera type', () => {
     const bad = makeDraft();
     (bad.attackerConfig as { teraType: unknown }).teraType = 'not-a-real-type';
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ target: '/es/battle/damage', expires: Date.now() + 1000, draft: bad }),
+    );
+    expect(takeDamageLocaleHandoff()).toBeNull();
+  });
+
+  it('rejects a draft missing extraDefenderFormSlugs (Phase 3 matchup comparison primitive)', () => {
+    const bad = makeDraft() as Partial<DamageLocaleDraft>;
+    delete bad.extraDefenderFormSlugs;
     sessionStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({ target: '/es/battle/damage', expires: Date.now() + 1000, draft: bad }),

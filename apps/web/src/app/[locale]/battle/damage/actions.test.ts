@@ -31,6 +31,7 @@ const {
   fetchDefenderReferenceData,
   fetchAdvancedReferenceData,
   calculateDamageAction,
+  calculateDamageBatchAction,
 } = await import('./actions');
 
 const GARCHOMP_FORM: ComparablePokemonForm = {
@@ -245,6 +246,100 @@ describe('calculateDamageAction', () => {
     expect(response.ok).toBe(true);
     if (!response.ok) throw new Error('unreachable');
     expect(response.result.modifiers.isCritical).toBe(true);
+  });
+});
+
+describe('calculateDamageBatchAction (Phase 3 roadmap: matchup comparison primitives)', () => {
+  it('a single extra defender produces the same result as calling calculateDamageAction directly', async () => {
+    const request = {
+      generation: 9,
+      attacker: combatant('garchomp', 'garchomp'),
+      defender: combatant('ferrothorn', 'ferrothorn'),
+      moveSlug: 'earthquake',
+      isCritical: false,
+    };
+
+    const single = await calculateDamageAction(request);
+    const [batched] = await calculateDamageBatchAction([request]);
+
+    expect(batched).toEqual(single);
+  });
+
+  it('several defenders preserve order and each match their own individual calculateDamageAction result', async () => {
+    const requests = [
+      {
+        generation: 9,
+        attacker: combatant('garchomp', 'garchomp'),
+        defender: combatant('ferrothorn', 'ferrothorn'),
+        moveSlug: 'earthquake',
+        isCritical: false,
+      },
+      {
+        generation: 9,
+        attacker: combatant('garchomp', 'garchomp'),
+        defender: combatant('garchomp', 'garchomp'),
+        moveSlug: 'earthquake',
+        isCritical: false,
+      },
+      {
+        generation: 9,
+        attacker: combatant('garchomp', 'garchomp'),
+        defender: combatant('ferrothorn', 'ferrothorn'),
+        moveSlug: 'earthquake',
+        isCritical: true,
+      },
+    ];
+
+    const responses = await calculateDamageBatchAction(requests);
+    expect(responses).toHaveLength(3);
+
+    for (let i = 0; i < requests.length; i++) {
+      const individual = await calculateDamageAction(requests[i]!);
+      expect(responses[i]).toEqual(individual);
+    }
+
+    // Order preserved — the Ferrothorn matchups are distinguishable from
+    // the Garchomp mirror matchup at the same indices they were requested.
+    expect(responses[0]).toEqual(await calculateDamageAction(requests[0]!));
+    expect(responses[2]).not.toEqual(responses[0]);
+  });
+
+  it('an error for one defender never invalidates the others — order and identity are still preserved', async () => {
+    const requests = [
+      {
+        generation: 9,
+        attacker: combatant('garchomp', 'garchomp'),
+        defender: combatant('ferrothorn', 'ferrothorn'),
+        moveSlug: 'earthquake',
+        isCritical: false,
+      },
+      {
+        generation: 9,
+        attacker: combatant('garchomp', 'garchomp'),
+        defender: combatant('not-a-real-pokemon-xyz', 'not-a-real-pokemon-xyz'),
+        moveSlug: 'earthquake',
+        isCritical: false,
+      },
+      {
+        generation: 9,
+        attacker: combatant('garchomp', 'garchomp'),
+        defender: combatant('garchomp', 'garchomp'),
+        moveSlug: 'earthquake',
+        isCritical: false,
+      },
+    ];
+
+    const responses = await calculateDamageBatchAction(requests);
+
+    expect(responses).toHaveLength(3);
+    expect(responses[0]?.ok).toBe(true);
+    expect(responses[1]).toEqual({ ok: false, code: 'unknown-form', side: 'defender' });
+    expect(responses[2]?.ok).toBe(true);
+  });
+
+  it('an empty request list resolves to an empty result list, not an error', async () => {
+    const responses = await calculateDamageBatchAction([]);
+    expect(responses).toEqual([]);
   });
 });
 

@@ -6,6 +6,24 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Damage Lab matchup comparison primitives (2026-09-29)
+
+Phase 3 roadmap item shipped: Damage Lab can now compare the current attacker+move against up to
+4 extra defenders alongside the existing principal matchup, which keeps its full card, Advanced
+and explanation trace unchanged. Extra defenders always use Damage Lab's own default settings (no
+per-row Advanced) and render as compact rows (damage range, %, effectiveness, KO) rather than a
+second full result. Calculation for every extra defender happens in one batched Server Action
+round trip — never one request per defender — with an invalid/unresolvable defender isolated to
+its own row instead of failing the whole comparison. Locale handoff now also preserves the extra
+defenders' identities and order. A short line explains the feature's purpose in the UI.
+
+Also fixed, discovered during this feature's validation: a pre-existing bug (since the original
+locale-handoff work) where React Strict Mode's development-only double-invocation of state
+updater functions could silently drop the restored move selection across a locale switch — the
+updater mutated a ref as a side effect, so its second, StrictMode-driven invocation saw an
+already-cleared ref and returned no selection. The updater is now pure; the move survives ES↔EN
+switches by its stable slug, with the localized label re-resolved per locale.
+
 ### Damage Lab explanation trace for modifiers (2026-09-28)
 
 Phase 3 roadmap item shipped: Damage Lab's result view replaces the old "Details" disclosure —
