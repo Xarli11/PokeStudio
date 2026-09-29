@@ -12,15 +12,17 @@ ADR-0015's `createBattle` accepted any Pokémon Showdown format id that was two-
 - **Current generation is Generation 9**, declared explicitly as `CURRENT_GENERATION = 9`. It is a product decision: not derived from the simulator, PokéAPI or "latest format", and a simulator upgrade cannot change it. Generation 9 currently spans two families, `scarlet-violet` and `champions`; they are one generation, distinguished by a `family` field.
 - **Closed, explicit catalog.** `formats.ts` is pure domain data (no simulator import, no simulator ids) and deeply frozen at runtime (array, descriptors and `availability`). The initial catalog has exactly five entries; nothing is discovered automatically, so an upgrade never adds a format to the product.
 
-| PokeStudio id          | Category                 | Family           | Game type | Availability            |
-| ---------------------- | ------------------------ | ---------------- | --------- | ----------------------- |
-| `sv-ou`                | `smogon-tier`            | `scarlet-violet` | singles   | available               |
-| `sv-ubers`             | `smogon-tier`            | `scarlet-violet` | singles   | available               |
-| `champions-bss-reg-mb` | `battle-stadium-singles` | `champions`      | singles   | available               |
-| `champions-vgc-reg-mb` | `vgc`                    | `champions`      | doubles   | blocked (`vgc-runtime`) |
-| `sv-doubles-ou`        | `smogon-doubles`         | `scarlet-violet` | doubles   | available               |
+| PokeStudio id          | Category                 | Family           | Game type | Availability |
+| ---------------------- | ------------------------ | ---------------- | --------- | ------------ |
+| `sv-ou`                | `smogon-tier`            | `scarlet-violet` | singles   | available    |
+| `sv-ubers`             | `smogon-tier`            | `scarlet-violet` | singles   | available    |
+| `champions-bss-reg-mb` | `battle-stadium-singles` | `champions`      | singles   | available    |
+| `champions-vgc-reg-mb` | `vgc`                    | `champions`      | doubles   | available    |
+| `sv-doubles-ou`        | `smogon-doubles`         | `scarlet-violet` | doubles   | available    |
 
 Smogon Doubles gets its own category rather than being folded into `smogon-tier`.
+
+_Update (VGC runtime, ADR-0017):_ `champions-vgc-reg-mb` also became `available`; no entry is blocked now and the blocked state is a tested gate with the generic reason `blocked`.
 
 _Update (Singles/Doubles foundations):_ the Doubles runtime now exists, so `sv-doubles-ou` became `available` (played end to end with a legal team, real targets and forced replacements) and the only remaining blocker is `vgc-runtime` for `champions-vgc-reg-mb`; the blocked reason is now `blocked-by-vgc-runtime`. Ids and the closed-catalog rules are unchanged.
 
@@ -32,7 +34,7 @@ _Update (Singles/Doubles foundations):_ the Doubles runtime now exists, so `sv-d
 - **Test-only path.** Mechanics tests keep using artificial formats such as Custom Game through an internal creator that is not exported, not reachable from `BattleConfig`, and has no flag. Teams are still validated there.
 - **Structured format identity:** `BattleFormatInfo` exposes `id`, `name`, `generation`, `gameType`, `category` and `family`, so a consumer (a future agent) never parses ids to learn them.
 - **Champions Stat Points:** the simulator reads the `evs` table as Stat Points in the Champions family (max 32 per stat, 66 total). PokeStudio adds no conversion; the validator is the authority.
-- **Boundaries.** VGC: `champions-vgc-reg-mb` is only known and blocked; Doubles execution, pick 4, Open Team Sheets, Bo3 and regulation UX belong to `Singles/Doubles foundations` and `VGC-first polish`. Build: no integration or format selector yet; the catalog is neutral and Build is deliberately not coupled to it (no equivalence with Build's game/version-group type is asserted). Cynthia: format identity is structured data reachable through `BattleSideHandle`; no policy lives here. Area Zero: it will map a `BattleFormatId` to a `BattleTeamInput`; banlists and legality are never copied here.
+- **Boundaries.** VGC: `champions-vgc-reg-mb` was initially only known and blocked; Doubles execution, pick 4, Open Team Sheets and Bo3 then arrived with `Singles/Doubles foundations` and `VGC-first polish` (ADR-0017). Build: no integration or format selector yet; the catalog is neutral and Build is deliberately not coupled to it (no equivalence with Build's game/version-group type is asserted). Cynthia: format identity is structured data reachable through `BattleSideHandle`; no policy lives here. Area Zero: it will map a `BattleFormatId` to a `BattleTeamInput`; banlists and legality are never copied here.
 
 ## Consequences
 

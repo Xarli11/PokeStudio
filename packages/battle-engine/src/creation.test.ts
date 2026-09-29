@@ -54,6 +54,7 @@ describe('createBattle', () => {
       gameType: 'singles',
       category: 'smogon-tier',
       family: 'scarlet-violet',
+      openTeamSheets: false,
     });
     expect(session.info.format.id).toBe('sv-ou');
     expect(session.info.engineFormatId).toBe('gen9ou'); // server-side only

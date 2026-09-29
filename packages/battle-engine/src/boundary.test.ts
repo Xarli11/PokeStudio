@@ -23,6 +23,7 @@ describe('package boundary', () => {
       'BattleDomainError',
       'CURRENT_GENERATION',
       'createBattle',
+      'createBattleSeries',
       'isBattleDomainError',
     ]);
   });

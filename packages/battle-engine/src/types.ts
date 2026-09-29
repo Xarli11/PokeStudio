@@ -108,6 +108,11 @@ export interface BattleFormatInfo {
   gameType: BattleGameType;
   category: BattleFormatCategory;
   family: BattleFormatFamily;
+  /**
+   * True when the format publishes each team's sheet (species, item, ability, moves, Tera type; no
+   * spreads or nicknames) before leads are chosen. Derived from the simulator's rules.
+   */
+  openTeamSheets: boolean;
 }
 
 /** Server-side info held by the session owner. NOT part of any player/spectator state. */

@@ -1,3 +1,5 @@
+import { Teams } from 'pokemon-showdown';
+
 import type { BattleCondition, BattleSideId } from '../types';
 import { parseDetails, parseIdent, toId, type ProtocolLine } from './protocol';
 
@@ -10,6 +12,8 @@ export interface KnownPokemon {
   moves: Set<string>;
   item?: string;
   ability?: string;
+  /** Public once revealed by Open Team Sheets (or by Terastallizing). */
+  teraType?: string;
 }
 
 const key = (side: BattleSideId, teamIndex: number) => `${side}:${teamIndex}`;
@@ -73,6 +77,33 @@ export class RevealedTracker {
         // Team preview: `|poke|p2|Species, L50, F|` in original team order.
         const side = args[0] === 'p1' ? 'p1' : args[0] === 'p2' ? 'p2' : null;
         if (side && args[1]) this.setDetails(side, this.pokeLines[side]++, args[1], false);
+        return;
+      }
+      case 'showteam': {
+        // Open Team Sheets: a public line carrying each side's whole packed team in team order
+        // (before any lead is chosen). It reveals species, level, gender, item, ability, all four
+        // moves and the Tera type — never stats/EVs/IVs or the nickname (the sheet has no name).
+        const side = args[0] === 'p1' ? 'p1' : args[0] === 'p2' ? 'p2' : null;
+        // The packed team itself contains `|` separators, so it spans the remaining fields.
+        const packed = args.slice(1).join('|');
+        const team = side && packed ? Teams.unpack(packed) : null;
+        if (side && team) {
+          team.forEach((set, teamIndex) => {
+            const gender = set.gender === 'M' || set.gender === 'F' ? `, ${set.gender}` : '';
+            this.setDetails(
+              side,
+              teamIndex,
+              `${set.species}, L${set.level ?? 100}${gender}`,
+              false,
+            );
+            const known = this.entry(side, teamIndex);
+            if (!known) return;
+            for (const move of set.moves) known.moves.add(toId(move));
+            if (set.item) known.item = set.item;
+            if (set.ability) known.ability = set.ability;
+            if (set.teraType) known.teraType = set.teraType;
+          });
+        }
         return;
       }
       case 'switch':

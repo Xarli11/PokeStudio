@@ -46,7 +46,8 @@ export type BattleFormatFamily = 'scarlet-violet' | 'champions';
 export type BattleFormatAvailability =
   | { readonly level: 'available' }
   /** Known and catalogued, but not executable yet. */
-  | { readonly level: 'blocked'; readonly blockedBy: 'vgc-runtime' };
+  /** Reserved for a format catalogued before the engine can run it; currently no entry uses it. */
+  | { readonly level: 'blocked'; readonly blockedBy: 'engine-capability' };
 
 export interface BattleFormatDescriptor {
   readonly id: BattleFormatId;
@@ -59,10 +60,6 @@ export interface BattleFormatDescriptor {
 }
 
 const AVAILABLE: BattleFormatAvailability = Object.freeze({ level: 'available' });
-const BLOCKED_BY_VGC: BattleFormatAvailability = Object.freeze({
-  level: 'blocked',
-  blockedBy: 'vgc-runtime',
-});
 
 /** Descriptors are frozen deeply (including `availability`), so consumers cannot mutate the catalog. */
 const entry = (descriptor: BattleFormatDescriptor): BattleFormatDescriptor =>
@@ -100,7 +97,7 @@ export const BATTLE_FORMATS: readonly BattleFormatDescriptor[] = Object.freeze([
     category: 'vgc',
     family: 'champions',
     gameType: 'doubles',
-    availability: BLOCKED_BY_VGC,
+    availability: AVAILABLE,
   }),
   entry({
     id: 'sv-doubles-ou',
