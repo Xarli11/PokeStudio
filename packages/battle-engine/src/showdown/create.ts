@@ -232,7 +232,7 @@ interface FormatTarget {
 
 const unsupportedFormat = (
   formatId: string,
-  reason: 'not-in-catalog' | 'blocked-by-doubles' | 'engine-unsupported',
+  reason: 'not-in-catalog' | 'blocked-by-vgc-runtime' | 'engine-unsupported',
 ) =>
   battleError(
     'UNSUPPORTED_FORMAT',
@@ -259,7 +259,7 @@ export function createShowdownBattle(
   const descriptor = findBattleFormat(config.formatId);
   if (!descriptor) throw unsupportedFormat(config.formatId, 'not-in-catalog');
   if (descriptor.availability.level === 'blocked') {
-    throw unsupportedFormat(config.formatId, 'blocked-by-doubles');
+    throw unsupportedFormat(config.formatId, 'blocked-by-vgc-runtime');
   }
   let resolved;
   try {
@@ -302,7 +302,9 @@ export function createShowdownBattleForTests(
   if (format.playerCount !== 2 || format.team) {
     throw unsupportedFormat(config.formatId, 'engine-unsupported');
   }
-  if (format.gameType !== 'singles') throw unsupportedFormat(config.formatId, 'blocked-by-doubles');
+  if (format.gameType !== 'singles' && format.gameType !== 'doubles') {
+    throw unsupportedFormat(config.formatId, 'engine-unsupported');
+  }
   return buildBattle(config, send, {
     showdownId: format.id,
     info: {
@@ -310,7 +312,7 @@ export function createShowdownBattleForTests(
       id: `internal:${format.id}` as BattleFormatInfo['id'],
       name: format.name,
       generation: Dex.forFormat(format).gen,
-      gameType: 'singles',
+      gameType: format.gameType,
       category: 'smogon-tier',
       family: 'scarlet-violet',
     },

@@ -246,7 +246,17 @@ export interface BattleSlotChoices {
 export type BattleLegalChoices =
   | { kind: 'wait'; side: BattleSideId }
   | { kind: 'team-preview'; side: BattleSideId; pick: number; of: number }
-  | { kind: 'move' | 'forced-switch'; side: BattleSideId; slots: BattleSlotChoices[] };
+  | { kind: 'move'; side: BattleSideId; slots: BattleSlotChoices[] }
+  | {
+      kind: 'forced-switch';
+      side: BattleSideId;
+      slots: BattleSlotChoices[];
+      /**
+       * Exactly this many slots must switch (the simulator requires min(slots needing a replacement,
+       * benched Pokémon)); every other slot passes. Always 1 in Singles.
+       */
+      switchCount: number;
+    };
 
 /** One fully specified action for one slot. Distinct from `BattleLegalOption`. */
 export type BattleCommandAction =

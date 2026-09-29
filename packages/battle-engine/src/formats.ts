@@ -46,7 +46,7 @@ export type BattleFormatFamily = 'scarlet-violet' | 'champions';
 export type BattleFormatAvailability =
   | { readonly level: 'available' }
   /** Known and catalogued, but not executable yet. */
-  | { readonly level: 'blocked'; readonly blockedBy: 'doubles-runtime' };
+  | { readonly level: 'blocked'; readonly blockedBy: 'vgc-runtime' };
 
 export interface BattleFormatDescriptor {
   readonly id: BattleFormatId;
@@ -59,9 +59,9 @@ export interface BattleFormatDescriptor {
 }
 
 const AVAILABLE: BattleFormatAvailability = Object.freeze({ level: 'available' });
-const BLOCKED_BY_DOUBLES: BattleFormatAvailability = Object.freeze({
+const BLOCKED_BY_VGC: BattleFormatAvailability = Object.freeze({
   level: 'blocked',
-  blockedBy: 'doubles-runtime',
+  blockedBy: 'vgc-runtime',
 });
 
 /** Descriptors are frozen deeply (including `availability`), so consumers cannot mutate the catalog. */
@@ -100,7 +100,7 @@ export const BATTLE_FORMATS: readonly BattleFormatDescriptor[] = Object.freeze([
     category: 'vgc',
     family: 'champions',
     gameType: 'doubles',
-    availability: BLOCKED_BY_DOUBLES,
+    availability: BLOCKED_BY_VGC,
   }),
   entry({
     id: 'sv-doubles-ou',
@@ -108,7 +108,7 @@ export const BATTLE_FORMATS: readonly BattleFormatDescriptor[] = Object.freeze([
     category: 'smogon-doubles',
     family: 'scarlet-violet',
     gameType: 'doubles',
-    availability: BLOCKED_BY_DOUBLES,
+    availability: AVAILABLE,
   }),
 ]);
 

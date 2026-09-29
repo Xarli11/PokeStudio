@@ -87,3 +87,53 @@ export const championsBssTeam: BattleTeamInput = {
     }),
   ],
 };
+
+/** Six members that are legal in Doubles OU, with moves covering every target category. */
+export const doublesTeam: BattleTeamInput = {
+  members: [
+    member('Garchomp', 'Rough Skin', ['Earthquake', 'Dragon Claw', 'Protect', 'Rock Slide'], {
+      item: 'Life Orb',
+      nature: 'Jolly',
+      evs: { hp: 4, atk: 252, spe: 252 },
+    }),
+    member('Rotom-Wash', 'Levitate', ['Hydro Pump', 'Volt Switch', 'Will-O-Wisp', 'Helping Hand'], {
+      item: 'Leftovers',
+      nature: 'Bold',
+      evs: { hp: 252, def: 252, spa: 4 },
+    }),
+    member('Kingambit', 'Defiant', ['Kowtow Cleave', 'Sucker Punch', 'Iron Head', 'Swords Dance'], {
+      item: 'Assault Vest',
+      nature: 'Adamant',
+      evs: { hp: 252, atk: 252, spd: 4 },
+    }),
+    member('Incineroar', 'Intimidate', ['Fake Out', 'Flare Blitz', 'Parting Shot', 'Knock Off'], {
+      item: 'Sitrus Berry',
+      nature: 'Careful',
+      evs: { hp: 252, atk: 4, spd: 252 },
+    }),
+    member('Corviknight', 'Pressure', ['Brave Bird', 'Roost', 'Defog', 'Body Press'], {
+      item: 'Rocky Helmet',
+      nature: 'Impish',
+      evs: { hp: 252, def: 252, spd: 4 },
+    }),
+    member('Amoonguss', 'Regenerator', ['Spore', 'Rage Powder', 'Pollen Puff', 'Clear Smog'], {
+      item: 'Black Sludge',
+      nature: 'Bold',
+      evs: { hp: 252, def: 252, spd: 4 },
+    }),
+  ],
+};
+
+export const DOUBLES_CUSTOM_FORMAT = 'gen9doublescustomgame';
+
+/** Custom-format helper: a low-level, sturdy-less Pokémon that any real attack faints. */
+export const frail = (
+  species: string,
+  ability: string,
+  moves: string[],
+): BattleTeamMemberInput => ({
+  species,
+  ability,
+  moves,
+  level: 5,
+});
