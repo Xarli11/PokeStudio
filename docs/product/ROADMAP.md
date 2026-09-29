@@ -117,7 +117,12 @@ silently treated as complete.
 
 ## Phase 4 — Battle Engine + Battle UI
 
-- authoritative battle-domain API,
+- authoritative battle-domain API — shipped: `@pokestudio/battle-engine` `createBattle()` returns a
+  synchronous Node/server-side `BattleSession` over a direct Showdown `Battle` (ADR-0015):
+  structured legal choices and commands, explicit perspectives with allow-list visibility and a
+  perspective-locked `BattleSideHandle`, typed errors, stable Pokémon identity, deterministic seed,
+  mandatory team validation, minimal structured events. Runtime is Singles only; Battle UI, doubles,
+  replay, the full trace and a format catalog are the following bullets,
 - current-generation priority formats,
 - Singles/Doubles foundations,
 - VGC-first polish,

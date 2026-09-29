@@ -12,21 +12,34 @@ Do not copy the official client implementation merely to obtain a battle UI. Pok
 
 ## PokeStudio boundary
 
-UI and application code must interact with a PokeStudio battle-domain interface, not raw Showdown internals.
-
-Conceptual API:
+UI and application code must interact with a PokeStudio battle-domain interface, not raw Showdown internals. The boundary is `@pokestudio/battle-engine` (ADR-0003, ADR-0015).
 
 ```ts
-interface BattleEngine {
-  createBattle(input: CreateBattleInput): BattleSession;
-  submitChoice(sessionId: string, side: SideId, choice: BattleChoice): BattleResult;
-  getLegalChoices(sessionId: string, side: SideId): LegalChoiceSet;
-  serializeReplay(sessionId: string): SerializedReplay;
-  restoreReplay(replay: SerializedReplay): BattleReplay;
-}
+const session = createBattle({
+  formatId: 'gen9ou', // validated simulator format id
+  sides: { p1: { displayName, team }, p2: { displayName, team } }, // team: BattleTeamInput
+  seed, // optional; resolved seed is on session.info
+});
+
+session.getState('p1'); // BattleState from an explicit perspective
+session.getLegalChoices('p1'); // structured options per active slot
+session.submitChoice('p1', command); // BattleCommand → { resolved, state, events }
+session.getEvents('spectator', afterSeq); // minimal structured events
+session.forSide('p1'); // BattleSideHandle: perspective-locked, no seed/omniscient
 ```
 
-Exact API is implementation-dependent; the boundary is mandatory.
+- **Runtime:** Node, server-side, synchronous. `pokemon-showdown@0.11.11` is not demonstrated to run on Cloudflare Workers or in a browser, so the web app must reach a session through a server-side boundary (a separate Node service if the web stays on Cloudflare). No server exists yet.
+- **Lifecycle:** `awaiting-choices | finished`; per side `team-preview | move | forced-switch | wait` and `submitted`. One submission per side per decision. Results are `win {side}` / `tie`.
+- **Perspectives:** `p1 | p2 | spectator | omniscient`, always explicit. Public state is built by allow-list; rival moves/item/ability appear only once the battle reveals them. Own HP is exact, others percentage. The seed is only on `session.info`.
+- **Choices vs commands:** legal options (`BattleLegalChoices`) and submitted commands (`BattleCommand`) are different types; the whole command is validated before the simulator is touched. Types are multi-slot (Doubles-capable); the runtime is Singles only and rejects other game types with `UNSUPPORTED_FORMAT`.
+- **Identity:** `BattlePokemonRef {side, teamIndex}` where `teamIndex` is the original position in the `BattleTeamInput`; stable through reorder, switches, faints and identical duplicates.
+- **Teams:** `BattleTeamInput` is the neutral boundary (Build, tools, tests and, later, an Area Zero mapper produce it). Legality is always validated with the simulator's validator; there is no bypass.
+- **Team field defaults:** an omitted optional field means "use the simulator's own default" — nothing is invented by the adapter. `gender` omitted is resolved by Showdown from the species (variable → M/F seeded by the battle seed, fixed-gender → that gender, genderless → `N`); `'N'` is only sent if the caller says it. `level`, `nature`, `item`, `teraType`, `evs` and `ivs` omitted are left to the validator's fill rules (format default level, Serious, no item, first type, EVs 0 in EV-limited formats and 252 otherwise, IVs 31). A partially given `evs`/`ivs` table has its missing stats completed with 0 / 31. A structurally valid team can still be rejected by legality (e.g. an all-omitted EV spread in `gen9ou`): that is `INVALID_TEAM` from the format, not an adapter default.
+- **Events:** `seq` is contiguous per perspective starting at 1 and is only meaningful with the perspective that produced it. `getEvents(perspective, afterSeq)` returns `seq > afterSeq` (exclusive). `BattleState.eventCursor` is the last `seq` of that perspective (0 if none), so `getEvents(p, state.eventCursor)` is "what is new". `submitChoice` returns the events its call produced for the submitter; the side that submitted first reads the resolution with its own cursor.
+- **Known visibility limits:** Illusion is not modeled (a disguised Pokémon can be shown as its real identity in the public state); nicknames are public only after switch-in, species of unswitched Pokémon only where team preview shows them; hidden trapping/disable can make a validated choice `choice-unavailable`.
+- **Errors:** `BattleDomainError` with a typed `code` (`INVALID_CONFIG`, `UNSUPPORTED_FORMAT`, `INVALID_TEAM`, `INVALID_SIDE`, `NOT_ACCEPTING_CHOICE`, `CHOICE_ALREADY_SUBMITTED`, `ILLEGAL_CHOICE`, `BATTLE_FINISHED`, `ENGINE_ERROR`) and typed `details`. Never parse `message`.
+- **Determinism:** `seed` is an opaque simulator seed string (`sodium,…`/`gen5,…`). Same seed and commands reproduce the battle.
+- **Not yet built:** doubles runtime, replay serialization/restore, the full structured battle trace, and a format catalog. Config, commands and events are plain JSON-serializable data so those can follow without reshaping the API.
 
 ## Why wrap upstream
 
@@ -92,7 +105,7 @@ Initial polished priority: current competitive generation/formats, with VGC slig
 
 ## Battle server
 
-Do not create a persistent battle server before a feature requires it.
+Do not create a persistent battle server before a feature requires it. The authoritative session runs in Node server-side (ADR-0015).
 
 When online PvP/long-running sessions arrive:
 
