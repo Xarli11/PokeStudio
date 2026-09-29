@@ -1,4 +1,4 @@
-import { Teams } from 'pokemon-showdown';
+import { Teams } from './simulator';
 
 import type { BattleCondition, BattleSideId } from '../types';
 import { parseDetails, parseIdent, toId, type ProtocolLine } from './protocol';

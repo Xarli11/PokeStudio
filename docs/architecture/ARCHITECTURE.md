@@ -29,7 +29,7 @@ Create only boundaries needed by real code.
 ```text
 apps/
   web/
-  battle-server/        # create when persistent multiplayer/AI runtime needs it
+  battle-server/        # minimal Node battle host (ADR-0019); in-memory, no persistence yet
 
 packages/
   ui/

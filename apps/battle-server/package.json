@@ -1,0 +1,25 @@
+{
+  "name": "@pokestudio/battle-server",
+  "private": true,
+  "version": "0.0.0",
+  "description": "PokeStudio battle server: a minimal Node process that owns authoritative BattleSessions (ADR-0019). The web app reaches it server-to-server; browsers never do.",
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@pokestudio/battle-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@pokestudio/config": "workspace:*",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

@@ -44,6 +44,7 @@ session.forSide('p1'); // BattleSideHandle: perspective-locked, no seed/omniscie
 - **Formats (ADR-0016):** `createBattle` takes a PokeStudio `BattleFormatId` from the closed catalog `BATTLE_FORMATS` (all five catalog formats are available (`sv-ou`, `sv-ubers`, `champions-bss-reg-mb`, `sv-doubles-ou`, `champions-vgc-reg-mb`)). `CURRENT_GENERATION = 9` is explicit (it names the priority generation; published format ids are permanent and never reinterpreted when it changes) and spans the `scarlet-violet` and `champions` families. Simulator ids stay internal (`BattleInfo.engineFormatId`, server-side); rules and legality stay with the simulator. Anything outside the catalog, including a raw simulator id, is `UNSUPPORTED_FORMAT` (`not-in-catalog`); a catalogued-but-blocked entry would be `blocked` (none today). In the Champions family the simulator reads `evs` as Stat Points (max 32 per stat, 66 total). `BattleFormatInfo` exposes `id`, `name`, `generation`, `gameType`, `category`, `family` and `openTeamSheets` structurally.
 - **Errors:** `BattleDomainError` with a typed `code` (`INVALID_CONFIG`, `UNSUPPORTED_FORMAT`, `INVALID_TEAM`, `INVALID_SIDE`, `NOT_ACCEPTING_CHOICE`, `CHOICE_ALREADY_SUBMITTED`, `ILLEGAL_CHOICE`, `BATTLE_FINISHED`, `ENGINE_ERROR`) and typed `details`. Never parse `message`.
 - **Determinism:** `seed` is an opaque simulator seed string (`sodium,…`/`gen5,…`). Same seed and commands reproduce the battle.
+- **Running it:** the simulator is loaded through `showdown/simulator.ts` with `createRequire`, so the engine runs directly on Node's ESM loader (not just under bundlers). The package exposes pure-data subpaths (`@pokestudio/battle-engine/formats`, `/types`) that web code may import; anything else would pull the simulator into a bundle. `getBattleDisplayNames()` returns display names for the ids that appear in state and events, and `importTeamText()` parses a pasted team into a `BattleTeamInput` (parsing only; legality is `createBattle`'s job).
 - **Not yet built:** Build integration with the catalog, replay storage/transport, snapshot-based fast restore. Config, commands and events are plain JSON-serializable data so those can follow without reshaping the API.
 
 ## Why wrap upstream
@@ -110,7 +111,7 @@ Initial polished priority: current competitive generation/formats, with VGC slig
 
 ## Battle server
 
-Do not create a persistent battle server before a feature requires it. The authoritative session runs in Node server-side (ADR-0015).
+The authoritative session runs in Node server-side (ADR-0015): `apps/battle-server` is a minimal Node process (plain HTTP, in-memory sessions with a TTL, no persistence) that the web app calls server-to-server (ADR-0019). It serves only player/spectator perspectives, never the omniscient view, and releases a replay only once a battle has finished. Do not add persistence or realtime transport before a feature requires it.
 
 When online PvP/long-running sessions arrive:
 

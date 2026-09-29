@@ -1,4 +1,4 @@
-import { Battle, Dex, PRNG, TeamValidator, Teams, type Pokemon } from 'pokemon-showdown';
+import { Battle, Dex, PRNG, TeamValidator, Teams, type Pokemon } from './simulator';
 
 import { battleError } from '../errors';
 import { findBattleFormat, type BattleFormatDescriptor } from '../formats';
