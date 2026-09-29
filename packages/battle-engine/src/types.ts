@@ -283,6 +283,15 @@ export type BattleCommand =
 
 // ── Events ──────────────────────────────────────────────────────────────────
 
+/** What produced an event, when the simulator says so (`[from] …`). Public information. */
+export interface BattleCause {
+  kind: 'move' | 'ability' | 'item' | 'condition';
+  /** Normalized id (e.g. `roughskin`, `lifeorb`, `confusion`, `sandstorm`, `recoil`). */
+  id: string;
+  /** The Pokémon that owns/caused the effect, when the simulator names one (`[of] …`). */
+  source?: BattlePokemonRef;
+}
+
 interface BattleEventBase {
   /**
    * Position in ONE perspective's event stream: contiguous, starting at 1. Streams are per
@@ -291,20 +300,70 @@ interface BattleEventBase {
    */
   seq: number;
   turn: number;
+  /**
+   * `seq` of the action this event happened under: the `move-used`, `switched` or `move-prevented`
+   * event whose consequences it is (move → damage → item → faint; switch → ability → boost).
+   * Absent for events that belong to no action (turn boundaries, end-of-turn effects).
+   */
+  parentSeq?: number;
+  /** What produced it (an ability, item, condition, …), when the simulator names it. */
+  cause?: BattleCause;
 }
 
-/** Minimal, perspective-filtered contract. Not the full structured battle trace. */
+/**
+ * Structured battle trace: perspective-filtered, no raw protocol. Covers what a UI needs to explain
+ * a turn — actions and their targets, misses/immunity/failure, damage and healing, status, volatile
+ * conditions, boosts, field and side conditions, ability/item effects, Tera, forme changes, faints
+ * and the result. Lines the simulator emits that add nothing to that are not surfaced.
+ */
 export type BattleEvent = BattleEventBase &
   (
     | { type: 'battle-started' }
     | { type: 'team-preview' }
     | { type: 'turn-started' }
-    | { type: 'switched'; slot: BattleSlotRef; pokemon: BattlePokemonRef }
+    | {
+        type: 'switched';
+        slot: BattleSlotRef;
+        pokemon: BattlePokemonRef;
+        /** True when the Pokémon was dragged in (Whirlwind, Roar…) rather than chosen. */
+        forced: boolean;
+      }
+    | { type: 'position-swapped'; pokemon: BattlePokemonRef; slot: BattleSlotRef }
     | { type: 'move-used'; user: BattlePokemonRef; moveId: string; target?: BattlePokemonRef }
-    | { type: 'hp-changed'; pokemon: BattlePokemonRef; hp: BattleHp }
+    | { type: 'move-missed'; user: BattlePokemonRef; target: BattlePokemonRef }
+    | { type: 'move-failed'; pokemon: BattlePokemonRef; moveId?: string }
+    | { type: 'move-prevented'; pokemon: BattlePokemonRef; reason: string; moveId?: string }
+    | { type: 'immune'; pokemon: BattlePokemonRef }
+    | { type: 'critical-hit'; pokemon: BattlePokemonRef }
+    | {
+        type: 'effectiveness';
+        pokemon: BattlePokemonRef;
+        result: 'super-effective' | 'resisted';
+      }
+    | {
+        type: 'hp-changed';
+        pokemon: BattlePokemonRef;
+        hp: BattleHp;
+        change: 'damage' | 'heal' | 'set';
+      }
     | { type: 'fainted'; pokemon: BattlePokemonRef }
     | { type: 'status-changed'; pokemon: BattlePokemonRef; status: BattleMajorStatus | null }
+    | { type: 'volatile-started'; pokemon: BattlePokemonRef; id: string }
+    | { type: 'volatile-ended'; pokemon: BattlePokemonRef; id: string }
     | { type: 'stat-boosted'; pokemon: BattlePokemonRef; stat: BattleBoostId; delta: number }
+    | {
+        type: 'effect-activated';
+        pokemon: BattlePokemonRef;
+        effect: { kind: 'move' | 'ability' | 'item' | 'condition'; id: string };
+      }
+    | {
+        type: 'item-changed';
+        pokemon: BattlePokemonRef;
+        item: string;
+        change: 'gained' | 'consumed' | 'removed';
+      }
+    | { type: 'terastallized'; pokemon: BattlePokemonRef; teraType: string }
+    | { type: 'forme-changed'; pokemon: BattlePokemonRef; species: string }
     | {
         type: 'field-changed';
         field: 'weather' | 'terrain' | 'pseudo-weather' | 'side-condition';
@@ -314,6 +373,36 @@ export type BattleEvent = BattleEventBase &
       }
     | { type: 'battle-ended'; result: BattleResult }
   );
+
+// ── Replay ──────────────────────────────────────────────────────────────────
+
+/**
+ * One accepted command. `decision` is the 0-based decision boundary it belongs to (it advances every
+ * time the engine resolves a decision); `turn` is the battle turn when it was submitted.
+ */
+export interface BattleReplayCommand {
+  decision: number;
+  turn: number;
+  side: BattleSideId;
+  command: BattleCommand;
+}
+
+/**
+ * A PokeStudio replay: everything needed to reproduce a battle deterministically — the format, the
+ * seed, the teams and the ordered structured commands. It is omniscient by nature (it contains both
+ * full teams and the seed): keep it server-side and never hand it to a player. Plain JSON.
+ */
+export interface BattleReplay {
+  schemaVersion: 1;
+  /** Which simulator produced it. A different simulator version is not assumed to reproduce it. */
+  engine: { simulator: 'pokemon-showdown'; simulatorVersion: string };
+  formatId: BattleFormatId;
+  seed: BattleSeed;
+  sides: Record<BattleSideId, BattleSideConfig>;
+  commands: BattleReplayCommand[];
+  /** The result when the battle had finished, otherwise `null`. */
+  result: BattleResult | null;
+}
 
 // ── Session ─────────────────────────────────────────────────────────────────
 
@@ -347,4 +436,6 @@ export interface BattleSession {
   /** Events with `seq > afterSeq` (exclusive; default 0 = all), in order, for that perspective. */
   getEvents(perspective: BattlePerspective, afterSeq?: number): readonly BattleEvent[];
   forSide(side: BattleSideId): BattleSideHandle;
+  /** Server-side, omniscient: a copy of everything needed to reproduce this battle. */
+  getReplay(): BattleReplay;
 }

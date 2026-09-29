@@ -98,7 +98,9 @@ describe('BattleSeries', () => {
       'Gholdengo',
       'Kingambit',
     ]);
-    expect(series.getGames()).toEqual([{ index: 1, seed: expect.any(String), result: null }]);
+    expect(series.getGames()).toEqual([
+      { index: 1, seed: expect.any(String), result: null, replay: expect.any(Object) },
+    ]);
   });
 
   it('cannot start the next game while the current one is being played', () => {

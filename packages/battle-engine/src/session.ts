@@ -19,6 +19,7 @@ import { ChannelProcessor } from './showdown/events';
 import { projectSide } from './showdown/project';
 import type { ProjectionContext } from './showdown/project';
 import { splitChannels } from './showdown/protocol';
+import { SIMULATOR_VERSION } from './showdown/version';
 import type {
   BattleCommand,
   BattleConfig,
@@ -27,6 +28,8 @@ import type {
   BattleLegalChoices,
   BattlePerspective,
   BattlePokemonRef,
+  BattleReplay,
+  BattleReplayCommand,
   BattleRequestSummary,
   BattleResult,
   BattleSession,
@@ -76,10 +79,14 @@ class ShowdownBattleSession implements BattleSession {
   readonly #pokemonByRef = new Map<string, ShowdownPokemon>();
   readonly #ctx: ProjectionContext;
   readonly #processors: Record<BattlePerspective, ChannelProcessor>;
+  readonly #sides: BattleConfig['sides'];
+  readonly #commands: BattleReplayCommand[] = [];
+  #decisionIndex = 0;
   readonly #submitted: Record<BattleSideId, boolean> = { p1: false, p2: false };
 
   constructor(config: BattleConfig, bundle: ShowdownBattleBundle, pending: string[]) {
     this.#pending = pending;
+    this.#sides = structuredClone(config.sides);
     this.#battle = bundle.battle;
     this.#refs = bundle.refs;
     for (const [pokemon, ref] of bundle.refs)
@@ -240,6 +247,7 @@ class ShowdownBattleSession implements BattleSession {
     }
     const choice = commandToChoiceString(decision, command);
 
+    const turnBefore = this.#battle.turn;
     const showdownSide = this.#battle.getSide(side);
     const requestBefore = showdownSide.activeRequest;
     const eventsBefore = this.#processors[side].cursor;
@@ -274,7 +282,15 @@ class ShowdownBattleSession implements BattleSession {
 
     // A committed decision replaces every request object (or ends the battle).
     const resolved = this.#battle.ended || showdownSide.activeRequest !== requestBefore;
+    // Only accepted commands are recorded; the decision index advances when the engine resolves.
+    this.#commands.push({
+      decision: this.#decisionIndex,
+      turn: turnBefore,
+      side,
+      command: structuredClone(command),
+    });
     if (resolved) {
+      this.#decisionIndex++;
       this.#submitted.p1 = false;
       this.#submitted.p2 = false;
     } else {
@@ -285,6 +301,18 @@ class ShowdownBattleSession implements BattleSession {
       state: this.getState(side),
       events: structuredClone(this.#processors[side].events.slice(eventsBefore)),
     };
+  }
+
+  getReplay(): BattleReplay {
+    return structuredClone({
+      schemaVersion: 1,
+      engine: { simulator: 'pokemon-showdown', simulatorVersion: SIMULATOR_VERSION },
+      formatId: this.info.format.id,
+      seed: this.info.seed,
+      sides: this.#sides,
+      commands: this.#commands,
+      result: this.#battle.ended ? resultFromWinner(this.#battle.winner ?? '') : null,
+    });
   }
 
   getEvents(perspective: BattlePerspective, afterSeq = 0): readonly BattleEvent[] {

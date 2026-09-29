@@ -10,6 +10,7 @@ export type BattleErrorCode =
   | 'ILLEGAL_CHOICE'
   | 'BATTLE_FINISHED'
   | 'INVALID_SERIES_STATE'
+  | 'INVALID_REPLAY'
   | 'ENGINE_ERROR';
 
 export type BattleIllegalChoiceReason =
@@ -54,6 +55,22 @@ export interface BattleErrorDetailsByCode {
   BATTLE_FINISHED: Record<string, never>;
   /** A series call that does not fit its current state. */
   INVALID_SERIES_STATE: { reason: 'game-in-progress' | 'series-finished' };
+  /** A replay that cannot be parsed, is not supported, or does not reproduce. */
+  INVALID_REPLAY: {
+    reason:
+      | 'malformed-json'
+      | 'malformed'
+      | 'unsupported-version'
+      | 'incompatible-engine'
+      | 'invalid-config'
+      | 'commands-rejected'
+      | 'result-mismatch'
+      | 'decision-out-of-range';
+    /** Structural problems (display text) for `malformed`. */
+    issues?: readonly string[];
+    /** Index into `commands` of the first command the engine rejected. */
+    commandIndex?: number;
+  };
   /** An engine invariant was broken (adapter bug or simulator failure). See `cause`. */
   ENGINE_ERROR: { operation: string };
 }

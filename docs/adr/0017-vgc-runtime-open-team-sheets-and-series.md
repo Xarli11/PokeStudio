@@ -22,4 +22,4 @@ What the simulator does with Open Team Sheets: `openteamsheets` is opt-in — ea
 
 - VGC is a real, tested format, and the visibility model gained its first "public from the start" information without special cases.
 - OTS behavior follows the installed simulator; the upgrade-guard test pins each catalog entry's Open Team Sheets mode.
-- Series replay/serialization is part of the replay work that follows; a series is already reproducible from its seed and the per-game commands.
+- Series replay: each game of a series carries its own replay (ADR-0018); a series is reproducible from its seed and those replays.
