@@ -12,13 +12,14 @@
   "home": {
     "title": "PokeStudio",
     "tagline": "Search. Learn. Build. Simulate. Battle. Analyze. Improve. Collect.",
-    "status": "The foundation is live. Explore, Build and Battle Lab are under active construction.",
-    "cta": "See the roadmap",
+    "status": "Explore Pokémon, build teams, and analyze damage with PokeStudio's tools.",
+    "cta": "Explore Pokémon",
+    "metaDescription": "Explore Pokémon, build teams, and analyze damage with PokeStudio's tools.",
     "pillarsTitle": "Built around three pillars",
     "pillars": {
       "explore": "Search the Pokédex, compare types and base stats, and trace evolutions — fast, and always up to date.",
-      "build": "Assemble teams and validate them against real format and legality rules before you commit.",
-      "battleLab": "Simulate matchups, review structured battle traces, and get AI-assisted coaching grounded in real mechanics."
+      "build": "Build teams, configure sets, and prepare your Pokémon for battle.",
+      "battleLab": "Calculate damage, compare matchups, and understand the factors behind each result."
     }
   },
   "theme": {
