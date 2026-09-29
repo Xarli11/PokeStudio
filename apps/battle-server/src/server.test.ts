@@ -364,3 +364,108 @@ describe('battle server: helpers', () => {
     expect((await call('GET', '/health')).body).toEqual({ ok: true, sessions: 1 });
   });
 });
+
+describe('battle server: forks', () => {
+  type Call = Awaited<ReturnType<typeof start>>['call'];
+  async function playToEnd(call: Call, id: string) {
+    await call('POST', `/v1/battles/${id}/commands/p1`, order(0, 1));
+    await call('POST', `/v1/battles/${id}/commands/p2`, order(0, 1));
+    for (let i = 0; i < 80; i++) {
+      for (const side of ['p1', 'p2'] as const) {
+        const choices = (await call('GET', `/v1/battles/${id}/choices/${side}`)).body;
+        if (choices.error || choices.kind === 'wait') continue;
+        const slot = choices.slots[0];
+        const option =
+          slot.options.find((o: { kind: string }) => o.kind === 'move') ?? slot.options[0];
+        const action =
+          option.kind === 'move'
+            ? { kind: 'move', slot: slot.slot, moveId: option.moveId }
+            : { kind: 'switch', slot: slot.slot, pokemon: option.pokemon };
+        await call('POST', `/v1/battles/${id}/commands/${side}`, {
+          kind: 'actions',
+          actions: [action],
+        });
+      }
+      const state = (await call('GET', `/v1/battles/${id}/state/spectator`)).body as BattleState;
+      if (state.status === 'finished') return;
+    }
+    throw new Error('battle did not finish');
+  }
+
+  it('forks only finished battles, into a separate readable session, leaving the original alone', async () => {
+    const { call, store } = await start();
+    const id = (await call('POST', '/v1/battles', config())).body.battleId as string;
+    const early = await call('POST', `/v1/battles/${id}/forks`, {});
+    expect(early.status).toBe(409);
+
+    await playToEnd(call, id);
+    const replay = (await call('GET', `/v1/battles/${id}/replay`)).body;
+    const decision = replay.commands.find(
+      (c: { side: string; command: { kind: string } }) =>
+        c.side === 'p1' && c.command.kind === 'actions',
+    ).decision as number;
+
+    // Ask a restored copy what p1 may do there, through the fork route's own rules.
+    const alt = {
+      kind: 'actions',
+      actions: [{ kind: 'move', slot: { side: 'p1', position: 0 }, moveId: 'shadowball' }],
+    };
+    const forked = await call('POST', `/v1/battles/${id}/forks`, {
+      atDecision: decision,
+      side: 'p1',
+      command: alt,
+    });
+    expect(forked.status).toBe(201);
+    expect(forked.body.battleId).not.toBe(id);
+    expect(forked.body.reused).toEqual(['p2']);
+    expect(forked.body.pending).toEqual([]);
+    expect(store.size).toBe(2);
+    const events = await call('GET', `/v1/battles/${forked.body.battleId}/events/spectator`);
+    expect(events.status).toBe(200);
+    // The boundary before that decision offers p1 its choices again.
+    const boundary = await call('GET', `/v1/battles/${id}/decisions/${decision}/p1`);
+    expect(boundary.status).toBe(200);
+    expect(boundary.body.choices.kind).toBe('move');
+    expect(boundary.body.state.requests.p1.submitted).not.toBe(true);
+    expect((await call('GET', `/v1/battles/${id}/decisions/x/p1`)).body.error.code).toBe(
+      'INVALID_DECISION',
+    );
+    expect((await call('GET', `/v1/battles/${id}/decisions/99999/p1`)).body.error.code).toBe(
+      'INVALID_REPLAY',
+    );
+    // The fork is not finished, so it does not release its own replay or forks either.
+    expect((await call('GET', `/v1/battles/${forked.body.battleId}/replay`)).status).toBe(409);
+    // The original still has its full history.
+    expect((await call('GET', `/v1/battles/${id}/replay`)).body).toEqual(replay);
+  });
+
+  it('rejects bad decision points, sides and illegal replacements', async () => {
+    const { call } = await start();
+    const id = (await call('POST', '/v1/battles', config())).body.battleId as string;
+    await playToEnd(call, id);
+    const alt = {
+      kind: 'actions',
+      actions: [{ kind: 'move', slot: { side: 'p1', position: 0 }, moveId: 'shadowball' }],
+    };
+    const bad = (body: unknown) => call('POST', `/v1/battles/${id}/forks`, body);
+    expect((await bad({ atDecision: 'x', side: 'p1', command: alt })).body.error.code).toBe(
+      'INVALID_DECISION',
+    );
+    expect((await bad({ atDecision: 1, side: 'omniscient', command: alt })).body.error.code).toBe(
+      'INVALID_SIDE',
+    );
+    expect((await bad({ atDecision: 9999, side: 'p1', command: alt })).body.error.code).toBe(
+      'INVALID_REPLAY',
+    );
+    const illegal = await bad({
+      atDecision: 1,
+      side: 'p1',
+      command: {
+        kind: 'actions',
+        actions: [{ kind: 'move', slot: { side: 'p1', position: 0 }, moveId: 'notamove' }],
+      },
+    });
+    expect(illegal.status).toBe(422);
+    expect(illegal.body.error.code).toBe('ILLEGAL_CHOICE');
+  });
+});

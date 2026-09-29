@@ -708,7 +708,8 @@
         "hpChanges": "HP changes",
         "hpArrowTemplate": "{before} → {after}",
         "noActions": "No actions this turn.",
-        "perspectiveNote": "Shown from the {perspective} perspective."
+        "perspectiveNote": "Shown from the {perspective} perspective.",
+        "tryDifferent": "Try a different play"
       },
       "result": {
         "heading": "Battle finished",
@@ -778,6 +779,19 @@
         "reason_recharge": "it must recharge",
         "reason_taunt": "it is taunted",
         "reason_disable": "the move is disabled"
+      },
+      "fork": {
+        "heading": "Different play",
+        "chooseSide": "Which player's play do you want to change?",
+        "loading": "Loading options…",
+        "noDecision": "This turn has no play to change.",
+        "original": "Original",
+        "alternative": "Alternative",
+        "reusedTemplate": "{player}'s original play was applied again.",
+        "askedTemplate": "{player}'s original play is no longer legal: choose again.",
+        "note": "Same battle up to this turn; only the play changes. Nothing is scored or recommended.",
+        "close": "Close",
+        "unavailable": "No plays can be changed here."
       }
     }
   }

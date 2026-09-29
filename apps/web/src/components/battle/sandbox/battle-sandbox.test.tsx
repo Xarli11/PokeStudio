@@ -16,6 +16,7 @@ import { BattleSandbox, type SandboxServerActions } from './battle-sandbox';
 afterEach(cleanup);
 
 const ID = '9f9626b1-d5a9-41d2-b136-1b2c3d4e5f60';
+const FORK_ID = '11111111-d5a9-41d2-b136-1b2c3d4e5f60';
 const TEAM = {
   members: [
     { species: 'Garchomp', ability: 'rough-skin', moves: ['earthquake'] },
@@ -107,10 +108,10 @@ function fake() {
     };
   };
 
-  const choicesFor = (side: BattleSideId): BattleLegalChoices =>
-    stage === 'finished'
+  const choicesFor = (side: BattleSideId, at: Stage = stage): BattleLegalChoices =>
+    at === 'finished'
       ? { kind: 'wait', side }
-      : stage === 'preview'
+      : at === 'preview'
         ? { kind: 'team-preview', side, pick: 2, of: 2 }
         : {
             kind: 'move',
@@ -174,13 +175,35 @@ function fake() {
       ok({ state: stateFor(side), choices: choicesFor(side) }),
     ),
     loadPerspectiveState: vi.fn(async (_id, perspective) => ok(stateFor(perspective))),
-    loadEvents: vi.fn(async () =>
-      ok({
-        events:
-          stage === 'preview'
-            ? events
-            : [...events, ...turnEvents().slice(0, stage === 'turn' ? 4 : 5)],
-      }),
+    loadEvents: vi.fn(async (id: string) =>
+      id === FORK_ID
+        ? ok({
+            events: [
+              { seq: 3, turn: 1, type: 'turn-started' },
+              {
+                seq: 4,
+                turn: 1,
+                type: 'move-used',
+                user: { side: 'p1', teamIndex: 0 },
+                moveId: 'dragonclaw',
+              },
+              {
+                seq: 5,
+                turn: 1,
+                parentSeq: 4,
+                type: 'hp-changed',
+                pokemon: { side: 'p2', teamIndex: 0 },
+                hp: { kind: 'percent', percent: 40 },
+                change: 'damage',
+              },
+            ] as BattleEvent[],
+          })
+        : ok({
+            events:
+              stage === 'preview'
+                ? events
+                : [...events, ...turnEvents().slice(0, stage === 'turn' ? 4 : 5)],
+          }),
     ),
     submitSandboxCommand: vi.fn(async (_id, side, command) => {
       commands.push({ side, command });
@@ -200,7 +223,28 @@ function fake() {
         conditions: {},
       }),
     ),
-    loadReplay: vi.fn(async () => ok({ schemaVersion: 1 } as never)),
+    loadReplay: vi.fn(async () =>
+      ok({
+        schemaVersion: 1,
+        commands: [
+          { decision: 0, turn: 0, side: 'p1', command: { kind: 'team-order', order: [0, 1] } },
+          { decision: 1, turn: 1, side: 'p1', command: { kind: 'actions', actions: [] } },
+          { decision: 1, turn: 1, side: 'p2', command: { kind: 'actions', actions: [] } },
+        ],
+      } as never),
+    ),
+    loadDecisionView: vi.fn(async (_id, _decision, side): Promise<ActionResult<SideView>> =>
+      ok({ state: stateFor(side), choices: choicesFor(side, 'turn') }),
+    ),
+    createFork: vi.fn(async () =>
+      ok({
+        battleId: FORK_ID,
+        format: stateFor('p1').format,
+        atDecision: 1,
+        reused: ['p2' as const],
+        pending: [],
+      }),
+    ),
   };
   return { actions, commands };
 }
@@ -469,5 +513,80 @@ describe('Battle Sandbox: timeline and Turn Inspector', () => {
     expect(inspector.textContent).toContain(labels.battle.player1);
     fireEvent.click(within(inspector).getByRole('button', { name: labels.inspector.close }));
     expect(screen.queryByTestId('turn-inspector')).toBeNull();
+  });
+});
+
+describe('Battle Sandbox: forks', () => {
+  it('offers the fork only on a finished battle and shows original and alternative side by side', async () => {
+    const { actions } = fake();
+    await startBattle(actions);
+    await playPreview(actions);
+    fireEvent.click(screen.getByTestId('turn-1'));
+    // Mid-battle there is nothing to fork.
+    expect(screen.queryByRole('button', { name: labels.inspector.tryDifferent })).toBeNull();
+
+    for (const player of ['Player 1', 'Player 2']) {
+      await waitFor(() => expect(screen.getByTestId('acting-panel').textContent).toContain(player));
+      fireEvent.click(
+        within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Earthquake/ }),
+      );
+      fireEvent.click(screen.getByRole('button', { name: labels.action.submit }));
+    }
+    await screen.findByTestId('battle-result');
+    fireEvent.click(screen.getByTestId('turn-1'));
+    fireEvent.click(screen.getByRole('button', { name: labels.inspector.tryDifferent }));
+
+    const panel = await screen.findByTestId('fork-panel');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Player 1' }));
+    await waitFor(() => expect(actions.loadDecisionView).toHaveBeenCalledWith(ID, 1, 'p1'));
+    fireEvent.click(await within(panel).findByRole('button', { name: /Dragon Claw/ }));
+    fireEvent.click(within(panel).getByRole('button', { name: labels.action.submit }));
+
+    await waitFor(() =>
+      expect(actions.createFork).toHaveBeenCalledWith(ID, {
+        atDecision: 1,
+        side: 'p1',
+        command: {
+          kind: 'actions',
+          actions: [{ kind: 'move', slot: { side: 'p1', position: 0 }, moveId: 'dragonclaw' }],
+        },
+      }),
+    );
+    const result = await screen.findByTestId('fork-result');
+    await waitFor(() => expect(result.textContent).toContain('used Dragon Claw'));
+    expect(result.textContent).toContain('used Earthquake'); // the original, untouched
+    expect(result.textContent).toContain(labels.fork.original);
+    expect(result.textContent).toContain(labels.fork.alternative);
+    expect(result.textContent).toContain("Player 2's original play was applied again.");
+    // Both are read through the perspective being viewed, never an omniscient one.
+    expect(actions.loadEvents).toHaveBeenCalledWith(FORK_ID, 'p1', 0);
+  });
+
+  it('shows a fork error without breaking the panel', async () => {
+    const { actions } = fake();
+    await startBattle(actions);
+    await playPreview(actions);
+    for (const player of ['Player 1', 'Player 2']) {
+      await waitFor(() => expect(screen.getByTestId('acting-panel').textContent).toContain(player));
+      fireEvent.click(
+        within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Earthquake/ }),
+      );
+      fireEvent.click(screen.getByRole('button', { name: labels.action.submit }));
+    }
+    await screen.findByTestId('battle-result');
+    (actions.createFork as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      error: { code: 'ILLEGAL_CHOICE' },
+    });
+    fireEvent.click(screen.getByTestId('turn-1'));
+    fireEvent.click(screen.getByRole('button', { name: labels.inspector.tryDifferent }));
+    const panel = await screen.findByTestId('fork-panel');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Player 2' }));
+    fireEvent.click(await within(panel).findByRole('button', { name: /Dragon Claw/ }));
+    fireEvent.click(within(panel).getByRole('button', { name: labels.action.submit }));
+    expect((await screen.findByTestId('fork-error')).textContent).toBe(
+      labels.errors.ILLEGAL_CHOICE,
+    );
+    expect(screen.queryByTestId('fork-result')).toBeNull();
   });
 });

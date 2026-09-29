@@ -23,6 +23,7 @@ export interface InspectorLabels {
   hpArrowTemplate: string;
   noActions: string;
   perspectiveNote: string;
+  tryDifferent: string;
 }
 
 const hpText = (hp: HpChange['before']) =>
@@ -85,13 +86,19 @@ export function TurnInspector({
   labels,
   ctx,
   perspectiveLabel,
+  variantLabel,
   onClose,
+  onFork,
 }: {
   turn: TurnSummary;
   labels: InspectorLabels;
   ctx: EventCopyContext;
   perspectiveLabel: string;
-  onClose: () => void;
+  /** Names this inspector when two are shown side by side (original / alternative). */
+  variantLabel?: string;
+  onClose?: () => void;
+  /** Offered only when the turn can be forked (a finished battle). */
+  onFork?: () => void;
 }) {
   const line = (event: TurnSummary['residual'][number]) => describeEvent(event, ctx);
   return (
@@ -105,9 +112,16 @@ export function TurnInspector({
           {labels.heading} ·{' '}
           {formatMessage(ctx.templates['turnStarted'] ?? 'Turn {turn}', { turn: turn.turn })}
         </h3>
-        <button type="button" className={buttonClass()} onClick={onClose}>
-          {labels.close}
-        </button>
+        {variantLabel ? (
+          <span className="rounded-md bg-brand-muted px-2 py-0.5 text-xs font-semibold">
+            {variantLabel}
+          </span>
+        ) : null}
+        {onClose ? (
+          <button type="button" className={buttonClass()} onClick={onClose}>
+            {labels.close}
+          </button>
+        ) : null}
       </div>
       <p className="m-0 text-xs text-muted">
         {formatMessage(labels.perspectiveNote, { perspective: perspectiveLabel })}
@@ -172,6 +186,11 @@ export function TurnInspector({
             ))}
           </ul>
         </div>
+      ) : null}
+      {onFork ? (
+        <button type="button" className={buttonClass('default')} onClick={onFork}>
+          {labels.tryDifferent}
+        </button>
       ) : null}
     </section>
   );

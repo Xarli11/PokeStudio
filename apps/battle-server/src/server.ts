@@ -4,8 +4,10 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import {
   BattleDomainError,
   createBattle,
+  forkBattle,
   getBattleDisplayNames,
   importTeamText,
+  restoreBattle,
 } from '@pokestudio/battle-engine';
 import type {
   BattleCommand,
@@ -26,6 +28,7 @@ export interface BattleServerOptions {
 }
 
 const MAX_BODY_BYTES = 512 * 1024;
+const MAX_DRAIN_BYTES = 8 * 1024 * 1024;
 const DEFAULT_TTL_MS = 60 * 60 * 1000;
 const DEFAULT_MAX_SESSIONS = 500;
 /** Perspectives a client may read. `omniscient` is deliberately not reachable over HTTP. */
@@ -80,9 +83,15 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   for await (const chunk of req) {
     const buffer = chunk as Buffer;
     size += buffer.length;
-    if (size > MAX_BODY_BYTES) throw new HttpError(413, 'PAYLOAD_TOO_LARGE');
-    chunks.push(buffer);
+    // An oversized body is read (and dropped) up to a hard cap before answering: replying while the
+    // client is still sending resets the connection instead of delivering the 413.
+    if (size > MAX_DRAIN_BYTES) {
+      req.destroy();
+      throw new HttpError(413, 'PAYLOAD_TOO_LARGE');
+    }
+    if (size <= MAX_BODY_BYTES) chunks.push(buffer);
   }
+  if (size > MAX_BODY_BYTES) throw new HttpError(413, 'PAYLOAD_TOO_LARGE');
   try {
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   } catch {
@@ -187,6 +196,48 @@ export function createBattleServer(options: BattleServerOptions = {}) {
         throw new HttpError(409, 'BATTLE_NOT_FINISHED');
       }
       return send(res, 200, found.getReplay());
+    }
+    if (method === 'GET' && kind === 'decisions' && parts.length === 6) {
+      // What `side` could do at the boundary before a past decision (to choose a fork). Finished only.
+      const found = session(id);
+      if (found.getState('spectator').status !== 'finished') {
+        throw new HttpError(409, 'BATTLE_NOT_FINISHED');
+      }
+      const atDecision = Number(parts[4]);
+      if (!Number.isInteger(atDecision)) throw new HttpError(400, 'INVALID_DECISION');
+      const side = sideOf(parts[5]);
+      const boundary = restoreBattle(found.getReplay(), { atDecision });
+      return send(res, 200, {
+        state: boundary.getState(side),
+        choices: boundary.getLegalChoices(side),
+      });
+    }
+    if (method === 'POST' && kind === 'forks' && parts.length === 4) {
+      // Like the replay, a fork is built from both teams and the seed: only for finished battles.
+      const found = session(id);
+      if (found.getState('spectator').status !== 'finished') {
+        throw new HttpError(409, 'BATTLE_NOT_FINISHED');
+      }
+      const body = (await readJson(req)) as {
+        atDecision?: unknown;
+        side?: unknown;
+        command?: unknown;
+      } | null;
+      if (!Number.isInteger(body?.atDecision)) throw new HttpError(400, 'INVALID_DECISION');
+      const side = sideOf(typeof body?.side === 'string' ? body.side : undefined);
+      const fork = forkBattle(found.getReplay(), {
+        atDecision: body?.atDecision as number,
+        side,
+        command: body?.command as BattleCommand,
+      });
+      if (!store.add(fork.session)) throw new HttpError(503, 'CAPACITY_REACHED');
+      return send(res, 201, {
+        battleId: fork.session.info.battleId,
+        format: fork.session.info.format,
+        atDecision: fork.atDecision,
+        reused: fork.reused,
+        pending: fork.pending,
+      });
     }
     throw new HttpError(404, 'NOT_FOUND');
   }

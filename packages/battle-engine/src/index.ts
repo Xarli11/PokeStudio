@@ -5,6 +5,8 @@ export type { BattleDisplayNames } from './showdown/names';
 export { importTeamText } from './showdown/import-team';
 export { BATTLE_REPLAY_SCHEMA_VERSION, parseBattleReplay, restoreBattle } from './replay';
 export type { RestoreOptions } from './replay';
+export { forkBattle } from './fork';
+export type { BattleFork, ForkOptions } from './fork';
 export type {
   BattleSeries,
   BattleSeriesConfig,
