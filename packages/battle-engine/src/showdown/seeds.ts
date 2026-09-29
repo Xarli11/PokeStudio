@@ -1,4 +1,4 @@
-import { PRNG } from 'pokemon-showdown';
+import { PRNG } from './simulator';
 
 /**
  * Series seeds. No PokeStudio RNG: the simulator's own PRNG derives one seed per game from the

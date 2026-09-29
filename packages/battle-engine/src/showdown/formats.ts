@@ -1,4 +1,4 @@
-import { Dex } from 'pokemon-showdown';
+import { Dex } from './simulator';
 
 import type { BattleFormatDescriptor, BattleFormatId } from '../formats';
 

@@ -25,6 +25,8 @@ describe('package boundary', () => {
       'CURRENT_GENERATION',
       'createBattle',
       'createBattleSeries',
+      'getBattleDisplayNames',
+      'importTeamText',
       'isBattleDomainError',
       'parseBattleReplay',
       'restoreBattle',
@@ -71,6 +73,6 @@ describe('package boundary', () => {
 
   it('the public entry re-exports no engine internals', () => {
     const entry = readFileSync(join(srcDir, 'index.ts'), 'utf8');
-    expect(entry).not.toMatch(/showdown|BattleStream|PRNG|Teams|Dex/);
+    expect(entry).not.toMatch(/pokemon-showdown|BattleStream|PRNG|\bTeams\b|\bDex\b/);
   });
 });

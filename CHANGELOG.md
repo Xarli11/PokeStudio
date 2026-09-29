@@ -6,6 +6,24 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Battle Sandbox and Node battle server (2026-09-29)
+
+First functional Battle UI (ADR-0019) — implemented and automatically tested; the manual owner
+validation of the four flows (Singles OU, Doubles OU, Champions BSS, Champions VGC) is still pending,
+so the roadmap item is not marked shipped. New `apps/battle-server`: a minimal Node process (plain
+HTTP, in-memory sessions with a TTL and a cap, nothing persisted) that owns authoritative battles and
+serves only player/spectator perspectives — never the omniscient view — releasing the replay only once
+a battle has finished; the web reaches it server-to-server with a shared secret and browsers never do.
+New `/[locale]/battle/sandbox` (not indexable, ES/EN): one person plays both sides — format and teams
+from Build or pasted text, team preview, per-slot actions with targets, Terastallization and forced
+replacements, a battlefield per perspective, the result with a downloadable replay, and a timeline with
+a Turn Inspector built from the structured trace (deterministic localized templates; no AI). The web
+bundle stays free of the simulator (only the engine's pure-data subpaths and types, guarded by a
+test). Engine: the simulator is now loaded with `createRequire` so the engine runs on plain Node ESM
+(caught while building the server), plus `getBattleDisplayNames()` and `importTeamText()`. The Battle
+Lab landing links to the Sandbox. Limits: sessions do not survive restarts, names are the simulator's
+English names, no sprites, and deployment of the battle server is not part of this change.
+
 ### Replay serialization and structured battle trace (2026-09-29)
 
 Two Phase 4 roadmap items shipped together (ADR-0018). **Replay:** `session.getReplay()` returns a

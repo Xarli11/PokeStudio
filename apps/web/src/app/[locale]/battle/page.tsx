@@ -68,6 +68,17 @@ export default async function BattleLabPage({ params }: { params: Promise<{ loca
         </span>
       </Link>
 
+      <Link
+        href={`/${locale}/battle/sandbox`}
+        className={interactiveCardClass('flex flex-col gap-2 p-5')}
+      >
+        <h2 className="m-0 text-lg font-bold">{dictionary.battle.sandbox.cardTitle}</h2>
+        <p className="m-0 text-sm text-muted">{dictionary.battle.sandbox.cardDescription}</p>
+        <span className="mt-1 text-sm font-semibold text-brand">
+          {dictionary.battle.sandbox.openSandbox} →
+        </span>
+      </Link>
+
       <p className="m-0 text-sm text-muted">{dictionary.battle.moreComingSoon}</p>
     </div>
   );

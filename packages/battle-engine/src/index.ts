@@ -1,5 +1,8 @@
 export { createBattle } from './session';
 export { createBattleSeries } from './series';
+export { getBattleDisplayNames } from './showdown/names';
+export type { BattleDisplayNames } from './showdown/names';
+export { importTeamText } from './showdown/import-team';
 export { BATTLE_REPLAY_SCHEMA_VERSION, parseBattleReplay, restoreBattle } from './replay';
 export type { RestoreOptions } from './replay';
 export type {

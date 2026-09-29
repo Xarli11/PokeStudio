@@ -1,4 +1,4 @@
-import type { Battle, Pokemon } from 'pokemon-showdown';
+import type { Battle, Pokemon } from './simulator';
 
 import type {
   BattleBoostId,
