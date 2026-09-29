@@ -16,7 +16,7 @@ UI and application code must interact with a PokeStudio battle-domain interface,
 
 ```ts
 const session = createBattle({
-  formatId: 'gen9ou', // validated simulator format id
+  formatId: 'sv-ou', // PokeStudio catalog id (see Formats)
   sides: { p1: { displayName, team }, p2: { displayName, team } }, // team: BattleTeamInput
   seed, // optional; resolved seed is on session.info
 });
@@ -37,9 +37,10 @@ session.forSide('p1'); // BattleSideHandle: perspective-locked, no seed/omniscie
 - **Team field defaults:** an omitted optional field means "use the simulator's own default" — nothing is invented by the adapter. `gender` omitted is resolved by Showdown from the species (variable → M/F seeded by the battle seed, fixed-gender → that gender, genderless → `N`); `'N'` is only sent if the caller says it. `level`, `nature`, `item`, `teraType`, `evs` and `ivs` omitted are left to the validator's fill rules (format default level, Serious, no item, first type, EVs 0 in EV-limited formats and 252 otherwise, IVs 31). A partially given `evs`/`ivs` table has its missing stats completed with 0 / 31. A structurally valid team can still be rejected by legality (e.g. an all-omitted EV spread in `gen9ou`): that is `INVALID_TEAM` from the format, not an adapter default.
 - **Events:** `seq` is contiguous per perspective starting at 1 and is only meaningful with the perspective that produced it. `getEvents(perspective, afterSeq)` returns `seq > afterSeq` (exclusive). `BattleState.eventCursor` is the last `seq` of that perspective (0 if none), so `getEvents(p, state.eventCursor)` is "what is new". `submitChoice` returns the events its call produced for the submitter; the side that submitted first reads the resolution with its own cursor.
 - **Known visibility limits:** Illusion is not modeled (a disguised Pokémon can be shown as its real identity in the public state); nicknames are public only after switch-in, species of unswitched Pokémon only where team preview shows them; hidden trapping/disable can make a validated choice `choice-unavailable`.
+- **Formats (ADR-0016):** `createBattle` takes a PokeStudio `BattleFormatId` from the closed catalog `BATTLE_FORMATS` (`sv-ou`, `sv-ubers`, `champions-bss-reg-mb` available; `champions-vgc-reg-mb` and `sv-doubles-ou` known but blocked by the Doubles runtime). `CURRENT_GENERATION = 9` is explicit (it names the priority generation; published format ids are permanent and never reinterpreted when it changes) and spans the `scarlet-violet` and `champions` families. Simulator ids stay internal (`BattleInfo.engineFormatId`, server-side); rules and legality stay with the simulator. Anything outside the catalog, including a raw simulator id, is `UNSUPPORTED_FORMAT` (`not-in-catalog`); a blocked entry is `blocked-by-doubles`. In the Champions family the simulator reads `evs` as Stat Points (max 32 per stat, 66 total). `BattleFormatInfo` exposes `id`, `name`, `generation`, `gameType`, `category` and `family` structurally.
 - **Errors:** `BattleDomainError` with a typed `code` (`INVALID_CONFIG`, `UNSUPPORTED_FORMAT`, `INVALID_TEAM`, `INVALID_SIDE`, `NOT_ACCEPTING_CHOICE`, `CHOICE_ALREADY_SUBMITTED`, `ILLEGAL_CHOICE`, `BATTLE_FINISHED`, `ENGINE_ERROR`) and typed `details`. Never parse `message`.
 - **Determinism:** `seed` is an opaque simulator seed string (`sodium,…`/`gen5,…`). Same seed and commands reproduce the battle.
-- **Not yet built:** doubles runtime, replay serialization/restore, the full structured battle trace, and a format catalog. Config, commands and events are plain JSON-serializable data so those can follow without reshaping the API.
+- **Not yet built:** doubles runtime, replay serialization/restore, the full structured battle trace, and Build integration with the catalog. Config, commands and events are plain JSON-serializable data so those can follow without reshaping the API.
 
 ## Why wrap upstream
 

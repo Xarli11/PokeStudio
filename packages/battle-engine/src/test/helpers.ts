@@ -1,5 +1,6 @@
 import type {
   BattleCommand,
+  BattleConfig,
   BattleLegalChoices,
   BattleSession,
   BattleSideId,
@@ -64,9 +65,15 @@ export const soloTeam = (
   members: [{ species, ability, moves, ...(item ? { item } : {}) }],
 });
 
-import { createBattle } from '../session';
+import { findBattleFormat } from '../formats';
+import { createBattle, createBattleForTests } from '../session';
 import { CUSTOM_FORMAT, SEED, teamA, teamB } from './fixtures';
 
+/**
+ * Creates a battle. A PokeStudio catalog id (e.g. `sv-ou`) goes through the public `createBattle`.
+ * Anything else — the default is `gen9customgame` — is a raw simulator format and uses the
+ * test-only path, which mechanics tests need for artificial formats.
+ */
 export function newBattle(
   overrides: {
     formatId?: string;
@@ -76,14 +83,18 @@ export function newBattle(
   } = {},
 ): BattleSession {
   const seed = 'seed' in overrides ? overrides.seed : SEED;
-  return createBattle({
-    formatId: overrides.formatId ?? CUSTOM_FORMAT,
+  const formatId = overrides.formatId ?? CUSTOM_FORMAT;
+  const config = {
+    formatId,
     ...(seed === undefined ? {} : { seed }),
     sides: {
       p1: { displayName: 'Ash', team: overrides.p1 ?? teamA },
       p2: { displayName: 'Gary', team: overrides.p2 ?? teamB },
     },
-  });
+  };
+  return findBattleFormat(formatId)
+    ? createBattle(config as BattleConfig)
+    : createBattleForTests(config);
 }
 
 /** Submits team preview for both sides with the given orders (default: input order). */

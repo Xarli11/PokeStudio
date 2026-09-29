@@ -123,7 +123,11 @@ silently treated as complete.
   perspective-locked `BattleSideHandle`, typed errors, stable Pokémon identity, deterministic seed,
   mandatory team validation, minimal structured events. Runtime is Singles only; Battle UI, doubles,
   replay, the full trace and a format catalog are the following bullets,
-- current-generation priority formats,
+- current-generation priority formats — shipped: an explicit, closed `@pokestudio/battle-engine` catalog
+  of Generation 9 formats with stable PokeStudio ids (ADR-0016). Available (played end to end in tests):
+  `sv-ou`, `sv-ubers`, `champions-bss-reg-mb`. Known but blocked by the Doubles runtime:
+  `champions-vgc-reg-mb`, `sv-doubles-ou`. Simulator ids stay internal and rules/legality stay with
+  Showdown; no Build integration, selector or UI yet,
 - Singles/Doubles foundations,
 - VGC-first polish,
 - replay serialization,

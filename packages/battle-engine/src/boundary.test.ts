@@ -19,7 +19,9 @@ function sourceFiles(dir: string): string[] {
 describe('package boundary', () => {
   it('exports only the intended runtime values', () => {
     expect(Object.keys(publicApi).sort()).toEqual([
+      'BATTLE_FORMATS',
       'BattleDomainError',
+      'CURRENT_GENERATION',
       'createBattle',
       'isBattleDomainError',
     ]);

@@ -8,7 +8,12 @@ import {
   toLegalChoices,
 } from './showdown/choice';
 import type { Decision, RequestView } from './showdown/choice';
-import { createShowdownBattle, SIDE_IDS, SHOWDOWN_SIDE_NAME } from './showdown/create';
+import {
+  createShowdownBattle,
+  createShowdownBattleForTests,
+  SIDE_IDS,
+  SHOWDOWN_SIDE_NAME,
+} from './showdown/create';
 import type { ShowdownBattleBundle, ShowdownPokemon } from './showdown/create';
 import { ChannelProcessor } from './showdown/events';
 import { projectSide } from './showdown/project';
@@ -83,6 +88,7 @@ class ShowdownBattleSession implements BattleSession {
       battleId: randomUUID(),
       format: Object.freeze({ ...bundle.format }),
       seed: bundle.seed,
+      engineFormatId: bundle.engineFormatId,
     });
     this.#ctx = {
       battle: this.#battle,
@@ -305,13 +311,9 @@ class ShowdownBattleSession implements BattleSession {
   }
 }
 
-/**
- * Creates an authoritative, ready-to-play battle. Synchronous. Throws `BattleDomainError` for
- * invalid config, unsupported format or invalid teams. Runtime target: Node, server-side.
- */
-export function createBattle(config: BattleConfig): BattleSession {
+function startSession(config: BattleConfig, build: typeof createShowdownBattle): BattleSession {
   const pending: string[] = [];
-  const bundle = createShowdownBattle(config, (type, data) => {
+  const bundle = build(config, (type, data) => {
     if (type === 'update') pending.push(Array.isArray(data) ? data.join('\n') : data);
   });
   try {
@@ -325,6 +327,27 @@ export function createBattle(config: BattleConfig): BattleSession {
       cause,
     );
   }
+}
+
+/**
+ * Creates an authoritative, ready-to-play battle. Synchronous. `config.formatId` must be a
+ * PokeStudio catalog id that is `available`. Throws `BattleDomainError` for invalid config,
+ * unsupported (unknown or blocked) formats or invalid teams. Runtime target: Node, server-side.
+ */
+export function createBattle(config: BattleConfig): BattleSession {
+  return startSession(config, createShowdownBattle);
+}
+
+/** Config for the test-only path: `formatId` is a raw simulator format id. */
+export type TestBattleConfig = Omit<BattleConfig, 'formatId'> & { formatId: string };
+
+/**
+ * @internal TEST-ONLY. Creates a session on a raw simulator format (e.g. `gen9customgame`) so
+ * mechanics tests can use artificial formats. Deliberately not exported from `index.ts` and not
+ * reachable through `BattleConfig`; teams are still validated.
+ */
+export function createBattleForTests(config: TestBattleConfig): BattleSession {
+  return startSession(config as BattleConfig, createShowdownBattleForTests);
 }
 
 /** @internal Test-only accessor; deliberately not re-exported from `index.ts`. */

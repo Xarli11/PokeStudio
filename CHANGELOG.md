@@ -6,6 +6,20 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Current-generation priority formats (2026-09-29)
+
+Phase 4 roadmap item shipped: `@pokestudio/battle-engine` now has an explicit, closed catalog of
+product battle formats (ADR-0016). `CURRENT_GENERATION = 9` is a product decision spanning the
+Scarlet/Violet and Champions families. Formats use stable PokeStudio ids (`sv-ou`, `sv-ubers`,
+`champions-bss-reg-mb` available; `champions-vgc-reg-mb`, `sv-doubles-ou` known but blocked by the
+Doubles runtime); simulator ids stay internal and rules/legality stay with Pokémon Showdown.
+`createBattle` now accepts only available catalog ids (`UNSUPPORTED_FORMAT` with `not-in-catalog` or
+`blocked-by-doubles` otherwise) and `BattleFormatInfo` exposes id, name, generation, game type,
+category and family. Every available format is played to `finished` in tests with a legal team,
+including Champions BSS (pick 3 of 6, level 50, Stat Points), and an upgrade guard pins each entry's
+critical simulator metadata. Mechanics tests use an internal, unexported creator for artificial
+formats. No Build, UI, Doubles or VGC work is included.
+
 ### Authoritative battle-domain API (2026-09-29)
 
 Phase 4 roadmap item shipped (first bullet only): `@pokestudio/battle-engine` now exposes

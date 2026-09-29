@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BattleDomainError } from './errors';
-import { createBattle, resultFromWinner } from './session';
+import { createBattleForTests, resultFromWinner } from './session';
 import { ChannelProcessor } from './showdown/events';
 import { CUSTOM_FORMAT, SEED, teamA, teamB } from './test/fixtures';
 import { newBattle, playToEnd, startTurnOne } from './test/helpers';
@@ -55,7 +55,7 @@ describe('lifecycle', () => {
 
   it('plays to a finish: faint, finished, winner by side id (not display name)', () => {
     const same = { displayName: 'Same Name' };
-    const session = createBattle({
+    const session = createBattleForTests({
       formatId: CUSTOM_FORMAT,
       seed: SEED,
       sides: { p1: { ...same, team: teamA }, p2: { ...same, team: teamB } },

@@ -6,6 +6,8 @@
  * All config/command/state/event shapes are plain JSON-serializable data.
  */
 
+import type { BattleFormatCategory, BattleFormatFamily, BattleFormatId } from './formats';
+
 // ── Identity ────────────────────────────────────────────────────────────────
 
 /** Battle side. Doubles-capable ids can be added later without reshaping any other type. */
@@ -66,6 +68,10 @@ export interface BattleTeamMemberInput {
   nature?: string;
   teraType?: string;
   happiness?: number;
+  /**
+   * Effort values. In the Champions format family the simulator reads this table as Stat Points
+   * (at most 32 per stat and 66 in total); the simulator's validator stays the authority.
+   */
   evs?: Partial<BattleStatTable>;
   ivs?: Partial<BattleStatTable>;
 }
@@ -83,18 +89,25 @@ export interface BattleSideConfig {
 
 /** Public battle configuration. Team legality is always validated; there is no bypass flag. */
 export interface BattleConfig {
-  /** Simulator format id (validated against the installed simulator; no PokeStudio catalog yet). */
-  formatId: string;
+  /**
+   * A PokeStudio format id from the closed catalog (`BATTLE_FORMATS`). Raw simulator ids such as
+   * "gen9ou" are rejected, as are catalogued formats that are not yet available.
+   */
+  formatId: BattleFormatId;
   sides: Record<BattleSideId, BattleSideConfig>;
   /** Omit for a random seed. The resolved seed is exposed on `BattleSession.info`. */
   seed?: BattleSeed;
 }
 
+/** Structured format identity: consumers never need to parse the id to learn any of this. */
 export interface BattleFormatInfo {
-  id: string;
+  id: BattleFormatId;
+  /** Display name from the simulator (English). Display only. */
   name: string;
   generation: number;
   gameType: BattleGameType;
+  category: BattleFormatCategory;
+  family: BattleFormatFamily;
 }
 
 /** Server-side info held by the session owner. NOT part of any player/spectator state. */
@@ -103,6 +116,8 @@ export interface BattleInfo {
   format: BattleFormatInfo;
   /** Resolved seed. Knowing it allows predicting rolls, so it is never put in a `BattleState`. */
   seed: BattleSeed;
+  /** The simulator's own format id, for debugging and future replay internals. Server-side only. */
+  engineFormatId: string;
 }
 
 // ── Lifecycle / results ─────────────────────────────────────────────────────
