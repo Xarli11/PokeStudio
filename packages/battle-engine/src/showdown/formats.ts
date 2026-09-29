@@ -28,6 +28,16 @@ export interface ResolvedFormat {
   maxTeamSize: number;
   pickedTeamSize: number | null;
   adjustLevel: number | null;
+  /** `'accepted'`: the format's Open Team Sheets are opt-in and PokeStudio treats them as accepted. */
+  openTeamSheets: 'accepted' | 'forced' | null;
+}
+
+/** Reads the Open Team Sheets rule the simulator itself defines for the format. */
+export function openTeamSheetsOf(rules: {
+  has(rule: string): boolean;
+}): 'accepted' | 'forced' | null {
+  if (rules.has('forceopenteamsheets')) return 'forced';
+  return rules.has('openteamsheets') ? 'accepted' : null;
 }
 
 export const showdownIdOf = (id: BattleFormatId): string => SHOWDOWN_FORMAT_ID[id];
@@ -51,6 +61,7 @@ export function resolveFormat(id: BattleFormatId): ResolvedFormat {
     maxTeamSize: rules.maxTeamSize,
     pickedTeamSize: rules.pickedTeamSize ?? null,
     adjustLevel: rules.adjustLevel ?? null,
+    openTeamSheets: openTeamSheetsOf(rules),
   };
 }
 

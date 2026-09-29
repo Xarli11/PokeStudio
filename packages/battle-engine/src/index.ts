@@ -1,4 +1,14 @@
 export { createBattle } from './session';
+export { createBattleSeries } from './series';
+export type {
+  BattleSeries,
+  BattleSeriesConfig,
+  BattleSeriesGame,
+  BattleSeriesInfo,
+  BattleSeriesResult,
+  BattleSeriesScore,
+  BattleSeriesStatus,
+} from './series';
 export { BATTLE_FORMATS, CURRENT_GENERATION } from './formats';
 export type {
   BattleFormatAvailability,

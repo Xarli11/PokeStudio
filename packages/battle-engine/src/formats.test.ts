@@ -7,6 +7,7 @@ import { BattleDomainError } from './errors';
 import { BATTLE_FORMATS, CURRENT_GENERATION, findBattleFormat } from './formats';
 import type { BattleFormatDescriptor, BattleFormatId } from './formats';
 import { createBattle, createBattleForTests } from './session';
+import { assertCatalogAvailable } from './showdown/create';
 import { resolveExecutableFormat, resolveFormat, showdownIdOf } from './showdown/formats';
 import { championsBssTeam, doublesTeam, legalOuTeam } from './test/fixtures';
 import { playToEnd } from './test/helpers';
@@ -76,8 +77,8 @@ describe('format registry (explicit, closed, PokeStudio-owned)', () => {
         () => ((BATTLE_FORMATS[0]!.availability as { level: string }).level = 'blocked'),
       ],
       [
-        'unblock a blocked format',
-        () => ((BATTLE_FORMATS[3]!.availability as { level: string }).level = 'available'),
+        'change another entry availability',
+        () => ((BATTLE_FORMATS[3]!.availability as { level: string }).level = 'blocked'),
       ],
     ];
     for (const [label, mutate] of mutations) {
@@ -87,7 +88,7 @@ describe('format registry (explicit, closed, PokeStudio-owned)', () => {
       ['sv-ou', 'available'],
       ['sv-ubers', 'available'],
       ['champions-bss-reg-mb', 'available'],
-      ['champions-vgc-reg-mb', 'blocked'],
+      ['champions-vgc-reg-mb', 'available'],
       ['sv-doubles-ou', 'available'],
     ]);
     for (const format of BATTLE_FORMATS) expect(Object.isFrozen(format.availability)).toBe(true);
@@ -121,12 +122,7 @@ describe('format registry (explicit, closed, PokeStudio-owned)', () => {
         'singles',
         { level: 'available' },
       ],
-      'champions-vgc-reg-mb': [
-        'vgc',
-        'champions',
-        'doubles',
-        { level: 'blocked', blockedBy: 'vgc-runtime' },
-      ],
+      'champions-vgc-reg-mb': ['vgc', 'champions', 'doubles', { level: 'available' }],
       'sv-doubles-ou': ['smogon-doubles', 'scarlet-violet', 'doubles', { level: 'available' }],
     });
   });
@@ -154,6 +150,7 @@ describe('upgrade guard against the installed simulator', () => {
       max: 6,
       pick: null,
       adjust: null,
+      ots: null,
     },
     'sv-ubers': {
       showdownId: 'gen9ubers',
@@ -163,6 +160,7 @@ describe('upgrade guard against the installed simulator', () => {
       max: 6,
       pick: null,
       adjust: null,
+      ots: null,
     },
     'champions-bss-reg-mb': {
       showdownId: 'gen9championsbssregmb',
@@ -172,6 +170,7 @@ describe('upgrade guard against the installed simulator', () => {
       max: 6,
       pick: 3,
       adjust: 50,
+      ots: null,
     },
     'champions-vgc-reg-mb': {
       showdownId: 'gen9championsvgc2026regmb',
@@ -181,6 +180,7 @@ describe('upgrade guard against the installed simulator', () => {
       max: 6,
       pick: 4,
       adjust: 50,
+      ots: 'accepted',
     },
     'sv-doubles-ou': {
       showdownId: 'gen9doublesou',
@@ -190,6 +190,7 @@ describe('upgrade guard against the installed simulator', () => {
       max: 6,
       pick: null,
       adjust: null,
+      ots: null,
     },
   } as const;
 
@@ -205,6 +206,7 @@ describe('upgrade guard against the installed simulator', () => {
       max: resolved.maxTeamSize,
       pick: resolved.pickedTeamSize,
       adjust: resolved.adjustLevel,
+      ots: resolved.openTeamSheets,
     }).toEqual(expected);
     expect(resolved.generation).toBe(findBattleFormat(id)!.generation);
     // The initial catalog is entirely current-generation.
@@ -231,22 +233,19 @@ describe('available formats run end to end', () => {
     'sv-ubers': legalOuTeam,
     'champions-bss-reg-mb': championsBssTeam,
     'sv-doubles-ou': doublesTeam,
+    'champions-vgc-reg-mb': championsBssTeam,
   };
   const PICK: Record<string, [number, number]> = {
     'sv-ou': [2, 2],
     'sv-ubers': [2, 2],
     'champions-bss-reg-mb': [3, 6],
     'sv-doubles-ou': [6, 6],
+    'champions-vgc-reg-mb': [4, 6],
   };
   const available = BATTLE_FORMATS.filter((f) => f.availability.level === 'available');
 
-  it('the available set is exactly sv-ou, sv-ubers, champions-bss-reg-mb and sv-doubles-ou', () => {
-    expect(available.map((f) => f.id)).toEqual([
-      'sv-ou',
-      'sv-ubers',
-      'champions-bss-reg-mb',
-      'sv-doubles-ou',
-    ]);
+  it('the available set is exactly the five catalog formats', () => {
+    expect(available.map((f) => f.id)).toEqual(IDS);
   });
 
   it.each(available.map((f) => f.id))(
@@ -303,15 +302,28 @@ describe('available formats run end to end', () => {
   });
 });
 
-describe('blocked formats', () => {
-  it.each(['champions-vgc-reg-mb'])(
-    '%s is known but createBattle rejects it as blocked-by-vgc-runtime',
-    (id) => {
-      const error = rejection(() => createBattle(configFor(id, legalOuTeam)));
-      expect(error.code).toBe('UNSUPPORTED_FORMAT');
-      expect(error.details).toEqual({ formatId: id, reason: 'blocked-by-vgc-runtime' });
-    },
-  );
+describe('catalog availability gate', () => {
+  it('rejects a catalogued-but-blocked format with a structured reason (no entry is blocked today)', () => {
+    const blocked: BattleFormatDescriptor = Object.freeze({
+      id: 'sv-ou',
+      generation: 9,
+      category: 'smogon-tier',
+      family: 'scarlet-violet',
+      gameType: 'singles',
+      availability: Object.freeze({ level: 'blocked', blockedBy: 'engine-capability' }),
+    });
+    const error = rejection(() => assertCatalogAvailable(blocked, 'sv-ou'));
+    expect(error.details).toEqual({ formatId: 'sv-ou', reason: 'blocked' });
+    expect(rejection(() => assertCatalogAvailable(undefined, 'x')).details).toEqual({
+      formatId: 'x',
+      reason: 'not-in-catalog',
+    });
+    expect(assertCatalogAvailable(findBattleFormat('sv-ou'), 'sv-ou').id).toBe('sv-ou');
+  });
+
+  it('every catalog entry is currently available', () => {
+    expect(BATTLE_FORMATS.every((f) => f.availability.level === 'available')).toBe(true);
+  });
 });
 
 describe('formats outside the catalog are not supported', () => {

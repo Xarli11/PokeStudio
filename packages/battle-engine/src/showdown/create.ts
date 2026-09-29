@@ -1,7 +1,7 @@
 import { Battle, Dex, PRNG, TeamValidator, Teams, type Pokemon } from 'pokemon-showdown';
 
 import { battleError } from '../errors';
-import { findBattleFormat } from '../formats';
+import { findBattleFormat, type BattleFormatDescriptor } from '../formats';
 import type {
   BattleConfig,
   BattleFormatInfo,
@@ -11,7 +11,7 @@ import type {
   BattleStatTable,
   BattleTeamInput,
 } from '../types';
-import { resolveExecutableFormat } from './formats';
+import { openTeamSheetsOf, resolveExecutableFormat } from './formats';
 import { memberToken } from './protocol';
 
 export type ShowdownPokemon = Pokemon;
@@ -228,17 +228,31 @@ export interface ShowdownBattleBundle {
 interface FormatTarget {
   showdownId: string;
   info: BattleFormatInfo;
+  /** Open Team Sheets as the simulator defines them for the format (see `showdown/formats.ts`). */
+  openTeamSheets: 'accepted' | 'forced' | null;
 }
 
 const unsupportedFormat = (
   formatId: string,
-  reason: 'not-in-catalog' | 'blocked-by-vgc-runtime' | 'engine-unsupported',
+  reason: 'not-in-catalog' | 'blocked' | 'engine-unsupported',
 ) =>
   battleError(
     'UNSUPPORTED_FORMAT',
     { formatId, reason },
     `Unsupported format "${formatId}": ${reason}`,
   );
+
+/**
+ * @internal Exported for tests. A format is runnable only if it is in the catalog and available.
+ */
+export function assertCatalogAvailable(
+  descriptor: BattleFormatDescriptor | undefined,
+  formatId: string,
+): BattleFormatDescriptor {
+  if (!descriptor) throw unsupportedFormat(formatId, 'not-in-catalog');
+  if (descriptor.availability.level === 'blocked') throw unsupportedFormat(formatId, 'blocked');
+  return descriptor;
+}
 
 function assertValidConfig(config: BattleConfig) {
   const issues = configIssues(config);
@@ -256,11 +270,7 @@ export function createShowdownBattle(
   send: (type: string, data: string | string[]) => void,
 ): ShowdownBattleBundle {
   assertValidConfig(config);
-  const descriptor = findBattleFormat(config.formatId);
-  if (!descriptor) throw unsupportedFormat(config.formatId, 'not-in-catalog');
-  if (descriptor.availability.level === 'blocked') {
-    throw unsupportedFormat(config.formatId, 'blocked-by-vgc-runtime');
-  }
+  const descriptor = assertCatalogAvailable(findBattleFormat(config.formatId), config.formatId);
   let resolved;
   try {
     resolved = resolveExecutableFormat(descriptor);
@@ -274,6 +284,7 @@ export function createShowdownBattle(
   }
   return buildBattle(config, send, {
     showdownId: resolved.showdownId,
+    openTeamSheets: resolved.openTeamSheets,
     info: {
       id: descriptor.id,
       name: resolved.name,
@@ -281,6 +292,7 @@ export function createShowdownBattle(
       gameType: descriptor.gameType,
       category: descriptor.category,
       family: descriptor.family,
+      openTeamSheets: resolved.openTeamSheets !== null,
     },
   });
 }
@@ -307,6 +319,7 @@ export function createShowdownBattleForTests(
   }
   return buildBattle(config, send, {
     showdownId: format.id,
+    openTeamSheets: openTeamSheetsOf(Dex.formats.getRuleTable(format)),
     info: {
       // Not a catalog id: tests only. Typed as one so the public shape stays unchanged.
       id: `internal:${format.id}` as BattleFormatInfo['id'],
@@ -315,6 +328,7 @@ export function createShowdownBattleForTests(
       gameType: format.gameType,
       category: 'smogon-tier',
       family: 'scarlet-violet',
+      openTeamSheets: openTeamSheetsOf(Dex.formats.getRuleTable(format)) !== null,
     },
   });
 }
@@ -370,6 +384,10 @@ function buildBattle(
       p1: { name: SHOWDOWN_SIDE_NAME.p1, team: packed.p1 },
       p2: { name: SHOWDOWN_SIDE_NAME.p2, team: packed.p2 },
     });
+    // Open Team Sheets are opt-in in the simulator (each player accepts through the room UI). A
+    // PokeStudio session treats them as accepted, so the sheets are public from the start. Formats
+    // with forced sheets already publish them during team preview.
+    if (target.openTeamSheets === 'accepted') battle.showOpenTeamSheets();
     const refs = new Map<Pokemon, BattlePokemonRef>();
     for (const [n, id] of SIDE_IDS.entries()) {
       const side = battle.sides[n];

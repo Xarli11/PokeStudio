@@ -129,7 +129,7 @@ silently treated as complete.
   `champions-vgc-reg-mb`, `sv-doubles-ou`. Simulator ids stay internal and rules/legality stay with
   Showdown; no Build integration, selector or UI yet,
 - Singles/Doubles foundations — shipped: `@pokestudio/battle-engine` runs `doubles` battles with two active slots per side, per-slot legal choices and commands mirroring the simulator request (targets only where the simulator lets you choose one, per-slot switches, `pass` for fainted slots, forced replacements with `switchCount`, simultaneous faints), unchanged visibility/identity/determinism guarantees and multi-slot events. `sv-doubles-ou` is now `available`; `champions-vgc-reg-mb` stays blocked on the VGC runtime (`VGC-first polish`). No UI,
-- VGC-first polish,
+- VGC-first polish — shipped: `champions-vgc-reg-mb` is `available` and end-to-end tested (register 6, pick 4, level 50, Champions Stat Points/items, Doubles, finished, deterministic). Open Team Sheets are derived from the simulator's rules and projected as public information from the start (items, abilities, moves; nicknames, HP and leads stay private); `createBattleSeries` adds a best-of-three domain with the simulator's scoring (ADR-0017). No UI,
 - replay serialization,
 - structured battle trace,
 - functional battle UI.

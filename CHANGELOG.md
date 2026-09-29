@@ -6,6 +6,19 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### VGC runtime and best-of series (2026-09-29)
+
+Phase 4 roadmap item shipped: `champions-vgc-reg-mb` is a real, `available` VGC format — register 6,
+bring 4, level 50, Champions Stat Points and items, Doubles, played to `finished`, deterministic by
+seed (ADR-0017). Open Team Sheets follow the installed simulator's rules (no per-format checks): the
+public `|showteam|` line makes each rival's team known from the start (species, item, ability and the
+four moves; the Tera type where the format has Tera), while nicknames, exact HP, spreads and the
+chosen leads stay private; opt-in sheets are treated as accepted. `BattleFormatInfo` gains
+`openTeamSheets`. A best-of-N (odd 3–9) is modeled as `createBattleSeries`, not another format: same
+teams every game, one seed per game derived with the simulator's PRNG, and the simulator's scoring
+(a tie awards no win and lowers the wins needed). No catalog entry is blocked any more; the blocked
+state stays as a tested gate (`blocked`). No UI, replay or Build changes.
+
 ### Singles/Doubles foundations (2026-09-29)
 
 Phase 4 roadmap item shipped: the battle engine now runs real Doubles. `BattleSession` supports two

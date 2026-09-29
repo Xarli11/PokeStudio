@@ -9,6 +9,7 @@ export type BattleErrorCode =
   | 'CHOICE_ALREADY_SUBMITTED'
   | 'ILLEGAL_CHOICE'
   | 'BATTLE_FINISHED'
+  | 'INVALID_SERIES_STATE'
   | 'ENGINE_ERROR';
 
 export type BattleIllegalChoiceReason =
@@ -35,11 +36,10 @@ export interface BattleErrorDetailsByCode {
     formatId: string;
     /**
      * - `not-in-catalog`: not a PokeStudio catalog id (this includes raw simulator ids).
-     * - `blocked-by-vgc-runtime`: catalogued, but needs VGC-specific runtime support that does not exist yet.
-     *   (The Doubles runtime itself exists; this blocker is specific to VGC rules.)
+     * - `blocked`: catalogued but not executable yet (no catalog entry is blocked at the moment).
      * - `engine-unsupported`: test-only path: a simulator format the engine cannot run.
      */
-    reason: 'not-in-catalog' | 'blocked-by-vgc-runtime' | 'engine-unsupported';
+    reason: 'not-in-catalog' | 'blocked' | 'engine-unsupported';
   };
   /** `problems` are display/debug text only. Never parse them. */
   INVALID_TEAM: { side: BattleSideId; problems: readonly string[] };
@@ -52,6 +52,8 @@ export interface BattleErrorDetailsByCode {
     slot?: BattleSlotRef;
   };
   BATTLE_FINISHED: Record<string, never>;
+  /** A series call that does not fit its current state. */
+  INVALID_SERIES_STATE: { reason: 'game-in-progress' | 'series-finished' };
   /** An engine invariant was broken (adapter bug or simulator failure). See `cause`. */
   ENGINE_ERROR: { operation: string };
 }

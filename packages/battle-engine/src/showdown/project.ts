@@ -138,6 +138,7 @@ function projectPublic(
     level: known.level,
     gender: known.gender,
     ...(pokemon.terastallized ? { terastallized: pokemon.terastallized } : {}),
+    ...(known.teraType ? { teraType: known.teraType } : {}),
     ...(known.ability ? { ability: toId(known.ability) } : {}),
     ...(known.item ? { item: toId(known.item) } : {}),
     ...(moves.length > 0 ? { moves: moves.map((id) => ({ id })) } : {}),
