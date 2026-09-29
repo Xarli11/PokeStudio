@@ -6,7 +6,9 @@ vi.mock('@/lib/battle/server-client', () => ({
 }));
 
 import {
+  createFork,
   createSandboxBattle,
+  loadDecisionView,
   importTeamText,
   loadEvents,
   loadPerspectiveState,
@@ -121,5 +123,34 @@ describe('sandbox server actions', () => {
       ok: false,
       error: { code: 'BATTLE_NOT_FOUND' },
     });
+  });
+});
+
+describe('fork actions', () => {
+  const command = { kind: 'actions', actions: [] } as never;
+
+  it('forwards a valid fork and decision read', async () => {
+    await createFork(ID, { atDecision: 2, side: 'p1', command });
+    expect(battleServer).toHaveBeenCalledWith('POST', `/v1/battles/${ID}/forks`, {
+      atDecision: 2,
+      side: 'p1',
+      command,
+    });
+    await loadDecisionView(ID, 2, 'p2');
+    expect(battleServer).toHaveBeenCalledWith('GET', `/v1/battles/${ID}/decisions/2/p2`);
+  });
+
+  it('rejects bad ids, decisions and sides without calling the server', async () => {
+    for (const result of await Promise.all([
+      createFork('nope', { atDecision: 1, side: 'p1', command }),
+      createFork(ID, { atDecision: -1, side: 'p1', command }),
+      createFork(ID, { atDecision: 1.5, side: 'p1', command }),
+      createFork(ID, { atDecision: 1, side: 'omniscient' as never, command }),
+      loadDecisionView(ID, 1, 'spectator' as never),
+      loadDecisionView(ID, Number.NaN, 'p1'),
+    ])) {
+      expect(result).toEqual({ ok: false, error: { code: 'INVALID_CONFIG' } });
+    }
+    expect(battleServer).not.toHaveBeenCalled();
   });
 });

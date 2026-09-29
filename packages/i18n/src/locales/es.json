@@ -708,7 +708,8 @@
         "hpChanges": "Cambios de PS",
         "hpArrowTemplate": "{before} → {after}",
         "noActions": "No hubo acciones en este turno.",
-        "perspectiveNote": "Se muestra desde la perspectiva de: {perspective}."
+        "perspectiveNote": "Se muestra desde la perspectiva de: {perspective}.",
+        "tryDifferent": "Probar otra jugada"
       },
       "result": {
         "heading": "Combate terminado",
@@ -778,6 +779,19 @@
         "reason_recharge": "debe recargar",
         "reason_taunt": "está provocado",
         "reason_disable": "el movimiento está anulado"
+      },
+      "fork": {
+        "heading": "Otra jugada",
+        "chooseSide": "¿La jugada de qué jugador quieres cambiar?",
+        "loading": "Cargando opciones…",
+        "noDecision": "Este turno no tiene una jugada que cambiar.",
+        "original": "Original",
+        "alternative": "Alternativa",
+        "reusedTemplate": "Se aplicó de nuevo la jugada original de {player}.",
+        "askedTemplate": "La jugada original de {player} ya no es legal: elige otra.",
+        "note": "Mismo combate hasta este turno; solo cambia la jugada. No se puntúa ni se recomienda nada.",
+        "close": "Cerrar",
+        "unavailable": "Aquí no se puede cambiar ninguna jugada."
       }
     }
   }

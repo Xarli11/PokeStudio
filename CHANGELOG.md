@@ -6,6 +6,18 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Battle Forks (2026-09-29)
+
+"Try a different play" in the Turn Inspector of a finished Sandbox battle (ADR-0019, addendum). The
+engine's `forkBattle(replay, {atDecision, side, command})` restores the battle to the boundary before
+a decision, applies a replacement command and re-applies the other side's original command if it is
+still legal (otherwise that side is reported as `pending` and asked again). The result is a separate
+live session; the original replay and session are never mutated. The battle server adds
+`GET /v1/battles/:id/decisions/:n/:side` and `POST /v1/battles/:id/forks`, both for finished battles
+only (they are built from the replay). The UI shows the original and the alternative turn side by
+side. No scoring, no AI, no recommendation. Limits: one decision (the turn's main play) can be
+changed per fork, and the alternative is shown for that turn only.
+
 ### Battle Sandbox and Node battle server (2026-09-29)
 
 First functional Battle UI (ADR-0019) — implemented and automatically tested; the manual owner

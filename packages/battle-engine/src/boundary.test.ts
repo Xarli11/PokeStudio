@@ -25,6 +25,7 @@ describe('package boundary', () => {
       'CURRENT_GENERATION',
       'createBattle',
       'createBattleSeries',
+      'forkBattle',
       'getBattleDisplayNames',
       'importTeamText',
       'isBattleDomainError',

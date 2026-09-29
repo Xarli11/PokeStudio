@@ -9,9 +9,11 @@ import { SITE_URL } from '@/lib/site-url';
 import { eyebrowClass } from '@/lib/ui-classes';
 
 import {
+  createFork,
   createSandboxBattle,
   importTeamText,
   loadDisplayNames,
+  loadDecisionView,
   loadEvents,
   loadPerspectiveState,
   loadReplay,
@@ -68,7 +70,9 @@ export default async function BattleSandboxPage({
         labels={dictionary.battle.sandbox}
         typeNames={dictionary.types}
         actions={{
+          createFork,
           createSandboxBattle,
+          loadDecisionView,
           importTeamText,
           loadSideView,
           loadPerspectiveState,

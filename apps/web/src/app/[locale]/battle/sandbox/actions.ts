@@ -13,6 +13,7 @@ import type {
   BattleSubmitResult,
   BattleTeamInput,
   CreatedBattle,
+  CreatedFork,
   ReadablePerspective,
   SideView,
 } from '@/lib/battle/types';
@@ -125,4 +126,35 @@ export async function loadDisplayNames(): Promise<ActionResult<BattleDisplayName
 export async function loadReplay(battleId: string): Promise<ActionResult<BattleReplay>> {
   if (!isBattleId(battleId)) return invalid();
   return battleServer<BattleReplay>('GET', `/v1/battles/${battleId}/replay`);
+}
+
+const isDecision = (value: unknown): value is number =>
+  Number.isInteger(value) && (value as number) >= 0;
+
+/** What `side` could do at the boundary before a past decision. Finished battles only. */
+export async function loadDecisionView(
+  battleId: string,
+  atDecision: number,
+  side: BattleSideId,
+): Promise<ActionResult<SideView>> {
+  if (!isBattleId(battleId) || !isDecision(atDecision) || !isSide(side)) return invalid();
+  return battleServer<SideView>('GET', `/v1/battles/${battleId}/decisions/${atDecision}/${side}`);
+}
+
+/** Forks a finished battle at a decision with a replacement command. The original is untouched. */
+export async function createFork(
+  battleId: string,
+  input: { atDecision: number; side: BattleSideId; command: BattleCommand },
+): Promise<ActionResult<CreatedFork>> {
+  if (
+    !isBattleId(battleId) ||
+    !input ||
+    !isDecision(input.atDecision) ||
+    !isSide(input.side) ||
+    typeof input.command !== 'object' ||
+    input.command === null
+  ) {
+    return invalid();
+  }
+  return battleServer<CreatedFork>('POST', `/v1/battles/${battleId}/forks`, input);
 }

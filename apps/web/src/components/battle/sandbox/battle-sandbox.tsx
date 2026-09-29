@@ -18,6 +18,7 @@ import type {
   BattleSubmitResult,
   BattleTeamInput,
   CreatedBattle,
+  CreatedFork,
   ReadablePerspective,
   SideView,
 } from '@/lib/battle/types';
@@ -26,6 +27,7 @@ import { buttonClass, cardClass } from '@/lib/ui-classes';
 import { ActionPanel, TeamPreviewPanel } from './action-panel';
 import { Battlefield } from './battlefield';
 import { BattleResultPanel } from './battle-result';
+import { ForkPanel } from './fork-panel';
 import { SandboxSetup } from './sandbox-setup';
 import { TimelinePanel, TurnInspector } from './timeline-panel';
 
@@ -56,6 +58,15 @@ export interface SandboxServerActions {
   ): Promise<ActionResult<BattleSubmitResult>>;
   loadDisplayNames(): Promise<ActionResult<BattleDisplayNames>>;
   loadReplay(battleId: string): Promise<ActionResult<BattleReplay>>;
+  loadDecisionView(
+    battleId: string,
+    atDecision: number,
+    side: BattleSideId,
+  ): Promise<ActionResult<SideView>>;
+  createFork(
+    battleId: string,
+    input: { atDecision: number; side: BattleSideId; command: BattleCommand },
+  ): Promise<ActionResult<CreatedFork>>;
 }
 
 type Views = { p1: SideView | null; p2: SideView | null };
@@ -90,6 +101,7 @@ export function BattleSandbox({
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [replayBusy, setReplayBusy] = useState(false);
+  const [forking, setForking] = useState<{ turn: number; replay: BattleReplay } | null>(null);
 
   const errorText = (code: string) =>
     (labels.errors as Record<string, string>)[code] ?? labels.errors.generic;
@@ -206,6 +218,17 @@ export function BattleSandbox({
     if (battle) await refresh(battle.battleId, perspective);
   };
 
+  const startFork = async (turn: number) => {
+    if (!battle) return;
+    const result = await actions.loadReplay(battle.battleId);
+    if (!result.ok) {
+      setErrorCode(result.error.code);
+      return;
+    }
+    setErrorCode(null);
+    setForking({ turn, replay: result.data });
+  };
+
   const downloadReplay = async () => {
     if (!battle) return;
     setReplayBusy(true);
@@ -233,6 +256,7 @@ export function BattleSandbox({
     setSpectator(null);
     setEvents([]);
     setSelectedTurn(null);
+    setForking(null);
     setErrorCode(null);
     setProblems(null);
   };
@@ -379,10 +403,36 @@ export function BattleSandbox({
             labels={labels.inspector}
             ctx={ctx}
             perspectiveLabel={perspectiveLabel(viewAs)}
-            onClose={() => setSelectedTurn(null)}
+            onClose={() => {
+              setSelectedTurn(null);
+              setForking(null);
+            }}
+            {...(status === 'finished' && inspected.turn > 0
+              ? { onFork: () => void startFork(inspected.turn) }
+              : {})}
           />
         ) : null}
       </div>
+      {battle && inspected && forking && forking.turn === inspected.turn ? (
+        <ForkPanel
+          key={`${battle.battleId}-${forking.turn}-${viewAs}`}
+          battleId={battle.battleId}
+          turn={forking.turn}
+          replay={forking.replay}
+          original={inspected}
+          viewAs={viewAs}
+          ctx={ctx}
+          labels={labels.fork}
+          inspectorLabels={labels.inspector}
+          actionLabels={labels.action}
+          names={names}
+          sideLabel={sideLabel}
+          perspectiveLabel={perspectiveLabel(viewAs)}
+          errorText={errorText}
+          actions={actions}
+          onClose={() => setForking(null)}
+        />
+      ) : null}
     </div>
   );
 }

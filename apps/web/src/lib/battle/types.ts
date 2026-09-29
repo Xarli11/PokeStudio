@@ -54,3 +54,14 @@ export interface BattleDisplayNames {
   items: Record<string, string>;
   conditions: Record<string, string>;
 }
+
+/** The result of forking a finished battle: a new, separate battle plus what was reused. */
+export interface CreatedFork {
+  battleId: string;
+  format: BattleFormatInfo;
+  atDecision: number;
+  /** Sides whose original command was applied again. */
+  reused: BattleSideId[];
+  /** Sides that still owe a command for the forked decision. */
+  pending: BattleSideId[];
+}
