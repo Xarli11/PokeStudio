@@ -2,7 +2,7 @@
   "name": "@pokestudio/battle-engine",
   "private": true,
   "version": "0.0.0",
-  "description": "PokeStudio battle-domain boundary around the Pokémon Showdown simulator (ADR-0003). UI and application code must not import pokemon-showdown directly.",
+  "description": "PokeStudio authoritative battle-domain API over the Pokémon Showdown simulator (ADR-0003, ADR-0015). Node server-side runtime. UI and application code must not import pokemon-showdown directly.",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "main": "./src/index.ts",

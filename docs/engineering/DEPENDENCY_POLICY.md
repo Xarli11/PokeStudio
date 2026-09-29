@@ -54,7 +54,7 @@ PokeStudio must not couple UI directly to internals — enforced by `packages/ba
 
 `pokemon-showdown` depends on `better-sqlite3` (a native module) for its own server-side chat/
 modlog/friends/private-messages features, none of which PokeStudio uses (PokeStudio only drives
-`BattleStream`/`Teams` from `sim/`). `better-sqlite3` has no prebuilt binary for Node's current
+`Battle`/`Dex`/`Teams`/`TeamValidator`/`PRNG` from `sim/`, ADR-0015). `better-sqlite3` has no prebuilt binary for Node's current
 odd-numbered "latest" release, forcing a from-source `node-gyp` compile with a warning at install
 time; Node 24 LTS (the pinned runtime, see `.nvmrc`) has prebuilt binaries and avoids this. Do not
 add a workaround (patching it out, stubbing the native module, etc.) for functionality PokeStudio

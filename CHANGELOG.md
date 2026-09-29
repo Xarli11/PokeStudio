@@ -6,6 +6,28 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Authoritative battle-domain API (2026-09-29)
+
+Phase 4 roadmap item shipped (first bullet only): `@pokestudio/battle-engine` now exposes
+`createBattle(config): BattleSession` — a synchronous, mutable, Node/server-side session over a
+directly constructed `pokemon-showdown@0.11.11` `Battle` (ADR-0015). `getState(perspective)`,
+`getLegalChoices(side)`, `submitChoice(side, command)` and `getEvents(perspective, afterSeq?)`
+speak PokeStudio domain types only: structured legal options vs submitted commands (multi-slot
+shapes, Singles runtime), explicit perspectives (`p1`/`p2`/`spectator`/`omniscient`, no default) with
+allow-list visibility and a per-perspective revealed-information tracker, a minimal structured event
+contract, stable Pokémon identity (`teamIndex` = original team position, by simulator instance),
+mandatory team legality validation through the simulator's validator, an always-typed
+`BattleDomainError`, and a deterministic opaque seed (never in player/spectator state).
+`session.forSide(side)` returns the perspective-locked `BattleSideHandle` that a future agent will
+consume. Display names and nicknames never reach the simulator (fixed `P1`/`P2` names and adapter
+tokens), so user text cannot inject protocol. Omitted optional team fields (gender, level, nature,
+EVs/IVs, Tera type) use the simulator's own defaults; an unspecified gender is never turned into
+"genderless".
+
+Replaced the Phase 0 spike (`simulateHeadlessBattle`, `generatePackedTeam`, `parseProtocolLine`,
+`StructuredBattleEvent`): the package had no consumers. Doubles runtime, replay serialization, the
+full structured battle trace, a format catalog and Battle UI are not part of this change.
+
 ### Damage Lab matchup comparison primitives (2026-09-29)
 
 Phase 3 roadmap item shipped: Damage Lab can now compare the current attacker+move against up to
