@@ -2,7 +2,7 @@ import { Teams } from 'pokemon-showdown';
 import { describe, expect, it } from 'vitest';
 
 import { isBattleDomainError } from './errors';
-import { createBattle, inputLogForTests } from './session';
+import { createBattle, createBattleForTests, inputLogForTests } from './session';
 import { CUSTOM_FORMAT, SEED, legalOuTeam, teamB } from './test/fixtures';
 import type { BattleSession, BattleTeamMemberInput } from './types';
 
@@ -11,7 +11,7 @@ const lead = (
   formatId = CUSTOM_FORMAT,
   seed = SEED,
 ): BattleSession =>
-  createBattle({
+  createBattleForTests({
     formatId,
     seed,
     sides: {
@@ -71,7 +71,7 @@ describe('gender: unspecified is not genderless', () => {
 
   it('holds in a tiered format too (genderless and fixed-gender species from omitted input)', () => {
     const session = createBattle({
-      formatId: 'gen9ou',
+      formatId: 'sv-ou',
       seed: SEED,
       sides: {
         p1: { displayName: 'A', team: legalOuTeam },
@@ -126,7 +126,7 @@ describe('omitted optional fields use the simulator defaults', () => {
   it('an EV-limited tiered format rejects an all-omitted spread: that is legality, not an adapter default', () => {
     try {
       createBattle({
-        formatId: 'gen9ou',
+        formatId: 'sv-ou',
         sides: {
           p1: { displayName: 'A', team: { members: [garchomp()] } },
           p2: { displayName: 'B', team: { members: [garchomp()] } },

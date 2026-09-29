@@ -1,4 +1,12 @@
 export { createBattle } from './session';
+export { BATTLE_FORMATS, CURRENT_GENERATION } from './formats';
+export type {
+  BattleFormatAvailability,
+  BattleFormatCategory,
+  BattleFormatDescriptor,
+  BattleFormatFamily,
+  BattleFormatId,
+} from './formats';
 export { BattleDomainError, isBattleDomainError } from './errors';
 export type {
   BattleErrorCode,

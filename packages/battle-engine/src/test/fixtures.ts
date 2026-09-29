@@ -48,3 +48,42 @@ export const legalOuTeam: BattleTeamInput = {
     }),
   ],
 };
+
+/**
+ * A legal 6-member team for the Champions family (`champions-bss-reg-mb`). The Champions ruleset uses
+ * its own item pool and reads `evs` as Stat Points (at most 32 per stat, 66 in total).
+ */
+export const championsBssTeam: BattleTeamInput = {
+  members: [
+    member('Garchomp', 'Rough Skin', ['Earthquake', 'Dragon Claw', 'Swords Dance', 'Protect'], {
+      item: 'Life Orb',
+      nature: 'Jolly',
+      evs: { hp: 2, atk: 32, spe: 32 },
+    }),
+    member('Rotom-Wash', 'Levitate', ['Hydro Pump', 'Volt Switch', 'Will-O-Wisp', 'Protect'], {
+      item: 'Leftovers',
+      nature: 'Bold',
+      evs: { hp: 32, def: 32, spa: 2 },
+    }),
+    member('Kingambit', 'Defiant', ['Kowtow Cleave', 'Sucker Punch', 'Iron Head', 'Swords Dance'], {
+      item: 'Sitrus Berry',
+      nature: 'Adamant',
+      evs: { hp: 32, atk: 32, spd: 2 },
+    }),
+    member('Dragonite', 'Multiscale', ['Extreme Speed', 'Earthquake', 'Dragon Dance', 'Roost'], {
+      item: 'Lum Berry',
+      nature: 'Adamant',
+      evs: { hp: 2, atk: 32, spe: 32 },
+    }),
+    member('Corviknight', 'Pressure', ['Brave Bird', 'Roost', 'Defog', 'Body Press'], {
+      item: 'Shell Bell',
+      nature: 'Impish',
+      evs: { hp: 32, def: 32, spd: 2 },
+    }),
+    member('Pelipper', 'Drizzle', ['Hurricane', 'Surf', 'U-turn', 'Roost'], {
+      item: 'Focus Sash',
+      nature: 'Modest',
+      evs: { hp: 2, spa: 32, spe: 32 },
+    }),
+  ],
+};

@@ -1,6 +1,7 @@
 import { Battle, Dex, PRNG, TeamValidator, Teams, type Pokemon } from 'pokemon-showdown';
 
 import { battleError } from '../errors';
+import { findBattleFormat } from '../formats';
 import type {
   BattleConfig,
   BattleFormatInfo,
@@ -10,6 +11,7 @@ import type {
   BattleStatTable,
   BattleTeamInput,
 } from '../types';
+import { resolveExecutableFormat } from './formats';
 import { memberToken } from './protocol';
 
 export type ShowdownPokemon = Pokemon;
@@ -216,37 +218,114 @@ export interface ShowdownBattleBundle {
   battle: Battle;
   format: BattleFormatInfo;
   seed: BattleSeed;
+  /** The simulator's own format id. Internal: never part of a player-visible state. */
+  engineFormatId: string;
   /** Simulator Pokémon instance → original team position. Identity, never content matching. */
   refs: Map<Pokemon, BattlePokemonRef>;
 }
 
+/** Where a battle runs: the simulator format id plus the public description of it. */
+interface FormatTarget {
+  showdownId: string;
+  info: BattleFormatInfo;
+}
+
+const unsupportedFormat = (
+  formatId: string,
+  reason: 'not-in-catalog' | 'blocked-by-doubles' | 'engine-unsupported',
+) =>
+  battleError(
+    'UNSUPPORTED_FORMAT',
+    { formatId, reason },
+    `Unsupported format "${formatId}": ${reason}`,
+  );
+
+function assertValidConfig(config: BattleConfig) {
+  const issues = configIssues(config);
+  if (issues.length > 0) {
+    throw battleError('INVALID_CONFIG', { issues }, `Invalid battle config: ${issues.join('; ')}`);
+  }
+}
+
 /**
- * Validates the public config and builds the simulator battle. Team legality is ALWAYS checked
- * with the simulator's TeamValidator; there is no way to skip it from the public API.
+ * Public path: `formatId` must be a PokeStudio catalog id whose availability is `available`. Any
+ * other string — including a raw simulator id such as "gen9ou" — is `not-in-catalog`.
  */
 export function createShowdownBattle(
   config: BattleConfig,
   send: (type: string, data: string | string[]) => void,
 ): ShowdownBattleBundle {
-  const issues = configIssues(config);
-  if (issues.length > 0) {
-    throw battleError('INVALID_CONFIG', { issues }, `Invalid battle config: ${issues.join('; ')}`);
+  assertValidConfig(config);
+  const descriptor = findBattleFormat(config.formatId);
+  if (!descriptor) throw unsupportedFormat(config.formatId, 'not-in-catalog');
+  if (descriptor.availability.level === 'blocked') {
+    throw unsupportedFormat(config.formatId, 'blocked-by-doubles');
   }
-
-  const format = Dex.formats.get(config.formatId.trim());
-  const unsupported = (
-    reason: 'unknown-format' | 'not-two-player' | 'unsupported-game-type' | 'generated-teams',
-  ) =>
-    battleError(
-      'UNSUPPORTED_FORMAT',
-      { formatId: config.formatId, reason },
-      `Unsupported format "${config.formatId}": ${reason}`,
+  let resolved;
+  try {
+    resolved = resolveExecutableFormat(descriptor);
+  } catch (cause) {
+    throw battleError(
+      'ENGINE_ERROR',
+      { operation: 'resolve-format' },
+      'Catalog/simulator mismatch',
+      cause,
     );
-  if (!format.exists || format.effectType !== 'Format') throw unsupported('unknown-format');
-  if (format.playerCount !== 2) throw unsupported('not-two-player');
-  if (format.gameType !== 'singles') throw unsupported('unsupported-game-type');
-  if (format.team) throw unsupported('generated-teams');
+  }
+  return buildBattle(config, send, {
+    showdownId: resolved.showdownId,
+    info: {
+      id: descriptor.id,
+      name: resolved.name,
+      generation: descriptor.generation,
+      gameType: descriptor.gameType,
+      category: descriptor.category,
+      family: descriptor.family,
+    },
+  });
+}
 
+/**
+ * @internal TEST-ONLY. Runs a raw simulator format id (e.g. `gen9customgame`) so mechanics tests can
+ * use artificial formats. Not exported from `index.ts`, not reachable through `BattleConfig`, and it
+ * still validates teams. The resulting format info is marked as internal.
+ */
+export function createShowdownBattleForTests(
+  config: BattleConfig,
+  send: (type: string, data: string | string[]) => void,
+): ShowdownBattleBundle {
+  assertValidConfig(config);
+  const format = Dex.formats.get(config.formatId.trim());
+  if (!format.exists || format.effectType !== 'Format') {
+    throw unsupportedFormat(config.formatId, 'not-in-catalog');
+  }
+  if (format.playerCount !== 2 || format.team) {
+    throw unsupportedFormat(config.formatId, 'engine-unsupported');
+  }
+  if (format.gameType !== 'singles') throw unsupportedFormat(config.formatId, 'blocked-by-doubles');
+  return buildBattle(config, send, {
+    showdownId: format.id,
+    info: {
+      // Not a catalog id: tests only. Typed as one so the public shape stays unchanged.
+      id: `internal:${format.id}` as BattleFormatInfo['id'],
+      name: format.name,
+      generation: Dex.forFormat(format).gen,
+      gameType: 'singles',
+      category: 'smogon-tier',
+      family: 'scarlet-violet',
+    },
+  });
+}
+
+/**
+ * Validates teams and builds the simulator battle. Team legality is ALWAYS checked with the
+ * simulator's TeamValidator; there is no way to skip it.
+ */
+function buildBattle(
+  config: BattleConfig,
+  send: (type: string, data: string | string[]) => void,
+  target: FormatTarget,
+): ShowdownBattleBundle {
   const packed: Record<BattleSideId, string> = { p1: '', p2: '' };
   const memberCount: Record<BattleSideId, number> = { p1: 0, p2: 0 };
   for (const id of SIDE_IDS) {
@@ -256,7 +335,7 @@ export function createShowdownBattle(
       // Validate a clone: the validator normalizes sets in place, and messages should name the
       // species rather than the adapter's internal member token.
       const validated = toShowdownSets(team);
-      const validatorProblems = TeamValidator.get(format.id).validateTeam(validated);
+      const validatorProblems = TeamValidator.get(target.showdownId).validateTeam(validated);
       if (validatorProblems && validatorProblems.length > 0) problems.push(...validatorProblems);
       else {
         // The validator normalizes sets in place (defaults, canonical names) and we keep that. Two
@@ -283,7 +362,7 @@ export function createShowdownBattle(
 
   try {
     const battle = new Battle({
-      formatid: format.id,
+      formatid: target.showdownId as never,
       ...(config.seed ? { seed: config.seed as ShowdownPRNGSeed } : {}),
       send,
       p1: { name: SHOWDOWN_SIDE_NAME.p1, team: packed.p1 },
@@ -306,13 +385,9 @@ export function createShowdownBattle(
     }
     return {
       battle,
-      format: {
-        id: format.id,
-        name: format.name,
-        generation: Dex.forFormat(format).gen,
-        gameType: 'singles',
-      },
+      format: target.info,
       seed: battle.prngSeed,
+      engineFormatId: target.showdownId,
       refs,
     };
   } catch (cause) {

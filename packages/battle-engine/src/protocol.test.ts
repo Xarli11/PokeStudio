@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createBattle, inputLogForTests } from './session';
+import { createBattleForTests, inputLogForTests } from './session';
 import { ChannelProcessor } from './showdown/events';
 import {
   parseDetails,
@@ -125,7 +125,7 @@ describe('protocol boundary of the public API', () => {
   });
 
   it('display names and nicknames are inert text: they cannot inject protocol', () => {
-    const session = createBattle({
+    const session = createBattleForTests({
       formatId: CUSTOM_FORMAT,
       seed: SEED,
       sides: {
