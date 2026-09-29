@@ -28,6 +28,7 @@ export interface BattleServerOptions {
 }
 
 const MAX_BODY_BYTES = 512 * 1024;
+const MAX_DRAIN_BYTES = 8 * 1024 * 1024;
 const DEFAULT_TTL_MS = 60 * 60 * 1000;
 const DEFAULT_MAX_SESSIONS = 500;
 /** Perspectives a client may read. `omniscient` is deliberately not reachable over HTTP. */
@@ -82,9 +83,15 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   for await (const chunk of req) {
     const buffer = chunk as Buffer;
     size += buffer.length;
-    if (size > MAX_BODY_BYTES) throw new HttpError(413, 'PAYLOAD_TOO_LARGE');
-    chunks.push(buffer);
+    // An oversized body is read (and dropped) up to a hard cap before answering: replying while the
+    // client is still sending resets the connection instead of delivering the 413.
+    if (size > MAX_DRAIN_BYTES) {
+      req.destroy();
+      throw new HttpError(413, 'PAYLOAD_TOO_LARGE');
+    }
+    if (size <= MAX_BODY_BYTES) chunks.push(buffer);
   }
+  if (size > MAX_BODY_BYTES) throw new HttpError(413, 'PAYLOAD_TOO_LARGE');
   try {
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
   } catch {
