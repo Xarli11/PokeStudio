@@ -6,6 +6,20 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Singles/Doubles foundations (2026-09-29)
+
+Phase 4 roadmap item shipped: the battle engine now runs real Doubles. `BattleSession` supports two
+active slots per side (`gameType: 'doubles'`); `getLegalChoices()` mirrors the simulator's Doubles
+request per slot — move targets only where the simulator lets you choose one (foe, ally, self as the
+category allows; none for spread/self/field/random/scripted moves), per-slot switches, `pass` for
+fainted slots, and forced replacements with a new `switchCount` (min of empty slots and benched
+Pokémon; surplus slots pass). Commands are validated whole per slot (`switch-required` is a new
+illegal-choice reason). Visibility, stable identity, seeded determinism and events keep the same
+guarantees with two actives; simultaneous faints and multiple forced switches are covered. The catalog
+entry `sv-doubles-ou` is now `available` (legal team, real targets, forced switches, played to
+finished); `champions-vgc-reg-mb` stays blocked, now by `vgc-runtime` (`blocked-by-vgc-runtime`).
+No UI, VGC rules (Open Team Sheets, Bo3, pick-4 polish), replay or Build changes.
+
 ### Current-generation priority formats (2026-09-29)
 
 Phase 4 roadmap item shipped: `@pokestudio/battle-engine` now has an explicit, closed catalog of

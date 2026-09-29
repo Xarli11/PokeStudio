@@ -12,15 +12,17 @@ ADR-0015's `createBattle` accepted any Pokémon Showdown format id that was two-
 - **Current generation is Generation 9**, declared explicitly as `CURRENT_GENERATION = 9`. It is a product decision: not derived from the simulator, PokéAPI or "latest format", and a simulator upgrade cannot change it. Generation 9 currently spans two families, `scarlet-violet` and `champions`; they are one generation, distinguished by a `family` field.
 - **Closed, explicit catalog.** `formats.ts` is pure domain data (no simulator import, no simulator ids) and deeply frozen at runtime (array, descriptors and `availability`). The initial catalog has exactly five entries; nothing is discovered automatically, so an upgrade never adds a format to the product.
 
-| PokeStudio id          | Category                 | Family           | Game type | Availability                |
-| ---------------------- | ------------------------ | ---------------- | --------- | --------------------------- |
-| `sv-ou`                | `smogon-tier`            | `scarlet-violet` | singles   | available                   |
-| `sv-ubers`             | `smogon-tier`            | `scarlet-violet` | singles   | available                   |
-| `champions-bss-reg-mb` | `battle-stadium-singles` | `champions`      | singles   | available                   |
-| `champions-vgc-reg-mb` | `vgc`                    | `champions`      | doubles   | blocked (`doubles-runtime`) |
-| `sv-doubles-ou`        | `smogon-doubles`         | `scarlet-violet` | doubles   | blocked (`doubles-runtime`) |
+| PokeStudio id          | Category                 | Family           | Game type | Availability            |
+| ---------------------- | ------------------------ | ---------------- | --------- | ----------------------- |
+| `sv-ou`                | `smogon-tier`            | `scarlet-violet` | singles   | available               |
+| `sv-ubers`             | `smogon-tier`            | `scarlet-violet` | singles   | available               |
+| `champions-bss-reg-mb` | `battle-stadium-singles` | `champions`      | singles   | available               |
+| `champions-vgc-reg-mb` | `vgc`                    | `champions`      | doubles   | blocked (`vgc-runtime`) |
+| `sv-doubles-ou`        | `smogon-doubles`         | `scarlet-violet` | doubles   | available               |
 
 Smogon Doubles gets its own category rather than being folded into `smogon-tier`.
+
+_Update (Singles/Doubles foundations):_ the Doubles runtime now exists, so `sv-doubles-ou` became `available` (played end to end with a legal team, real targets and forced replacements) and the only remaining blocker is `vgc-runtime` for `champions-vgc-reg-mb`; the blocked reason is now `blocked-by-vgc-runtime`. Ids and the closed-catalog rules are unchanged.
 
 - **Format ids are permanent.** A published `BattleFormatId` is never recycled, never changes meaning and is never removed because `CURRENT_GENERATION` moves: `sv-ou` always means the Generation 9 Scarlet/Violet OU context and `champions-bss-reg-mb` always means Champions Battle Stadium Singles Regulation M-B. `CURRENT_GENERATION` only says which generation is the product's current priority. A new generation adds new ids. Each entry carries its own `generation`, and resolving an entry checks that value, never `CURRENT_GENERATION`, so raising the constant cannot invalidate an existing id. How older ids are presented later (selectable vs historical) is decided when persistence or replay need it; whatever is chosen must keep every published id resolvable. No historical registry, deprecated state or migration is designed here.
 - **Stable PokeStudio ids; simulator ids stay internal.** The mapping to simulator ids lives in `showdown/formats.ts` and appears only in server-side `BattleInfo.engineFormatId`, never in a player/spectator `BattleState` or the public catalog. Product logic never compares against simulator ids.

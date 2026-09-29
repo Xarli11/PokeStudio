@@ -1,5 +1,6 @@
 import type {
   BattleCommand,
+  BattleCommandAction,
   BattleConfig,
   BattleLegalChoices,
   BattleSession,
@@ -17,17 +18,41 @@ export function firstChoice(choices: BattleLegalChoices): BattleCommand | null {
     case 'team-preview':
       return { kind: 'team-order', order: Array.from({ length: choices.pick }, (_, i) => i) };
     case 'move':
-    case 'forced-switch':
       return {
         kind: 'actions',
-        actions: choices.slots.map(({ slot, options }) => {
+        actions: choices.slots.map(({ slot, options }): BattleCommandAction => {
           const option = options.find((o) => o.kind === 'move') ?? options[0];
           if (!option) throw new Error('no legal option');
-          if (option.kind === 'move') return { kind: 'move', slot, moveId: option.moveId };
+          if (option.kind === 'move') {
+            const target = option.targets?.[0];
+            return {
+              kind: 'move',
+              slot,
+              moveId: option.moveId,
+              ...(target ? { target } : {}),
+            };
+          }
           if (option.kind === 'switch') return { kind: 'switch', slot, pokemon: option.pokemon };
           return { kind: 'pass', slot };
         }),
       };
+    case 'forced-switch': {
+      // Exactly `switchCount` slots switch, each to a different Pokémon; the others pass.
+      let remaining = choices.switchCount;
+      const used = new Set<number>();
+      return {
+        kind: 'actions',
+        actions: choices.slots.map(({ slot, options }): BattleCommandAction => {
+          const pick = options.find((o) => o.kind === 'switch' && !used.has(o.pokemon.teamIndex));
+          if (pick?.kind === 'switch' && remaining > 0) {
+            remaining--;
+            used.add(pick.pokemon.teamIndex);
+            return { kind: 'switch', slot, pokemon: pick.pokemon };
+          }
+          return { kind: 'pass', slot };
+        }),
+      };
+    }
   }
 }
 

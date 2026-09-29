@@ -36,8 +36,8 @@ import type {
   BattleSubmitResult,
 } from './types';
 
-/** Singles-only runtime for now: exactly one active slot per side. */
-const ACTIVE_PER_SIDE = 1;
+/** Active slots per side for each supported game type. */
+const ACTIVE_PER_SIDE = { singles: 1, doubles: 2 } as const;
 const PERSPECTIVES: readonly BattlePerspective[] = ['p1', 'p2', 'spectator', 'omniscient'];
 
 const isSideId = (value: unknown): value is BattleSideId => value === 'p1' || value === 'p2';
@@ -162,7 +162,7 @@ class ShowdownBattleSession implements BattleSession {
       showdownSide.activeRequest as RequestView | null,
       side,
       refs,
-      ACTIVE_PER_SIDE,
+      ACTIVE_PER_SIDE[this.info.format.gameType],
     );
   }
 

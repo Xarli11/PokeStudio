@@ -8,7 +8,7 @@ import { BATTLE_FORMATS, CURRENT_GENERATION, findBattleFormat } from './formats'
 import type { BattleFormatDescriptor, BattleFormatId } from './formats';
 import { createBattle, createBattleForTests } from './session';
 import { resolveExecutableFormat, resolveFormat, showdownIdOf } from './showdown/formats';
-import { championsBssTeam, legalOuTeam } from './test/fixtures';
+import { championsBssTeam, doublesTeam, legalOuTeam } from './test/fixtures';
 import { playToEnd } from './test/helpers';
 import type { BattleConfig, BattleTeamInput } from './types';
 
@@ -88,7 +88,7 @@ describe('format registry (explicit, closed, PokeStudio-owned)', () => {
       ['sv-ubers', 'available'],
       ['champions-bss-reg-mb', 'available'],
       ['champions-vgc-reg-mb', 'blocked'],
-      ['sv-doubles-ou', 'blocked'],
+      ['sv-doubles-ou', 'available'],
     ]);
     for (const format of BATTLE_FORMATS) expect(Object.isFrozen(format.availability)).toBe(true);
   });
@@ -125,14 +125,9 @@ describe('format registry (explicit, closed, PokeStudio-owned)', () => {
         'vgc',
         'champions',
         'doubles',
-        { level: 'blocked', blockedBy: 'doubles-runtime' },
+        { level: 'blocked', blockedBy: 'vgc-runtime' },
       ],
-      'sv-doubles-ou': [
-        'smogon-doubles',
-        'scarlet-violet',
-        'doubles',
-        { level: 'blocked', blockedBy: 'doubles-runtime' },
-      ],
+      'sv-doubles-ou': ['smogon-doubles', 'scarlet-violet', 'doubles', { level: 'available' }],
     });
   });
 
@@ -235,16 +230,23 @@ describe('available formats run end to end', () => {
     'sv-ou': legalOuTeam,
     'sv-ubers': legalOuTeam,
     'champions-bss-reg-mb': championsBssTeam,
+    'sv-doubles-ou': doublesTeam,
   };
   const PICK: Record<string, [number, number]> = {
     'sv-ou': [2, 2],
     'sv-ubers': [2, 2],
     'champions-bss-reg-mb': [3, 6],
+    'sv-doubles-ou': [6, 6],
   };
   const available = BATTLE_FORMATS.filter((f) => f.availability.level === 'available');
 
-  it('the available set is exactly sv-ou, sv-ubers and champions-bss-reg-mb', () => {
-    expect(available.map((f) => f.id)).toEqual(['sv-ou', 'sv-ubers', 'champions-bss-reg-mb']);
+  it('the available set is exactly sv-ou, sv-ubers, champions-bss-reg-mb and sv-doubles-ou', () => {
+    expect(available.map((f) => f.id)).toEqual([
+      'sv-ou',
+      'sv-ubers',
+      'champions-bss-reg-mb',
+      'sv-doubles-ou',
+    ]);
   });
 
   it.each(available.map((f) => f.id))(
@@ -302,12 +304,12 @@ describe('available formats run end to end', () => {
 });
 
 describe('blocked formats', () => {
-  it.each(['champions-vgc-reg-mb', 'sv-doubles-ou'])(
-    '%s is known but createBattle rejects it as blocked-by-doubles',
+  it.each(['champions-vgc-reg-mb'])(
+    '%s is known but createBattle rejects it as blocked-by-vgc-runtime',
     (id) => {
       const error = rejection(() => createBattle(configFor(id, legalOuTeam)));
       expect(error.code).toBe('UNSUPPORTED_FORMAT');
-      expect(error.details).toEqual({ formatId: id, reason: 'blocked-by-doubles' });
+      expect(error.details).toEqual({ formatId: id, reason: 'blocked-by-vgc-runtime' });
     },
   );
 });

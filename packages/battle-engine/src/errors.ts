@@ -23,6 +23,8 @@ export type BattleIllegalChoiceReason =
   | 'switch-unavailable'
   | 'duplicate-switch'
   | 'pass-unavailable'
+  /** A forced replacement was required but the command did not provide enough switches. */
+  | 'switch-required'
   /** The engine reported the choice unavailable after the request changed (hidden trapping/disable). */
   | 'choice-unavailable';
 
@@ -33,10 +35,11 @@ export interface BattleErrorDetailsByCode {
     formatId: string;
     /**
      * - `not-in-catalog`: not a PokeStudio catalog id (this includes raw simulator ids).
-     * - `blocked-by-doubles`: catalogued, but needs the Doubles runtime that does not exist yet.
+     * - `blocked-by-vgc-runtime`: catalogued, but needs VGC-specific runtime support that does not exist yet.
+     *   (The Doubles runtime itself exists; this blocker is specific to VGC rules.)
      * - `engine-unsupported`: test-only path: a simulator format the engine cannot run.
      */
-    reason: 'not-in-catalog' | 'blocked-by-doubles' | 'engine-unsupported';
+    reason: 'not-in-catalog' | 'blocked-by-vgc-runtime' | 'engine-unsupported';
   };
   /** `problems` are display/debug text only. Never parse them. */
   INVALID_TEAM: { side: BattleSideId; problems: readonly string[] };

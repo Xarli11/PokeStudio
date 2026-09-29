@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { BattleDomainError } from './errors';
+import { BattleDomainError } from './errors';
 import { analyzeRequest, commandToChoiceString, toLegalChoices } from './showdown/choice';
 import type { RequestView } from './showdown/choice';
 import type { BattleCommand, BattlePokemonRef } from './types';
@@ -212,5 +212,137 @@ describe('multi-slot request translation (types only; no doubles runtime)', () =
     expect(commandToChoiceString(preview, { kind: 'team-order', order: [3, 1, 0, 5] })).toBe(
       'team 4, 2, 1, 6',
     );
+  });
+});
+
+describe('every simulator target category, from the actor in slot 1 of a doubles side', () => {
+  const FOES = [
+    { side: 'p2', position: 0 },
+    { side: 'p2', position: 1 },
+  ] as const;
+  const ALLY = { side: 'p1', position: 0 } as const;
+  const SELF = { side: 'p1', position: 1 } as const;
+  // [target category, example move, expected targets (null = the simulator offers no choice)]
+  const CASES = [
+    ['normal', 'dragonclaw', [...FOES, ALLY]],
+    ['any', 'bravebird', [...FOES, ALLY]],
+    ['adjacentFoe', 'doodle', [...FOES]],
+    ['adjacentAlly', 'helpinghand', [ALLY]],
+    ['adjacentAllyOrSelf', 'acupressure', [SELF, ALLY]],
+    ['self', 'protect', null],
+    ['allAdjacent', 'earthquake', null],
+    ['allAdjacentFoes', 'rockslide', null],
+    ['randomNormal', 'outrage', null],
+    ['scripted', 'counter', null],
+    ['allySide', 'reflect', null],
+    ['foeSide', 'stealthrock', null],
+    ['all', 'trickroom', null],
+    ['allies', 'lifedew', null],
+    ['allyTeam', 'healbell', null],
+  ] as const;
+
+  const request: RequestView = {
+    side: {
+      pokemon: [
+        { condition: '100/100', active: true },
+        { condition: '100/100', active: true },
+        { condition: '100/100', active: false },
+      ],
+    },
+    active: [{ moves: [] }, { moves: CASES.map(([target, id]) => ({ id, pp: 5, target })) }],
+  };
+  const decision = analyzeRequest(request, 'p1', refs.slice(0, 3), 2);
+  const legal = toLegalChoices(decision);
+
+  it.each(CASES)('%s (%s) → %j', (_category, moveId, expected) => {
+    if (legal.kind !== 'move') throw new Error('expected move');
+    const option = legal.slots[1]!.options.find((o) => o.kind === 'move' && o.moveId === moveId);
+    expect(option).toBeDefined();
+    if (option?.kind !== 'move') return;
+    expect(option.targets).toEqual(expected === null ? null : expected.map((t) => ({ ...t })));
+  });
+
+  it('each offered target serializes to a simulator target location (foe +, ally −)', () => {
+    const single = analyzeRequest(
+      {
+        ...request,
+        active: [{ moves: [{ id: 'dragonclaw', pp: 5, target: 'normal' }] }, request.active![1]!],
+      },
+      'p1',
+      refs.slice(0, 3),
+      2,
+    );
+    const string = (target: { side: 'p1' | 'p2'; position: number }) =>
+      commandToChoiceString(single, {
+        kind: 'actions',
+        actions: [
+          { kind: 'move', slot: { side: 'p1', position: 0 }, moveId: 'dragonclaw', target },
+          { kind: 'move', slot: SELF, moveId: 'dragonclaw', target },
+        ],
+      });
+    expect(string({ side: 'p2', position: 0 })).toBe('move 1 1, move 1 1');
+    expect(string({ side: 'p2', position: 1 })).toBe('move 1 2, move 1 2');
+    // The ally slot is the *other* slot for each actor; slot 0 cannot target itself.
+    expect(() => string({ side: 'p1', position: 0 })).toThrowError(BattleDomainError);
+    expect(() => string({ side: 'p1', position: 1 })).toThrowError(BattleDomainError);
+  });
+
+  it('forced replacements: two empty slots with two, one and zero benched Pokémon', () => {
+    const forced = (bench: number) =>
+      toLegalChoices(
+        analyzeRequest(
+          {
+            forceSwitch: [true, true],
+            side: {
+              pokemon: [
+                { condition: '0 fnt', active: true },
+                { condition: '0 fnt', active: true },
+                ...Array.from({ length: bench }, () => ({ condition: '50/50', active: false })),
+              ],
+            },
+          },
+          'p1',
+          refs.slice(0, 2 + bench),
+          2,
+        ),
+      );
+    const two = forced(2);
+    const one = forced(1);
+    const none = forced(0);
+    if (
+      two.kind !== 'forced-switch' ||
+      one.kind !== 'forced-switch' ||
+      none.kind !== 'forced-switch'
+    ) {
+      throw new Error('expected forced-switch');
+    }
+    expect([two.switchCount, one.switchCount, none.switchCount]).toEqual([2, 1, 0]);
+    expect(two.slots.map((s) => s.options.some((o) => o.kind === 'pass'))).toEqual([false, false]);
+    expect(one.slots.map((s) => s.options.some((o) => o.kind === 'pass'))).toEqual([true, true]);
+    expect(none.slots.map((s) => s.options)).toEqual([[{ kind: 'pass' }], [{ kind: 'pass' }]]);
+  });
+
+  it('a Pokémon commanding its ally (Tatsugiri/Dondozo) has no action of its own', () => {
+    const decision = analyzeRequest(
+      {
+        side: {
+          pokemon: [
+            { condition: '10/10', active: true, commanding: true },
+            { condition: '10/10', active: true },
+          ],
+        },
+        active: [
+          { moves: [{ id: 'splash', pp: 5, target: 'self' }] },
+          { moves: [{ id: 'splash', pp: 5, target: 'self' }] },
+        ],
+      },
+      'p1',
+      refs.slice(0, 2),
+      2,
+    );
+    const legal = toLegalChoices(decision);
+    if (legal.kind !== 'move') throw new Error('expected move');
+    expect(legal.slots[0]!.options).toEqual([{ kind: 'pass' }]);
+    expect(legal.slots[1]!.options.some((o) => o.kind === 'move')).toBe(true);
   });
 });

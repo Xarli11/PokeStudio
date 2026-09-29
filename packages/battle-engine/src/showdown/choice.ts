@@ -36,7 +36,7 @@ export interface RequestView {
   forceSwitch?: readonly boolean[] | undefined;
   active?: readonly RequestActiveView[] | undefined;
   side: {
-    pokemon: readonly { condition: string; active: boolean }[];
+    pokemon: readonly { condition: string; active: boolean; commanding?: boolean | undefined }[];
   };
 }
 
@@ -65,6 +65,12 @@ export interface Decision {
   pick: number;
   of: number;
   slots: SlotSpec[];
+  /**
+   * Forced-switch requests only: exactly this many of the flagged slots must switch (the simulator
+   * requires min(slots needing a replacement, available benched Pokémon)); the rest must pass.
+   */
+  forcedSwitches: number;
+  forcedPasses: number;
   /** `refs[i]` = ref of the Pokémon at request position `i` (simulator numbering is position + 1). */
   refs: readonly BattlePokemonRef[];
 }
@@ -120,7 +126,16 @@ export function analyzeRequest(
   activePerSide: number,
 ): Decision {
   const kind = requestKindOf(request);
-  const base = { kind, side, pick: 0, of: refs.length, slots: [] as SlotSpec[], refs };
+  const base = {
+    kind,
+    side,
+    pick: 0,
+    of: refs.length,
+    slots: [] as SlotSpec[],
+    forcedSwitches: 0,
+    forcedPasses: 0,
+    refs,
+  };
   if (!request || kind === 'wait') return base;
   if (kind === 'team-preview') {
     return { ...base, pick: request.maxChosenTeamSize ?? refs.length };
@@ -133,6 +148,9 @@ export function analyzeRequest(
     });
 
   const slots: SlotSpec[] = [];
+  const flagged = request.forceSwitch?.filter(Boolean).length ?? 0;
+  const forcedSwitches = Math.min(flagged, bench().length);
+  const forcedPasses = flagged - forcedSwitches;
   for (let position = 0; position < activePerSide; position++) {
     const slot: BattleSlotRef = { side, position };
     const pokemon = refs[position] ?? null;
@@ -142,14 +160,17 @@ export function analyzeRequest(
         slot,
         pokemon,
         moves: [],
-        switches: mustSwitch ? bench() : [],
-        canPass: !mustSwitch,
+        switches: mustSwitch && forcedSwitches > 0 ? bench() : [],
+        // With fewer replacements than empty slots, the surplus flagged slots must pass.
+        canPass: !mustSwitch || forcedPasses > 0,
       });
       continue;
     }
     const active = request.active?.[position];
-    const fainted = isFainted(request.side.pokemon[position]?.condition);
-    if (!active || fainted) {
+    const occupant = request.side.pokemon[position];
+    const fainted = isFainted(occupant?.condition);
+    // A Pokémon commanding its ally (Tatsugiri/Dondozo) has no action of its own.
+    if (!active || fainted || occupant?.commanding) {
       slots.push({ slot, pokemon, moves: [], switches: [], canPass: true });
       continue;
     }
@@ -169,7 +190,7 @@ export function analyzeRequest(
       canPass: false,
     });
   }
-  return { ...base, slots };
+  return { ...base, slots, forcedSwitches, forcedPasses };
 }
 
 export function toLegalChoices(decision: Decision): BattleLegalChoices {
@@ -178,26 +199,25 @@ export function toLegalChoices(decision: Decision): BattleLegalChoices {
   if (kind === 'team-preview') {
     return { kind: 'team-preview', side, pick: decision.pick, of: decision.of };
   }
-  return {
-    kind,
-    side,
-    slots: decision.slots.map((spec) => {
-      const options: BattleLegalOption[] = [
-        ...spec.moves
-          .filter((move) => move.enabled)
-          .map((move): BattleLegalOption => ({
-            kind: 'move',
-            moveId: move.id,
-            pp: move.pp,
-            targets: move.targets,
-            modifiers: [...move.modifiers],
-          })),
-        ...spec.switches.map((pokemon): BattleLegalOption => ({ kind: 'switch', pokemon })),
-        ...(spec.canPass ? [{ kind: 'pass' } as const] : []),
-      ];
-      return { slot: spec.slot, pokemon: spec.pokemon, options };
-    }),
-  };
+  const slots = decision.slots.map((spec) => {
+    const options: BattleLegalOption[] = [
+      ...spec.moves
+        .filter((move) => move.enabled)
+        .map((move): BattleLegalOption => ({
+          kind: 'move',
+          moveId: move.id,
+          pp: move.pp,
+          targets: move.targets,
+          modifiers: [...move.modifiers],
+        })),
+      ...spec.switches.map((pokemon): BattleLegalOption => ({ kind: 'switch', pokemon })),
+      ...(spec.canPass ? [{ kind: 'pass' } as const] : []),
+    ];
+    return { slot: spec.slot, pokemon: spec.pokemon, options };
+  });
+  return kind === 'forced-switch'
+    ? { kind, side, slots, switchCount: decision.forcedSwitches }
+    : { kind, side, slots };
 }
 
 function illegal(
@@ -291,5 +311,10 @@ export function commandToChoiceString(decision: Decision, command: BattleCommand
       }
     }
   });
+  // The simulator needs exactly min(empty slots, benched Pokémon) replacements; passes on flagged
+  // slots are only offered for the surplus, so requiring the switches also fixes the pass count.
+  if (decision.kind === 'forced-switch' && switchedIn.length < decision.forcedSwitches) {
+    illegal(side, 'switch-required');
+  }
   return parts.join(', ');
 }
