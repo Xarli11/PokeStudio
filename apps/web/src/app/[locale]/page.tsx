@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { type Locale, getDictionary, isLocale, locales } from '@pokestudio/i18n';
 import { notFound } from 'next/navigation';
 
-import { buttonClass, interactiveCardClass, cardClass, soonBadgeClass } from '@/lib/ui-classes';
+import { buttonClass, interactiveCardClass } from '@/lib/ui-classes';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -21,7 +21,7 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title: dictionary.home.title,
-    description: dictionary.home.tagline,
+    description: dictionary.home.metaDescription,
     alternates: {
       canonical: `/${locale}`,
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}`])),
@@ -29,7 +29,7 @@ export async function generateMetadata({
     openGraph: {
       url: `/${locale}`,
       title: dictionary.home.title,
-      description: dictionary.home.tagline,
+      description: dictionary.home.metaDescription,
       locale,
       type: 'website',
     },
@@ -40,35 +40,16 @@ function PillarCard({
   href,
   title,
   description,
-  soonLabel,
 }: {
-  href?: string;
+  href: string;
   title: string;
   description: string;
-  soonLabel?: string;
 }) {
-  const body = (
-    <>
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="m-0 text-base font-bold">{title}</h3>
-        {soonLabel ? <span className={soonBadgeClass}>{soonLabel}</span> : null}
-      </div>
-      <p className="m-0 text-sm text-muted">{description}</p>
-    </>
-  );
-
-  if (href) {
-    return (
-      <Link href={href} className={interactiveCardClass('flex flex-col gap-3 p-5')}>
-        {body}
-      </Link>
-    );
-  }
-
   return (
-    <div aria-disabled="true" className={cardClass('flex flex-col gap-3 p-5 opacity-70')}>
-      {body}
-    </div>
+    <Link href={href} className={interactiveCardClass('flex flex-col gap-3 p-5')}>
+      <h3 className="m-0 text-base font-bold">{title}</h3>
+      <p className="m-0 text-sm text-muted">{description}</p>
+    </Link>
   );
 }
 
@@ -88,7 +69,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <p className="m-0 text-sm text-muted">{dictionary.home.status}</p>
 
         <Link href={`/${locale}/pokemon`} className={buttonClass('primary', 'mt-2 self-start')}>
-          {dictionary.nav.explore} →
+          {dictionary.home.cta} →
         </Link>
       </section>
 
@@ -103,9 +84,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             description={dictionary.home.pillars.explore}
           />
           <PillarCard
+            href={`/${locale}/build`}
             title={dictionary.nav.build}
             description={dictionary.home.pillars.build}
-            soonLabel={dictionary.nav.soon}
           />
           <PillarCard
             href={`/${locale}/battle`}

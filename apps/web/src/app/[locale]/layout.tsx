@@ -38,7 +38,7 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title: dictionary.home.title,
-    description: dictionary.home.tagline,
+    description: dictionary.home.metaDescription,
     alternates: {
       languages: Object.fromEntries(locales.map((l) => [l, `/${l}`])),
     },
