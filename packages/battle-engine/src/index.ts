@@ -1,5 +1,7 @@
 export { createBattle } from './session';
 export { createBattleSeries } from './series';
+export { BATTLE_REPLAY_SCHEMA_VERSION, parseBattleReplay, restoreBattle } from './replay';
+export type { RestoreOptions } from './replay';
 export type {
   BattleSeries,
   BattleSeriesConfig,
@@ -44,7 +46,10 @@ export type {
   BattlePerspective,
   BattlePokemonRef,
   BattlePokemonState,
+  BattleReplay,
+  BattleReplayCommand,
   BattleRequestKind,
+  BattleCause,
   BattleRequestSummary,
   BattleResult,
   BattleSeed,

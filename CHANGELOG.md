@@ -6,6 +6,23 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Replay serialization and structured battle trace (2026-09-29)
+
+Two Phase 4 roadmap items shipped together (ADR-0018). **Replay:** `session.getReplay()` returns a
+versioned (`schemaVersion` 1), JSON-only `BattleReplay` — simulator name/version, `BattleFormatId`,
+resolved seed, both sides' teams and the ordered structured commands (`{decision, turn, side,
+command}`, never simulator strings). `restoreBattle(replay, { atDecision? })` re-creates the battle
+and replays the commands through the normal path, optionally stopping at the boundary before a given
+decision (the base for Battle Forks). Malformed, unsupported-version, incompatible-simulator,
+non-reproducing or out-of-range replays are rejected with a typed `INVALID_REPLAY`. Determinism is
+tested for Singles OU, Doubles OU, Champions BSS and Champions VGC, at every decision boundary. Each
+game of a `BattleSeries` carries its replay. **Trace:** the event stream now covers moves and
+targets, misses, failures, prevented moves, immunity, critical hits, effectiveness, damage/heal,
+status, volatile conditions, boosts, ability/item/move/condition effects, item changes, Tera, forme
+changes, position swaps, field/side conditions, faints and the result, with `cause` and `parentSeq`
+causality (residual effects and turn boundaries have no parent; switch-in abilities link to their own
+switch), filtered per perspective. No UI, storage or Build changes.
+
 ### VGC runtime and best-of series (2026-09-29)
 
 Phase 4 roadmap item shipped: `champions-vgc-reg-mb` is a real, `available` VGC format — register 6,

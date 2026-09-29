@@ -130,8 +130,8 @@ silently treated as complete.
   Showdown; no Build integration, selector or UI yet,
 - Singles/Doubles foundations — shipped: `@pokestudio/battle-engine` runs `doubles` battles with two active slots per side, per-slot legal choices and commands mirroring the simulator request (targets only where the simulator lets you choose one, per-slot switches, `pass` for fainted slots, forced replacements with `switchCount`, simultaneous faints), unchanged visibility/identity/determinism guarantees and multi-slot events. `sv-doubles-ou` is now `available`; `champions-vgc-reg-mb` stays blocked on the VGC runtime (`VGC-first polish`). No UI,
 - VGC-first polish — shipped: `champions-vgc-reg-mb` is `available` and end-to-end tested (register 6, pick 4, level 50, Champions Stat Points/items, Doubles, finished, deterministic). Open Team Sheets are derived from the simulator's rules and projected as public information from the start (items, abilities, moves; nicknames, HP and leads stay private); `createBattleSeries` adds a best-of-three domain with the simulator's scoring (ADR-0017). No UI,
-- replay serialization,
-- structured battle trace,
+- replay serialization — shipped: `session.getReplay()` returns a versioned (`schemaVersion` 1), JSON-only `BattleReplay` (simulator version, `BattleFormatId`, seed, teams and the ordered structured commands with decision/turn/side); `restoreBattle(replay, { atDecision? })` reproduces the battle or restores it to the boundary before any decision (the base for forks), and corrupt/incompatible replays are rejected with a typed `INVALID_REPLAY` (ADR-0018). Tested for Singles OU, Doubles OU, Champions BSS and Champions VGC. No storage/UI,
+- structured battle trace — shipped: the battle event stream is a structured trace (moves and targets, misses, failures, immunity, effectiveness, damage/heal, status, volatiles, boosts, field and side conditions, ability/item effects, Tera, forme changes, faints, result) with `cause` and `parentSeq` causality, filtered per perspective, no raw protocol (ADR-0018). No UI,
 - functional battle UI.
 
 Historical mechanics expand incrementally.

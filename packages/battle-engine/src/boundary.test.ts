@@ -20,11 +20,14 @@ describe('package boundary', () => {
   it('exports only the intended runtime values', () => {
     expect(Object.keys(publicApi).sort()).toEqual([
       'BATTLE_FORMATS',
+      'BATTLE_REPLAY_SCHEMA_VERSION',
       'BattleDomainError',
       'CURRENT_GENERATION',
       'createBattle',
       'createBattleSeries',
       'isBattleDomainError',
+      'parseBattleReplay',
+      'restoreBattle',
     ]);
   });
 
@@ -58,6 +61,7 @@ describe('package boundary', () => {
       'forSide',
       'getEvents',
       'getLegalChoices',
+      'getReplay',
       'getState',
       'submitChoice',
     ]);

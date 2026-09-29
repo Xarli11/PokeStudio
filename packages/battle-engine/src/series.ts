@@ -5,6 +5,7 @@ import { createBattle } from './session';
 import { deriveGameSeeds, generateSeed } from './showdown/seeds';
 import type {
   BattleConfig,
+  BattleReplay,
   BattleFormatInfo,
   BattleResult,
   BattleSeed,
@@ -40,6 +41,8 @@ export interface BattleSeriesGame {
   seed: BattleSeed;
   /** `null` while the game is still being played. */
   result: BattleResult | null;
+  /** Server-side, omniscient: what is needed to reproduce this game. */
+  replay: BattleReplay;
 }
 
 export interface BattleSeriesInfo {
@@ -157,6 +160,7 @@ export function createBattleSeries(config: BattleSeriesConfig): BattleSeries {
         index: i + 1,
         seed: gameSeeds[i]!,
         result: results[i] ? { ...results[i]! } : null,
+        replay: sessions[i]!.getReplay(),
       }));
     },
     currentGame() {
