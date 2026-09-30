@@ -66,6 +66,7 @@ export type {
   BattleSlotChoices,
   BattleSlotRef,
   BattleState,
+  BattlePokemonPrivateDetails,
   BattleStatTable,
   BattleStatus,
   BattleSubmitResult,

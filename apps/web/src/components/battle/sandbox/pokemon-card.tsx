@@ -10,6 +10,7 @@ export interface PokemonCardLabels {
   actingTag: string;
   targetTag: string;
   selectedTag: string;
+  inspectTemplate: string;
 }
 
 function hpPercent(hp: BattlePokemonState['hp']): number {
@@ -20,7 +21,7 @@ function hpText(hp: BattlePokemonState['hp']): string {
   return hp.kind === 'exact' ? `${hp.current}/${hp.max}` : `${hp.percent}%`;
 }
 
-const STATUS_LABEL: Record<string, string> = {
+export const STATUS_LABEL: Record<string, string> = {
   brn: 'BRN',
   par: 'PAR',
   slp: 'SLP',
@@ -29,6 +30,29 @@ const STATUS_LABEL: Record<string, string> = {
   tox: 'TOX',
 };
 
+/** The identity row; a button when the Pokémon can be inspected. */
+function HeaderRow({
+  onInspect,
+  label,
+  children,
+}: {
+  onInspect: (() => void) | undefined;
+  label: string;
+  children: React.ReactNode;
+}) {
+  if (!onInspect) return <div className="flex items-center gap-3">{children}</div>;
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onInspect}
+      className="-m-1 flex cursor-pointer items-center gap-3 rounded-md bg-transparent p-1 text-left text-inherit transition-colors hover:bg-surface-hover"
+    >
+      {children}
+    </button>
+  );
+}
+
 /** One Pokémon in the battlefield: identity, HP, status, boosts and Tera — from the viewer's state only. */
 export function PokemonCard({
   pokemon,
@@ -36,6 +60,7 @@ export function PokemonCard({
   typeNames,
   compact = false,
   highlight,
+  onInspect,
 }: {
   pokemon: BattlePokemonState;
   labels: PokemonCardLabels;
@@ -43,6 +68,8 @@ export function PokemonCard({
   compact?: boolean;
   /** Set by the action panel: this Pokémon is acting, or is a legal target being chosen. */
   highlight?: 'actor' | 'target' | 'selected';
+  /** Opens the on-demand details sheet for this Pokémon. */
+  onInspect?: () => void;
 }) {
   const percent = Math.max(0, Math.min(100, hpPercent(pokemon.hp)));
   const barColor = percent > 50 ? 'bg-brand' : percent > 20 ? 'bg-warning' : 'bg-danger';
@@ -64,7 +91,7 @@ export function PokemonCard({
       data-highlight={highlight}
       className={`flex min-w-0 flex-col gap-2.5 rounded-lg bg-surface p-3.5 transition-shadow ${ring} ${pokemon.fainted ? 'opacity-50' : ''} ${compact ? 'text-sm' : ''}`}
     >
-      <div className="flex items-center gap-3">
+      <HeaderRow onInspect={onInspect} label={labels.inspectTemplate.replace('{name}', label)}>
         {/* Monogram only: no sprite is shown until Battle has a licensed, species-keyed source. */}
         <span
           aria-hidden="true"
@@ -90,7 +117,12 @@ export function PokemonCard({
                 : labels.targetTag}
           </span>
         ) : null}
-      </div>
+        {onInspect ? (
+          <span aria-hidden="true" className="shrink-0 text-muted">
+            ›
+          </span>
+        ) : null}
+      </HeaderRow>
       <div className="flex flex-col gap-1.5">
         <div
           role="meter"

@@ -228,6 +228,29 @@ describe('battle server: hidden information', () => {
     const own = JSON.stringify((await call('GET', `/v1/battles/${id}/state/p2`)).body);
     expect(own).toContain('focussash'); // the owner sees its own
   });
+
+  it('serves private Pokémon details only to the owning perspective, through the same route', async () => {
+    const { call } = await start();
+    const id = (await call('POST', '/v1/battles', config())).body.battleId as string;
+    const read = async (perspective: string, side: 'p1' | 'p2') =>
+      ((await call('GET', `/v1/battles/${id}/state/${perspective}`)).body as BattleState).sides[
+        side
+      ].team;
+    expect((await read('p1', 'p1'))[0]!.privateDetails).toMatchObject({
+      nature: 'Timid',
+      stats: { hp: 316, spa: 365, spe: 293 },
+    });
+    for (const [perspective, side] of [
+      ['p1', 'p2'],
+      ['p2', 'p1'],
+      ['spectator', 'p1'],
+      ['spectator', 'p2'],
+    ] as const) {
+      const team = await read(perspective, side);
+      expect(team.some((pokemon) => 'privateDetails' in pokemon)).toBe(false);
+      expect(JSON.stringify(team)).not.toMatch(/nature|"evs"|"ivs"|"stats"/);
+    }
+  });
 });
 
 describe('battle server: typed errors', () => {

@@ -1,4 +1,9 @@
-import type { BattleSideId, BattleState } from '@pokestudio/battle-engine/types';
+import type {
+  BattlePokemonRef,
+  BattlePokemonState,
+  BattleSideId,
+  BattleState,
+} from '@pokestudio/battle-engine/types';
 
 import { tagClass } from '@/lib/ui-classes';
 import type { BattleDisplayNames } from '@/lib/battle/types';
@@ -18,6 +23,37 @@ export interface BattlefieldLabels extends PokemonCardLabels {
   battlefield: string;
 }
 
+function BenchChip({
+  pokemon,
+  inspectLabel,
+  onInspect,
+}: {
+  pokemon: BattlePokemonState;
+  inspectLabel: string;
+  onInspect?: () => void;
+}) {
+  const name = pokemon.nickname ?? pokemon.species;
+  const text = `${name}${pokemon.fainted ? ' ✕' : ''}`;
+  const base = 'rounded-full bg-surface px-2 py-0.5';
+  if (!onInspect)
+    return (
+      <span className={base} data-fainted={pokemon.fainted}>
+        {text}
+      </span>
+    );
+  return (
+    <button
+      type="button"
+      aria-label={inspectLabel.replace('{name}', name)}
+      data-fainted={pokemon.fainted}
+      onClick={onInspect}
+      className={`${base} cursor-pointer border-0 text-xs text-inherit underline decoration-dotted underline-offset-2 hover:bg-surface-hover`}
+    >
+      {text}
+    </button>
+  );
+}
+
 function sideTitle(side: BattleSideId, labels: BattlefieldLabels) {
   return side === 'p1' ? labels.player1 : labels.player2;
 }
@@ -34,6 +70,7 @@ export function Battlefield({
   names,
   focus = null,
   bottom = 'p1',
+  onInspect,
 }: {
   state: BattleState;
   labels: BattlefieldLabels;
@@ -42,6 +79,8 @@ export function Battlefield({
   focus?: ActionFocus | null;
   /** The side drawn at the bottom (the one being viewed); the other is on top. */
   bottom?: BattleSideId;
+  /** When given, every Pokémon shown here can be opened in the details sheet. */
+  onInspect?: (ref: BattlePokemonRef) => void;
 }) {
   const label = (table: 'conditions', id: string) => names?.[table][id] ?? id;
   const field = [
@@ -96,6 +135,7 @@ export function Battlefield({
                 pokemon={pokemon}
                 labels={labels}
                 typeNames={typeNames}
+                {...(onInspect ? { onInspect: () => onInspect(pokemon.ref) } : {})}
                 {...(highlightOf(side, index) ? { highlight: highlightOf(side, index)! } : {})}
               />
             ) : (
@@ -110,14 +150,12 @@ export function Battlefield({
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
             <span className="font-semibold">{labels.bench}</span>
             {bench.map((pokemon) => (
-              <span
+              <BenchChip
                 key={pokemon.ref.teamIndex}
-                className="rounded-full bg-surface px-2 py-0.5"
-                data-fainted={pokemon.fainted}
-              >
-                {pokemon.nickname ?? pokemon.species}
-                {pokemon.fainted ? ' ✕' : ''}
-              </span>
+                pokemon={pokemon}
+                inspectLabel={labels.inspectTemplate}
+                {...(onInspect ? { onInspect: () => onInspect(pokemon.ref) } : {})}
+              />
             ))}
           </div>
         ) : null}
