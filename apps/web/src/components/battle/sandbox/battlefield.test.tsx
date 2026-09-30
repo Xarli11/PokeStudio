@@ -12,7 +12,10 @@ import { Battlefield } from './battlefield';
 
 afterEach(cleanup);
 
-const labels = getDictionary('en').battle.sandbox.battle;
+const labels = {
+  ...getDictionary('en').battle.sandbox.battle,
+  inspectTemplate: getDictionary('en').battle.sandbox.details.inspectTemplate,
+};
 const typeNames = getDictionary('en').types;
 
 const mon = (side: BattleSideId, teamIndex: number, species: string): BattlePokemonState => ({

@@ -135,7 +135,10 @@ describe('Open Team Sheets: exactly what the simulator publishes', () => {
     for (const perspective of ['p1', 'spectator'] as const) {
       const text = dump(session, perspective);
       expect(text).not.toMatch(/Rival\d/); // nicknames stay private until switch-in
-      expect(text).not.toMatch(/"evs"|"ivs"|"stats"|statPoints/i);
+      // The owner sees their own spreads (privateDetails); the rival's side never carries any.
+      const rivalText = JSON.stringify(session.getState(perspective).sides.p2);
+      expect(rivalText).not.toMatch(/"evs"|"ivs"|"stats"|statPoints|privateDetails|nature/i);
+      if (perspective === 'spectator') expect(text).not.toMatch(/"evs"|"ivs"|"stats"|statPoints/i);
     }
     // p1 submits its picks; p2 (and spectators) learn nothing about them yet.
     session.submitChoice('p1', { kind: 'team-order', order: [5, 4, 3, 2] });

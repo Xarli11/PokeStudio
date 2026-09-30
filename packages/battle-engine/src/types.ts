@@ -154,6 +154,27 @@ export interface BattleMoveState {
   disabled?: boolean;
 }
 
+/**
+ * What the simulator actually resolved for a Pokémon's set (defaults, format rules and Champions
+ * normalization applied). Present only for the owner's own perspective and the omniscient one; never
+ * for the opposing side or a spectator, not even under Open Team Sheets (ADR-0017).
+ */
+export interface BattlePokemonPrivateDetails {
+  nature: string;
+  /** Effort values; in the Champions family these are Stat Points (`BattleFormatInfo.family`). */
+  evs: BattleStatTable;
+  /**
+   * Individual values. Absent in the Champions family, whose stat formula ignores them (they are
+   * fixed at 31 there).
+   */
+  ivs?: BattleStatTable;
+  /**
+   * Calculated stats from species, level, IVs, EVs/Stat Points and nature, BEFORE boost stages and
+   * item/ability/status modifiers (boosts live in `BattlePokemonState.boosts`). `hp` is max HP.
+   */
+  stats: BattleStatTable;
+}
+
 export interface BattlePokemonState {
   ref: BattlePokemonRef;
   species: string;
@@ -178,6 +199,8 @@ export interface BattlePokemonState {
   ability?: string;
   item?: string | null;
   moves?: BattleMoveState[];
+  /** Own/omniscient perspective only. */
+  privateDetails?: BattlePokemonPrivateDetails;
   /** What the viewing perspective actually knows. */
   revealed: { ability: boolean; item: boolean; moves: string[] };
 }

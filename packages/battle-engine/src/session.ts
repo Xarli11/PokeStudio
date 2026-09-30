@@ -99,6 +99,7 @@ class ShowdownBattleSession implements BattleSession {
     });
     this.#ctx = {
       battle: this.#battle,
+      family: bundle.format.family,
       refs: this.#refs,
       displayNames: { p1: config.sides.p1.displayName, p2: config.sides.p2.displayName },
       nicknames: {

@@ -1,10 +1,12 @@
 import type { Battle, Pokemon } from './simulator';
 
+import type { BattleFormatFamily } from '../formats';
 import type {
   BattleBoostId,
   BattleHp,
   BattleMajorStatus,
   BattlePerspective,
+  BattlePokemonPrivateDetails,
   BattlePokemonRef,
   BattlePokemonState,
   BattleSideId,
@@ -44,6 +46,8 @@ const PUBLIC_VOLATILES: readonly string[] = [
 
 export interface ProjectionContext {
   battle: Battle;
+  /** Champions reads IVs as fixed, so they are not projected there. */
+  family: BattleFormatFamily;
   refs: ReadonlyMap<Pokemon, BattlePokemonRef>;
   displayNames: Readonly<Record<BattleSideId, string>>;
   /** Display nicknames by `teamIndex` (PokeStudio-side data; public to others only once the Pokémon has switched in). */
@@ -88,6 +92,27 @@ function commonFields(
   };
 }
 
+/**
+ * The set the simulator really uses. `baseStoredStats` is the simulator's own calculation from
+ * species/level/IVs/EVs/nature before item/ability/status modifiers and boost stages (unlike
+ * `getStat`, which applies them); it already follows the format's stat formula, so nothing is
+ * recomputed here. It is not touched by Transform.
+ */
+function privateDetails(ctx: ProjectionContext, pokemon: Pokemon): BattlePokemonPrivateDetails {
+  const { hp, atk, def, spa, spd, spe } = pokemon.baseStoredStats;
+  const { evs, ivs } = pokemon.set;
+  return {
+    nature: pokemon.getNature().name,
+    evs: { hp: evs.hp, atk: evs.atk, def: evs.def, spa: evs.spa, spd: evs.spd, spe: evs.spe },
+    ...(ctx.family === 'champions'
+      ? {}
+      : {
+          ivs: { hp: ivs.hp, atk: ivs.atk, def: ivs.def, spa: ivs.spa, spd: ivs.spd, spe: ivs.spe },
+        }),
+    stats: { hp, atk, def, spa, spd, spe },
+  };
+}
+
 /** Full information about a Pokémon: the owner's own view, or the omniscient view. */
 function projectFull(
   ctx: ProjectionContext,
@@ -117,6 +142,7 @@ function projectFull(
     ability: pokemon.ability,
     item: pokemon.item || null,
     moves,
+    privateDetails: privateDetails(ctx, pokemon),
     revealed: { ability: true, item: true, moves: moves.map((move) => move.id) },
   };
 }

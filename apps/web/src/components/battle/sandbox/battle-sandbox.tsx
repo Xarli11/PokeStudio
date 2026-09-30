@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { BattlePokemonRef } from '@pokestudio/battle-engine/types';
 import { formatMessage } from '@pokestudio/i18n';
 import type { Dictionary } from '@pokestudio/i18n';
 
@@ -28,6 +29,7 @@ import { ActionPanel, TeamPreviewPanel, type ActionFocus } from './action-panel'
 import { Battlefield } from './battlefield';
 import { BattleResultPanel } from './battle-result';
 import { ForkPanel } from './fork-panel';
+import { PokemonDetailsPanel } from './pokemon-details';
 import { SandboxSetup } from './sandbox-setup';
 import { TimelinePanel, TurnInspector } from './timeline-panel';
 
@@ -107,6 +109,8 @@ export function BattleSandbox({
   const [replayBusy, setReplayBusy] = useState(false);
   const [focus, setFocus] = useState<ActionFocus | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
+  // Only the identity is kept: the Pokémon itself is always re-read from the current board.
+  const [inspectedRef, setInspectedRef] = useState<BattlePokemonRef | null>(null);
   const sending = useRef(false);
   const [forking, setForking] = useState<{ turn: number; replay: BattleReplay } | null>(null);
 
@@ -155,6 +159,18 @@ export function BattleSandbox({
   const board: BattleState | null =
     viewAs === 'spectator' ? spectator : (views[viewAs]?.state ?? null);
   const status = views.p1?.state.status;
+  const inspectedPokemon = useMemo(() => {
+    if (!board || !inspectedRef) return null;
+    const side = board.sides[inspectedRef.side];
+    const same = (p: { ref: BattlePokemonRef } | null) =>
+      p !== null && p.ref.side === inspectedRef.side && p.ref.teamIndex === inspectedRef.teamIndex;
+    return side.team.find(same) ?? side.active.find(same) ?? null;
+  }, [board, inspectedRef]);
+  // A Pokémon this perspective can no longer see closes its details instead of lingering. While the
+  // new perspective is still loading there is no board, so nothing renders and nothing is decided yet.
+  useEffect(() => {
+    if (board && inspectedRef && !inspectedPokemon) setInspectedRef(null);
+  }, [board, inspectedRef, inspectedPokemon]);
 
   const perspectiveLabel = (perspective: ReadablePerspective) =>
     perspective === 'p1'
@@ -269,6 +285,7 @@ export function BattleSandbox({
     setSelectedTurn(null);
     setForking(null);
     setTimelineOpen(false);
+    setInspectedRef(null);
     setErrorCode(null);
     setProblems(null);
   };
@@ -363,11 +380,13 @@ export function BattleSandbox({
               levelTemplate: labels.battle.levelTemplate,
               fainted: labels.battle.fainted,
               teraTemplate: labels.battle.tera,
+              inspectTemplate: labels.details.inspectTemplate,
             }}
             typeNames={typeNames}
             names={names}
             focus={pendingSide ? focus : null}
             bottom={viewAs === 'p2' ? 'p2' : 'p1'}
+            onInspect={setInspectedRef}
           />
         ) : null}
 
@@ -499,6 +518,18 @@ export function BattleSandbox({
             </div>
           ) : null}
         </div>
+      ) : null}
+      {board && inspectedPokemon ? (
+        <PokemonDetailsPanel
+          pokemon={inspectedPokemon}
+          family={board.format.family}
+          labels={labels.details}
+          levelTemplate={labels.battle.levelTemplate}
+          faintedLabel={labels.battle.fainted}
+          names={names}
+          typeNames={typeNames}
+          onClose={() => setInspectedRef(null)}
+        />
       ) : null}
       {battle && inspected && forking && forking.turn === inspected.turn ? (
         <ForkPanel

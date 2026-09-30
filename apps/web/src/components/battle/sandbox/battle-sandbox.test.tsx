@@ -278,8 +278,12 @@ async function startBattle(actions: SandboxServerActions) {
 async function playPreview(actions: SandboxServerActions) {
   for (const player of ['Player 1', 'Player 2']) {
     await waitFor(() => expect(screen.getByTestId('acting-panel').textContent).toContain(player));
-    fireEvent.click(screen.getByRole('button', { name: /Garchomp/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Rotom-Wash/ }));
+    fireEvent.click(
+      within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Garchomp/ }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Rotom-Wash/ }),
+    );
     fireEvent.click(screen.getByRole('button', { name: labels.preview.submit }));
   }
   await waitFor(() => expect(screen.getByTestId('turn-indicator').textContent).toBe('Turn 1'));
@@ -394,8 +398,12 @@ describe('Battle Sandbox: playing a battle', () => {
     const confirm = () =>
       screen.getByRole('button', { name: labels.preview.submit }) as HTMLButtonElement;
     expect(confirm().disabled).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: /Rotom-Wash/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Garchomp/ }));
+    fireEvent.click(
+      within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Rotom-Wash/ }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Garchomp/ }),
+    );
     expect(confirm().disabled).toBe(false);
     fireEvent.click(confirm());
     await waitFor(() => expect(actions.submitSandboxCommand).toHaveBeenCalledTimes(1));
@@ -405,8 +413,12 @@ describe('Battle Sandbox: playing a battle', () => {
     await waitFor(() =>
       expect(screen.getByTestId('acting-panel').textContent).toContain('Player 2 (now)'),
     );
-    fireEvent.click(screen.getByRole('button', { name: /Garchomp/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Rotom-Wash/ }));
+    fireEvent.click(
+      within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Garchomp/ }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Rotom-Wash/ }),
+    );
     fireEvent.click(confirm());
     await waitFor(() => expect(screen.getByTestId('turn-indicator').textContent).toBe('Turn 1'));
 
@@ -455,8 +467,12 @@ describe('Battle Sandbox: playing a battle', () => {
   it('keeps the submit button disabled until a move is chosen, and shows server errors', async () => {
     const { actions } = fake();
     await startBattle(actions);
-    fireEvent.click(screen.getByRole('button', { name: /Garchomp/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Rotom-Wash/ }));
+    fireEvent.click(
+      within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Garchomp/ }),
+    );
+    fireEvent.click(
+      within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Rotom-Wash/ }),
+    );
     (actions.submitSandboxCommand as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: false,
       error: { code: 'ILLEGAL_CHOICE' },

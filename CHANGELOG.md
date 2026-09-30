@@ -6,6 +6,18 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Battle Pokémon details (2026-09-30)
+
+Selecting a Pokémon in the Battle Sandbox (active or visible bench) opens an on-demand details sheet:
+a side drawer on desktop and a bottom sheet on mobile that overlays the action panel (Escape/close/
+backdrop, focus trap and return). It shows identity, HP, status, boosts and Tera state; known ability,
+item and moves (PP only when the perspective knows it); and, for the viewer's own Pokémon only,
+calculated stats, nature and EVs/IVs — labelled "Stat Points" and without IVs in the Champions family.
+New `BattlePokemonState.privateDetails`, built in the projection from the simulator's normalized
+Pokémon (`baseStoredStats`), is absent for the opponent and the spectator, including Open Team Sheets
+(ADR-0017 unchanged). The UI keeps only a `BattlePokemonRef` and re-reads the Pokémon from the current
+board, so a perspective change or refresh never shows stale or newly hidden data. No new endpoint.
+
 ### Battle Sandbox UX polish (2026-09-30)
 
 Guided, progressive Sandbox (advanced mode; no new mechanics). Setup explains that both sides are
