@@ -19,6 +19,7 @@ import {
   loadReplay,
   loadSideView,
   submitSandboxCommand,
+  validateSandboxTeam,
 } from './actions';
 
 export function generateStaticParams() {
@@ -57,13 +58,17 @@ export default async function BattleSandboxPage({
   const dictionary = getDictionary(locale);
 
   return (
-    <div className="mx-auto flex max-w-detail flex-col gap-8">
+    // Below the desktop layout, once a battle exists the big intro steps aside (pure CSS: the page
+    // reacts to the battle being on screen) so the battlefield keeps the vertical space.
+    <div className="mx-auto flex max-w-wide flex-col gap-8 max-lg:[&:has([data-testid=sandbox-battle])]:gap-3 max-lg:[&:has([data-testid=sandbox-battle])_[data-hero]]:hidden">
       <header className="flex flex-col gap-3">
-        <span className={eyebrowClass()}>{dictionary.nav.battleLab}</span>
-        <h1 className="m-0 text-3xl tracking-tight">{dictionary.battle.sandbox.title}</h1>
-        <p className="m-0 max-w-xl text-muted">{dictionary.battle.sandbox.tagline}</p>
+        <div data-hero="" className="flex flex-col gap-3">
+          <span className={eyebrowClass()}>{dictionary.nav.battleLab}</span>
+          <h1 className="m-0 text-3xl tracking-tight">{dictionary.battle.sandbox.title}</h1>
+          <p className="m-0 max-w-xl text-muted">{dictionary.battle.sandbox.tagline}</p>
+        </div>
         <Link href={`/${locale}/battle`} className="text-sm font-semibold text-brand">
-          ← {dictionary.battle.title}
+          ← {dictionary.nav.battleLab}
         </Link>
       </header>
       <BattleSandbox
@@ -78,6 +83,7 @@ export default async function BattleSandboxPage({
           loadPerspectiveState,
           loadEvents,
           submitSandboxCommand,
+          validateSandboxTeam,
           loadDisplayNames,
           loadReplay,
         }}

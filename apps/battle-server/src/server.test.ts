@@ -340,6 +340,26 @@ describe('battle server: access, lifetime and capacity', () => {
   });
 });
 
+describe('battle server: team validation', () => {
+  it('says whether a team is legal for a format without creating a battle', async () => {
+    const { call, store } = await start();
+    const ok = await call('POST', '/v1/teams/validate', { formatId: 'sv-ou', team: OU_TEAM });
+    expect(ok).toMatchObject({ status: 200, body: { valid: true } });
+    const banned = {
+      members: [{ species: 'Amoonguss', ability: 'Regenerator', moves: ['Spore', 'Clear Smog'] }],
+    };
+    const bad = await call('POST', '/v1/teams/validate', { formatId: 'sv-ou', team: banned });
+    expect(bad.status).toBeGreaterThanOrEqual(400);
+    expect(bad.body.error.code).toBe('INVALID_TEAM');
+    expect(bad.body.error.details.problems.length).toBeGreaterThan(0);
+    expect(
+      (await call('POST', '/v1/teams/validate', { formatId: 'nope', team: OU_TEAM })).body.error
+        .code,
+    ).toBe('UNSUPPORTED_FORMAT');
+    expect(store.size).toBe(0);
+  });
+});
+
 describe('battle server: helpers', () => {
   it('serves display names for ids and imports pasted teams', async () => {
     const { call } = await start();

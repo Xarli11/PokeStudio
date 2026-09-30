@@ -587,7 +587,7 @@
     },
     "sandbox": {
       "title": "Battle Sandbox",
-      "tagline": "Play a full battle between two teams: you choose the actions for both sides, and the authoritative battle engine resolves every turn.",
+      "tagline": "Try teams and formats by playing both sides of a battle.",
       "metaDescription": "Play a full Pokémon battle between two teams in PokeStudio's Battle Sandbox.",
       "cardTitle": "Battle Sandbox",
       "cardDescription": "Pick a format, load two teams and play the battle turn by turn — you control both sides. Replay any turn in the timeline.",
@@ -611,7 +611,7 @@
       "setup": {
         "heading": "Set up the battle",
         "formatLabel": "Format",
-        "playerTemplate": "Player {n} team",
+        "playerTemplate": "Player {n}",
         "sideOne": "Player 1",
         "sideTwo": "Player 2",
         "fromBuild": "From Build",
@@ -623,12 +623,25 @@
         "importButton": "Read team",
         "importing": "Reading…",
         "memberCountTemplate": "{count} Pokémon",
-        "teamMissing": "Choose a team for each player.",
         "createButton": "Start battle",
         "creating": "Starting…",
-        "problemsHeading": "This team is not legal in the selected format:",
-        "problemsTeamTemplate": "Player {n}:",
-        "buildMappingNote": "Build teams are sent as they are; the battle engine decides whether they are legal for the format."
+        "buildMappingNote": "Build teams are sent as they are; the battle engine decides whether they are legal for the format.",
+        "purpose": "Control both sides to test teams, formats, and battle situations.",
+        "purposeDetail": "There is no opponent or matchmaking: you pick the moves for both players.",
+        "stepTemplate": "{step} · {title}",
+        "stepFormat": "Format",
+        "statusEmpty": "Choose a team",
+        "statusChecking": "Checking the team…",
+        "statusReady": "Team ready",
+        "statusInvalid": "Needs changes",
+        "statusUnavailable": "Could not check the team",
+        "invalidHeadingTemplate": "This team is not valid for {format}.",
+        "detailLabel": "Detail",
+        "startReady": "Everything is ready.",
+        "startCheckingHelp": "Checking the teams…",
+        "startInvalidTemplate": "Fix Player {n}'s team to start.",
+        "startMissingTemplate": "Choose Player {n}'s team to start.",
+        "startUnavailable": "The team cannot be checked right now. Make sure the battle server is running."
       },
       "formats": {
         "sv-ou": "Scarlet/Violet OU",
@@ -640,7 +653,9 @@
       "formatMeta": {
         "singles": "Singles",
         "doubles": "Doubles",
-        "openTeamSheets": "Open team sheets"
+        "openTeamSheets": "Open team sheets",
+        "singlesSummary": "Singles · 1 active Pokémon",
+        "doublesSummary": "Doubles · 2 active Pokémon"
       },
       "battle": {
         "turnTemplate": "Turn {turn}",
@@ -649,7 +664,6 @@
         "player1": "Player 1",
         "player2": "Player 2",
         "spectator": "Spectator",
-        "yourActionTemplate": "{player}: choose your action",
         "waitingTemplate": "{player} is waiting for the other side",
         "submitted": "Choice submitted",
         "endTurnHint": "Both players choose, then the turn resolves.",
@@ -665,7 +679,12 @@
         "fieldEmpty": "No field effects",
         "hazards": "Side conditions",
         "tera": "Terastallized: {type}",
-        "unknownPokemon": "Unknown"
+        "unknownPokemon": "Unknown",
+        "resolving": "Resolving turn…",
+        "battlefield": "Battlefield",
+        "actingTag": "Acting",
+        "targetTag": "Possible target",
+        "selectedTag": "Chosen target"
       },
       "preview": {
         "heading": "Team preview",
@@ -677,20 +696,39 @@
         "orderTemplate": "#{n}"
       },
       "action": {
-        "slotTemplate": "Slot {n}",
+        "actorTemplate": "{player} · {pokemon}",
+        "stepOfTemplate": "{n} of {total}",
+        "chooseAction": "Choose an action",
+        "chooseReplacement": "Choose a replacement",
+        "forcedSwitchCountTemplate": "Send in {count}",
         "moves": "Moves",
         "switches": "Switch to",
         "pass": "Pass",
         "ppTemplate": "PP {pp}",
-        "target": "Target",
-        "targetFoe": "Opposing {n}",
-        "targetAlly": "Your ally",
+        "chooseTarget": "Choose a target",
+        "targetFoeTemplate": "{name} (opponent)",
+        "targetAllyTemplate": "{name} (ally)",
+        "targetAutoTemplate": "Target: {name}",
         "terastallize": "Terastallize",
+        "next": "Next",
+        "back": "Back",
+        "review": "Review turn",
+        "reviewHeading": "Confirm the turn",
+        "change": "Change",
+        "changeMove": "Change move",
+        "summaryMoveTemplate": "{pokemon} → {move}",
+        "summaryMoveTargetTemplate": "{pokemon} → {move} on {target}",
+        "summarySwitchTemplate": "{pokemon} → switch to {to}",
+        "summaryPassTemplate": "{pokemon} → no action",
+        "summaryTera": " · Terastallize",
         "submit": "Confirm choice",
+        "confirmTurn": "Confirm turn",
         "submitting": "Submitting…",
-        "forcedHeading": "Choose a replacement",
-        "forcedSwitchCountTemplate": "Send in {count} Pokémon",
-        "chooseFirst": "Choose an action for every slot.",
+        "chooseFirst": "Choose an action to continue.",
+        "forcedCountHint": "Send in exactly the number of Pokémon requested.",
+        "progressDone": "done",
+        "progressCurrent": "now",
+        "progressPending": "waiting",
         "noActionNeeded": "No action needed"
       },
       "timeline": {
@@ -698,7 +736,9 @@
         "empty": "Nothing has happened yet.",
         "turnTemplate": "Turn {turn}",
         "openInspector": "Inspect turn",
-        "startLabel": "Start"
+        "startLabel": "Start",
+        "hide": "Hide timeline",
+        "showTemplate": "Show timeline ({count})"
       },
       "inspector": {
         "heading": "Turn inspector",
@@ -718,7 +758,10 @@
         "turnsTemplate": "Turns played: {turns}",
         "downloadReplay": "Download replay",
         "newBattle": "New battle",
-        "replayNote": "The replay reproduces this battle exactly from its seed and commands."
+        "replayNote": "The replay reproduces this battle exactly from its seed and commands.",
+        "showTimeline": "Show timeline",
+        "hideTimeline": "Hide timeline",
+        "inspectHint": "Open a turn in the timeline to inspect it or try a different play."
       },
       "events": {
         "battleStarted": "The battle started.",

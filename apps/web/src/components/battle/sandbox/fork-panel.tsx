@@ -17,9 +17,10 @@ import type {
   ReadablePerspective,
   SideView,
 } from '@/lib/battle/types';
-import { buttonClass, cardClass } from '@/lib/ui-classes';
+import { buttonClass } from '@/lib/ui-classes';
 
 import { ActionPanel, type ActionLabels } from './action-panel';
+import { optionClass, panelClass } from './styles';
 import { TurnInspector, type InspectorLabels } from './timeline-panel';
 
 export interface ForkLabels {
@@ -179,7 +180,7 @@ export function ForkPanel({
     <section
       aria-label={labels.heading}
       data-testid="fork-panel"
-      className={cardClass('flex flex-col gap-3 p-4')}
+      className={panelClass('flex flex-col gap-4 p-4 sm:p-5')}
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="m-0 text-base font-bold">
@@ -204,7 +205,7 @@ export function ForkPanel({
                 type="button"
                 aria-pressed={side === candidate}
                 onClick={() => setSide(candidate)}
-                className={`${buttonClass('default')} ${side === candidate ? 'border-brand bg-brand-muted' : ''}`}
+                className={optionClass(side === candidate, 'min-h-11')}
               >
                 {sideLabel(candidate)}
               </button>
@@ -228,6 +229,7 @@ export function ForkPanel({
             labels={actionLabels}
             names={names}
             busy={busy}
+            playerLabel={sideLabel(side)}
             onSubmit={(command) => void submitAlternative(command)}
           />
         ) : boundary ? (
@@ -259,6 +261,7 @@ export function ForkPanel({
               labels={actionLabels}
               names={names}
               busy={busy}
+              playerLabel={sideLabel(fork.pending[0] ?? other)}
               onSubmit={(command) => void submitPending(command)}
             />
           ) : null}
@@ -269,6 +272,7 @@ export function ForkPanel({
               ctx={ctx}
               perspectiveLabel={perspectiveLabel}
               variantLabel={labels.original}
+              variant="original"
             />
             {alternative ? (
               <TurnInspector
@@ -277,6 +281,7 @@ export function ForkPanel({
                 ctx={ctx}
                 perspectiveLabel={perspectiveLabel}
                 variantLabel={labels.alternative}
+                variant="alternative"
               />
             ) : null}
           </div>

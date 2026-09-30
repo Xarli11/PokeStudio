@@ -61,6 +61,15 @@ export async function importTeamText(
   return battleServer<{ team: BattleTeamInput }>('POST', '/v1/teams/import', { text });
 }
 
+/** Asks the engine (through the battle server) whether a team is legal in a format, before starting. */
+export async function validateSandboxTeam(
+  formatId: string,
+  team: BattleTeamInput,
+): Promise<ActionResult<{ valid: true }>> {
+  if (typeof formatId !== 'string' || !FORMAT_ID.test(formatId) || !team) return invalid();
+  return battleServer<{ valid: true }>('POST', '/v1/teams/validate', { formatId, team });
+}
+
 /** What one side needs now: its own state and what it may do. */
 export async function loadSideView(
   battleId: string,

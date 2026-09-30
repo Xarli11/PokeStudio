@@ -50,7 +50,7 @@ const state = (): BattleState =>
         displayName: 'p1',
         teamSize: 4,
         pokemonLeft: 4,
-        active: [],
+        active: [mon('p1', 0, 'Garchomp'), mon('p1', 1, 'Rotom-Wash')],
         team: [
           mon('p1', 0, 'Garchomp'),
           mon('p1', 1, 'Rotom-Wash'),
@@ -62,10 +62,10 @@ const state = (): BattleState =>
       p2: {
         id: 'p2',
         displayName: 'p2',
-        teamSize: 0,
-        pokemonLeft: 0,
-        active: [],
-        team: [],
+        teamSize: 2,
+        pokemonLeft: 2,
+        active: [mon('p2', 0, 'Incineroar'), mon('p2', 1, 'Amoonguss')],
+        team: [mon('p2', 0, 'Incineroar'), mon('p2', 1, 'Amoonguss')],
         sideConditions: [],
       },
     },
@@ -116,7 +116,11 @@ const doubles: Extract<BattleLegalChoices, { kind: 'move' }> = {
   ],
 };
 
-const renderPanel = (choices: Parameters<typeof ActionPanel>[0]['choices'], onSubmit = vi.fn()) => {
+const renderPanel = (
+  choices: Parameters<typeof ActionPanel>[0]['choices'],
+  onSubmit = vi.fn(),
+  extra: Partial<Parameters<typeof ActionPanel>[0]> = {},
+) => {
   render(
     <ActionPanel
       choices={choices}
@@ -124,34 +128,51 @@ const renderPanel = (choices: Parameters<typeof ActionPanel>[0]['choices'], onSu
       labels={labels.action}
       names={names}
       busy={false}
+      playerLabel="Player 1"
       onSubmit={onSubmit}
+      {...extra}
     />,
   );
   return onSubmit;
 };
-const submit = () =>
-  screen.getByRole('button', { name: labels.action.submit }) as HTMLButtonElement;
+const button = (name: string | RegExp) => screen.getByRole('button', { name }) as HTMLButtonElement;
+const next = () => button(labels.action.next);
+const review = () => button(labels.action.review);
+const confirmTurn = () => button(labels.action.confirmTurn);
 
-describe('ActionPanel: Doubles', () => {
-  it('has a section per slot with each Pokémon named, and blocks submit until every slot is set', () => {
+describe('ActionPanel: Doubles, one Pokémon at a time', () => {
+  it('names who is acting and shows only that Pokémon’s options', () => {
     renderPanel(doubles);
-    expect(screen.getAllByRole('group').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Garchomp')).toBeTruthy();
-    expect(screen.getByText('Rotom-Wash')).toBeTruthy();
-    expect(submit().disabled).toBe(true);
+    expect(screen.getByTestId('actor-line').textContent).toBe('Player 1 · Garchomp');
+    expect(screen.getByTestId('action-prompt').textContent).toContain(labels.action.chooseAction);
+    expect(screen.getByTestId('action-prompt').textContent).toContain('1 of 2');
+    // Rotom-Wash's moves are not on screen yet.
+    expect(screen.queryByRole('button', { name: /Helping Hand/ })).toBeNull();
+    expect(next().disabled).toBe(true);
+    expect(screen.getByText(labels.action.chooseFirst)).toBeTruthy();
+    const progress = screen.getByTestId('turn-progress');
+    expect(progress.textContent).toContain('Garchomp');
+    expect(progress.textContent).toContain('Rotom-Wash');
+    expect(progress.querySelector('[aria-current="step"]')?.textContent).toContain('Garchomp');
   });
 
-  it('asks for a target only when the move has a choice, and builds the exact command', () => {
+  it('asks for a target only when there is a real choice, and reviews the turn before sending', () => {
     const onSubmit = renderPanel(doubles);
     // Slot 1: Earthquake needs no target.
-    fireEvent.click(screen.getAllByRole('button', { name: /Earthquake/ })[0]!);
-    expect(screen.queryByRole('group', { name: labels.action.target })).toBeNull();
-    // Slot 2: Helping Hand (ally only) needs its target.
-    fireEvent.click(screen.getByRole('button', { name: /Helping Hand/ }));
-    expect(submit().disabled).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: labels.action.targetAlly }));
-    expect(submit().disabled).toBe(false);
-    fireEvent.click(submit());
+    fireEvent.click(button(/Earthquake/));
+    expect(screen.queryByTestId('target-chooser')).toBeNull();
+    fireEvent.click(next());
+    expect(screen.getByTestId('actor-line').textContent).toBe('Player 1 · Rotom-Wash');
+    // Slot 2: Helping Hand has a single legal target, so it is picked for the player.
+    fireEvent.click(button(/Helping Hand/));
+    expect(screen.queryByTestId('target-chooser')).toBeNull();
+    expect(screen.getByTestId('target-auto').textContent).toBe('Target: Garchomp');
+    fireEvent.click(review());
+    expect(onSubmit).not.toHaveBeenCalled();
+    const summary = screen.getByTestId('turn-review').textContent ?? '';
+    expect(summary).toContain('Garchomp → Earthquake');
+    expect(summary).toContain('Rotom-Wash → Helping Hand on Garchomp');
+    fireEvent.click(confirmTurn());
     expect(onSubmit).toHaveBeenCalledWith({
       kind: 'actions',
       actions: [
@@ -161,38 +182,113 @@ describe('ActionPanel: Doubles', () => {
     });
   });
 
-  it("offers foes and the ally for a normal move, labelled from the actor's point of view", () => {
-    renderPanel(doubles);
-    fireEvent.click(screen.getByRole('button', { name: /Dragon Claw/ }));
-    const group = screen.getByRole('group', { name: labels.action.target });
-    expect([...group.querySelectorAll('button')].map((b) => b.textContent)).toEqual([
-      'Opposing 1',
-      'Opposing 2',
-      labels.action.targetAlly,
+  it('names real Pokémon as targets and never offers an illegal one as clickable', () => {
+    const foesOnly: Extract<BattleLegalChoices, { kind: 'move' }> = {
+      ...doubles,
+      slots: [
+        {
+          ...doubles.slots[0]!,
+          options: [{ kind: 'move', moveId: 'dragonclaw', pp: 24, targets: foes, modifiers: [] }],
+        },
+        doubles.slots[1]!,
+      ],
+    };
+    renderPanel(foesOnly);
+    fireEvent.click(button(/Dragon Claw/));
+    const group = screen.getByRole('group', { name: labels.action.chooseTarget });
+    const buttons = [...group.querySelectorAll('button')];
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      'Incineroar (opponent)',
+      'Amoonguss (opponent)',
+      'Rotom-Wash (ally)',
     ]);
-    fireEvent.click(screen.getByRole('button', { name: 'Opposing 2' }));
-    fireEvent.click(screen.getByRole('button', { name: /Protect/ }));
-    expect(submit().disabled).toBe(false);
+    expect(buttons.map((b) => b.disabled)).toEqual([false, false, true]);
+    expect(next().disabled).toBe(true);
+    fireEvent.click(buttons[1]!);
+    expect(next().disabled).toBe(false);
+  });
+
+  it('offers a clear way back from a chosen move while its target is being picked', () => {
+    renderPanel(doubles);
+    fireEvent.click(button(/Dragon Claw/));
+    expect(screen.getByTestId('target-chooser')).toBeTruthy();
+    fireEvent.click(button(labels.action.changeMove));
+    // The move is un-chosen: no target list, no chosen state, every move is selectable again.
+    expect(screen.queryByTestId('target-chooser')).toBeNull();
+    expect(button(/Dragon Claw/).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.queryByRole('button', { name: labels.action.changeMove })).toBeNull();
+    expect(next().disabled).toBe(true);
+  });
+
+  it('lets the player change a step from the review, and confirms only once', () => {
+    const onSubmit = renderPanel(doubles);
+    fireEvent.click(button(/Earthquake/));
+    fireEvent.click(next());
+    fireEvent.click(button(/Protect/));
+    fireEvent.click(review());
+    fireEvent.click(screen.getAllByRole('button', { name: labels.action.change })[0]!);
+    expect(screen.getByTestId('actor-line').textContent).toBe('Player 1 · Garchomp');
+    fireEvent.click(button(/Dragon Claw/));
+    fireEvent.click(button(/Incineroar \(opponent\)/));
+    fireEvent.click(next());
+    fireEvent.click(review());
+    expect(screen.getByTestId('turn-review').textContent).toContain(
+      'Garchomp → Dragon Claw on Incineroar',
+    );
+    fireEvent.click(confirmTurn());
+    fireEvent.click(confirmTurn());
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables confirm while the turn is being resolved', () => {
+    renderPanel(doubles, vi.fn(), { busy: true });
+    // Busy from the start: nothing can be sent.
+    fireEvent.click(button(/Earthquake/));
+    fireEvent.click(next());
+    fireEvent.click(button(/Protect/));
+    fireEvent.click(review());
+    const sending = button(labels.action.submitting);
+    expect(sending.disabled).toBe(true);
+  });
+
+  it('reports the acting Pokémon and the legal targets for the battlefield', () => {
+    const onFocus = vi.fn();
+    renderPanel(doubles, vi.fn(), { onFocus });
+    expect(onFocus).toHaveBeenLastCalledWith({ actor: slot(0), targets: null, selected: null });
+    fireEvent.click(button(/Dragon Claw/));
+    expect(onFocus).toHaveBeenLastCalledWith({
+      actor: slot(0),
+      targets: [...foes, slot(1)],
+      selected: null,
+    });
+    fireEvent.click(button(/Amoonguss \(opponent\)/));
+    expect(onFocus).toHaveBeenLastCalledWith({
+      actor: slot(0),
+      targets: [...foes, slot(1)],
+      selected: foes[1],
+    });
+    cleanup();
+    expect(onFocus).toHaveBeenLastCalledWith(null);
   });
 
   it("allows one Terastallization per turn: the other slot's box is disabled once one is ticked", () => {
     renderPanel(doubles);
-    fireEvent.click(screen.getAllByRole('button', { name: /Earthquake/ })[0]!);
-    fireEvent.click(screen.getByRole('button', { name: /Protect/ }));
-    const boxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
-    expect(boxes).toHaveLength(2);
-    fireEvent.click(boxes[0]!);
-    expect(boxes[0]!.checked).toBe(true);
-    expect(boxes[1]!.disabled).toBe(true);
+    fireEvent.click(button(/Earthquake/));
+    fireEvent.click(screen.getByRole('checkbox', { name: labels.action.terastallize }));
+    fireEvent.click(next());
+    fireEvent.click(button(/Protect/));
+    const box = screen.getByRole('checkbox', {
+      name: labels.action.terastallize,
+    }) as HTMLInputElement;
+    expect(box.disabled).toBe(true);
   });
 
   it('does not let both slots switch to the same Pokémon', () => {
     renderPanel(doubles);
-    const switchButtons = () =>
-      screen.getAllByRole('button', { name: 'Kingambit' }) as HTMLButtonElement[];
-    fireEvent.click(switchButtons()[0]!);
-    expect(switchButtons()[1]!.disabled).toBe(true);
-    expect(switchButtons()[0]!.disabled).toBe(false);
+    fireEvent.click(button('Kingambit'));
+    fireEvent.click(next());
+    expect(button('Kingambit').disabled).toBe(true);
+    expect(button('Incineroar').disabled).toBe(false);
   });
 });
 
@@ -219,16 +315,22 @@ describe('ActionPanel: forced replacements', () => {
 
   it('requires exactly switchCount replacements and lets the surplus slot pass', () => {
     const onSubmit = renderPanel(forced(1, true));
-    expect(screen.getByText(/Send in 1 Pokémon/)).toBeTruthy();
-    const pass = screen.getAllByRole('button', { name: labels.action.pass });
-    // Nothing chosen yet, then pass/pass is not enough (a switch is required).
-    fireEvent.click(pass[0]!);
-    fireEvent.click(pass[1]!);
-    expect(submit().disabled).toBe(true);
-    // Switch in slot 2, pass in slot 1.
-    fireEvent.click(screen.getAllByRole('button', { name: 'Kingambit' })[1]!);
-    expect(submit().disabled).toBe(false);
-    fireEvent.click(submit());
+    expect(screen.getByTestId('action-prompt').textContent).toContain(
+      labels.action.chooseReplacement,
+    );
+    expect(screen.getByTestId('action-prompt').textContent).toContain('Send in 1');
+    fireEvent.click(button(labels.action.pass));
+    fireEvent.click(next());
+    fireEvent.click(button(labels.action.pass));
+    fireEvent.click(review());
+    // Pass/pass is not enough: a replacement is required.
+    expect(confirmTurn().disabled).toBe(true);
+    expect(screen.getByText(labels.action.forcedCountHint)).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: labels.action.change })[1]!);
+    fireEvent.click(button('Kingambit'));
+    fireEvent.click(review());
+    expect(confirmTurn().disabled).toBe(false);
+    fireEvent.click(confirmTurn());
     expect(onSubmit).toHaveBeenCalledWith({
       kind: 'actions',
       actions: [
@@ -240,11 +342,12 @@ describe('ActionPanel: forced replacements', () => {
 
   it('with enough Pokémon for every slot, both switch to different Pokémon', () => {
     const onSubmit = renderPanel(forced(2, false));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Kingambit' })[0]!);
-    expect(submit().disabled).toBe(true);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Incineroar' })[1]!);
-    expect(submit().disabled).toBe(false);
-    fireEvent.click(submit());
+    fireEvent.click(button('Kingambit'));
+    fireEvent.click(next());
+    expect(button('Kingambit').disabled).toBe(true);
+    fireEvent.click(button('Incineroar'));
+    fireEvent.click(review());
+    fireEvent.click(confirmTurn());
     expect(
       onSubmit.mock.calls[0]![0].actions.map(
         (a: { pokemon: { teamIndex: number } }) => a.pokemon.teamIndex,
@@ -252,7 +355,7 @@ describe('ActionPanel: forced replacements', () => {
     ).toEqual([2, 3]);
   });
 
-  it('a slot that only offers pass is settled automatically', () => {
+  it('a slot that only offers pass is settled automatically and skipped', () => {
     const onlyPass: Extract<BattleLegalChoices, { kind: 'move' }> = {
       kind: 'move',
       side: 'p1',
@@ -266,9 +369,11 @@ describe('ActionPanel: forced replacements', () => {
       ],
     };
     const onSubmit = renderPanel(onlyPass);
-    expect(screen.getByText(labels.action.noActionNeeded)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Protect/ }));
-    fireEvent.click(submit());
+    // One real decision: no stepper and no review, a direct confirm.
+    expect(screen.queryByTestId('turn-progress')).toBeNull();
+    expect(screen.getByTestId('actor-line').textContent).toBe('Player 1 · Rotom-Wash');
+    fireEvent.click(button(/Protect/));
+    fireEvent.click(button(labels.action.submit));
     expect(onSubmit).toHaveBeenCalledWith({
       kind: 'actions',
       actions: [

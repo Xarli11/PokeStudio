@@ -21,6 +21,10 @@ Discovered while building the server: `pokemon-showdown` is CommonJS, and Node's
 - **UI:** the Battle Sandbox (`/[locale]/battle/sandbox`, not indexable) is one person playing both sides: format and teams (from Build's saved teams or pasted text), team preview, per-slot actions with targets, Terastallization and forced replacements, a battlefield per perspective, the result with a downloadable replay, a per-turn timeline, and a Turn Inspector. The timeline and inspector are built from the structured trace only (`cause`/`parentSeq`, HP before/after derived from events) with deterministic, localized (ES/EN) templates — no AI and no generated text.
 - **Build integration is a mapping only** (`TeamDraft` → `BattleTeamInput`); the engine decides legality and its typed team problems are shown as they are.
 
+## Addendum: team validation before starting
+
+`POST /v1/teams/validate {formatId, team}` builds a throwaway battle with the team on both sides and discards it, so legality stays entirely with the engine (`INVALID_TEAM` with the engine's problem strings, otherwise `{valid: true}`). The web calls it as soon as a format and a team are known. Problem strings are shown as detail under a localized heading and are never parsed.
+
 ## Addendum: Battle Forks
 
 A fork is `restoreBattle` up to a decision boundary plus a replacement command, implemented once in the engine (`forkBattle`) — no mechanics are duplicated in the server or web. The other side's original command for that decision is re-applied when still legal, otherwise the side is reported `pending` and asked again. A fork is a new session with its own history; the source replay is copied first, never mutated. Because it is built from the replay (both teams and the seed), the server only forks and only exposes decision boundaries of finished battles, and reads of the fork are still per-perspective. The Turn Inspector shows original and alternative side by side, with no evaluation.
