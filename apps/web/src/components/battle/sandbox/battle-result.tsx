@@ -3,7 +3,9 @@
 import { formatMessage } from '@pokestudio/i18n';
 import type { BattleResult } from '@pokestudio/battle-engine/types';
 
-import { buttonClass, cardClass } from '@/lib/ui-classes';
+import { buttonClass } from '@/lib/ui-classes';
+
+import { panelClass } from './styles';
 
 export interface ResultLabels {
   heading: string;
@@ -13,6 +15,9 @@ export interface ResultLabels {
   downloadReplay: string;
   newBattle: string;
   replayNote: string;
+  showTimeline: string;
+  hideTimeline: string;
+  inspectHint: string;
 }
 
 export function BattleResultPanel({
@@ -21,6 +26,8 @@ export function BattleResultPanel({
   labels,
   playerLabel,
   replayBusy,
+  timelineOpen,
+  onToggleTimeline,
   onDownloadReplay,
   onNewBattle,
 }: {
@@ -29,6 +36,8 @@ export function BattleResultPanel({
   labels: ResultLabels;
   playerLabel: (side: 'p1' | 'p2') => string;
   replayBusy: boolean;
+  timelineOpen: boolean;
+  onToggleTimeline: () => void;
   onDownloadReplay: () => void;
   onNewBattle: () => void;
 }) {
@@ -36,17 +45,25 @@ export function BattleResultPanel({
     <section
       aria-label={labels.heading}
       data-testid="battle-result"
-      className={cardClass('flex flex-col gap-3 p-4')}
+      className={panelClass('flex min-w-0 flex-col gap-3 p-4 sm:p-5')}
     >
-      <h3 className="m-0 text-lg font-bold">{labels.heading}</h3>
-      <p className="m-0 text-base">
+      <h3 className="m-0 text-sm font-semibold text-muted">{labels.heading}</h3>
+      <p className="m-0 text-2xl font-bold leading-tight" data-testid="result-headline">
         {result.kind === 'win'
           ? formatMessage(labels.winnerTemplate, { player: playerLabel(result.winner) })
           : labels.tie}
       </p>
       <p className="m-0 text-sm text-muted">{formatMessage(labels.turnsTemplate, { turns })}</p>
-      <p className="m-0 text-xs text-muted">{labels.replayNote}</p>
+      <p className="m-0 text-sm text-muted">{labels.inspectHint}</p>
       <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          className={buttonClass()}
+          aria-expanded={timelineOpen}
+          onClick={onToggleTimeline}
+        >
+          {timelineOpen ? labels.hideTimeline : labels.showTimeline}
+        </button>
         <button
           type="button"
           className={buttonClass()}
@@ -59,6 +76,9 @@ export function BattleResultPanel({
           {labels.newBattle}
         </button>
       </div>
+      <p className="m-0 border-t border-border-subtle pt-3 text-xs text-muted">
+        {labels.replayNote}
+      </p>
     </section>
   );
 }

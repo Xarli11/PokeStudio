@@ -9,6 +9,7 @@ import {
   createFork,
   createSandboxBattle,
   loadDecisionView,
+  validateSandboxTeam,
   importTeamText,
   loadEvents,
   loadPerspectiveState,
@@ -151,6 +152,22 @@ describe('fork actions', () => {
     ])) {
       expect(result).toEqual({ ok: false, error: { code: 'INVALID_CONFIG' } });
     }
+    expect(battleServer).not.toHaveBeenCalled();
+  });
+});
+
+describe('team validation action', () => {
+  it('forwards the format and team, and rejects a bad format id without calling the server', async () => {
+    await validateSandboxTeam('sv-ou', TEAM);
+    expect(battleServer).toHaveBeenCalledWith('POST', '/v1/teams/validate', {
+      formatId: 'sv-ou',
+      team: TEAM,
+    });
+    battleServer.mockClear();
+    expect(await validateSandboxTeam('../x', TEAM)).toEqual({
+      ok: false,
+      error: { code: 'INVALID_CONFIG' },
+    });
     expect(battleServer).not.toHaveBeenCalled();
   });
 });

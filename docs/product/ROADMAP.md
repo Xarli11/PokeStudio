@@ -134,6 +134,10 @@ silently treated as complete.
 - structured battle trace — shipped: the battle event stream is a structured trace (moves and targets, misses, failures, immunity, effectiveness, damage/heal, status, volatiles, boosts, field and side conditions, ability/item effects, Tera, forme changes, faints, result) with `cause` and `parentSeq` causality, filtered per perspective, no raw protocol (ADR-0018). No UI,
 - functional battle UI.
 
+Product direction for Battle (not scheduled): once Cynthia exists, Battle becomes `Quick Battle`
+(the simple experience against Cynthia) and `Sandbox` (the advanced mode where one person controls both
+sides, inspects the trace and forks). Neither is built as an empty placeholder before then.
+
 Historical mechanics expand incrementally.
 
 ## Phase 5 — Battle AI v1

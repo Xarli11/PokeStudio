@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { formatMessage } from '@pokestudio/i18n';
 import type { Dictionary } from '@pokestudio/i18n';
@@ -22,9 +22,9 @@ import type {
   ReadablePerspective,
   SideView,
 } from '@/lib/battle/types';
-import { buttonClass, cardClass } from '@/lib/ui-classes';
+import { badgeClass, segmentButtonClass, segmentTrackClass } from './styles';
 
-import { ActionPanel, TeamPreviewPanel } from './action-panel';
+import { ActionPanel, TeamPreviewPanel, type ActionFocus } from './action-panel';
 import { Battlefield } from './battlefield';
 import { BattleResultPanel } from './battle-result';
 import { ForkPanel } from './fork-panel';
@@ -58,6 +58,10 @@ export interface SandboxServerActions {
   ): Promise<ActionResult<BattleSubmitResult>>;
   loadDisplayNames(): Promise<ActionResult<BattleDisplayNames>>;
   loadReplay(battleId: string): Promise<ActionResult<BattleReplay>>;
+  validateSandboxTeam(
+    formatId: string,
+    team: BattleTeamInput,
+  ): Promise<ActionResult<{ valid: true }>>;
   loadDecisionView(
     battleId: string,
     atDecision: number,
@@ -101,6 +105,9 @@ export function BattleSandbox({
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [replayBusy, setReplayBusy] = useState(false);
+  const [focus, setFocus] = useState<ActionFocus | null>(null);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const sending = useRef(false);
   const [forking, setForking] = useState<{ turn: number; replay: BattleReplay } | null>(null);
 
   const errorText = (code: string) =>
@@ -201,16 +208,20 @@ export function BattleSandbox({
   };
 
   const submit = async (side: BattleSideId, command: BattleCommand) => {
-    if (!battle) return;
+    if (!battle || sending.current) return;
+    sending.current = true;
     setBusy(true);
-    const result = await actions.submitSandboxCommand(battle.battleId, side, command);
-    if (!result.ok) {
-      setErrorCode(result.error.code);
+    try {
+      const result = await actions.submitSandboxCommand(battle.battleId, side, command);
+      if (!result.ok) {
+        setErrorCode(result.error.code);
+        return;
+      }
+      await refresh(battle.battleId, viewAs);
+    } finally {
+      sending.current = false;
       setBusy(false);
-      return;
     }
-    await refresh(battle.battleId, viewAs);
-    setBusy(false);
   };
 
   const changeView = async (perspective: ReadablePerspective) => {
@@ -257,6 +268,7 @@ export function BattleSandbox({
     setEvents([]);
     setSelectedTurn(null);
     setForking(null);
+    setTimelineOpen(false);
     setErrorCode(null);
     setProblems(null);
   };
@@ -265,13 +277,15 @@ export function BattleSandbox({
     formats: labels.formats as Record<string, string>,
     singles: labels.formatMeta.singles,
     doubles: labels.formatMeta.doubles,
+    singlesSummary: labels.formatMeta.singlesSummary,
+    doublesSummary: labels.formatMeta.doublesSummary,
     openTeamSheets: labels.formatMeta.openTeamSheets,
   };
 
   const errorBanner = errorCode ? (
     <p
       role="alert"
-      className={cardClass('m-0 border-danger p-3 text-sm')}
+      className="m-0 rounded-lg bg-danger/10 p-3 text-sm font-semibold text-foreground"
       data-testid="sandbox-error"
     >
       {errorText(errorCode)}
@@ -286,12 +300,14 @@ export function BattleSandbox({
           labels={labels.setup}
           formatLabels={formatLabels}
           problems={problems}
+          errorText={errorText}
           onCreated={(result) => void onCreated(result)}
           actions={{
             importTeam: async (text) => {
               const result = await actions.importTeamText(text);
               return result.ok ? { ok: true, team: result.data.team } : result;
             },
+            validateTeam: (formatId, team) => actions.validateSandboxTeam(formatId, team),
             create: (input) => startBattle(input),
           }}
         />
@@ -300,22 +316,26 @@ export function BattleSandbox({
   }
 
   const acting = pendingSide ? views[pendingSide] : null;
+  const sidesAsked = (['p1', 'p2'] as const).filter((side) => {
+    const view = views[side];
+    return !!view && view.choices.kind !== 'wait';
+  });
   const finishedResult = views.p1?.state.result ?? null;
 
   return (
-    <div className="flex flex-col gap-4" data-testid="sandbox-battle">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col">
-          <h2 className="m-0 text-xl font-bold">
+    <div className="flex flex-col gap-5" data-testid="sandbox-battle">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="m-0 text-sm font-semibold text-muted">
             {labels.formats[battle.format.id as keyof typeof labels.formats] ?? battle.format.name}
           </h2>
-          <span className="text-xs text-muted" data-testid="turn-indicator">
+          <span className="text-xl font-bold leading-tight" data-testid="turn-indicator">
             {board && board.turn === 0
               ? labels.battle.preview
               : formatMessage(labels.battle.turnTemplate, { turn: board?.turn ?? 0 })}
           </span>
         </div>
-        <div role="tablist" aria-label={labels.battle.viewAs} className="flex gap-1">
+        <div role="tablist" aria-label={labels.battle.viewAs} className={segmentTrackClass}>
           {PERSPECTIVES.map((perspective) => (
             <button
               key={perspective}
@@ -323,7 +343,7 @@ export function BattleSandbox({
               type="button"
               aria-selected={viewAs === perspective}
               onClick={() => void changeView(perspective)}
-              className={`${buttonClass('default')} ${viewAs === perspective ? 'border-brand bg-brand-muted' : ''}`}
+              className={segmentButtonClass(viewAs === perspective)}
             >
               {perspectiveLabel(perspective)}
             </button>
@@ -333,86 +353,153 @@ export function BattleSandbox({
 
       {errorBanner}
 
-      {board ? (
-        <Battlefield
-          state={board}
-          labels={{
-            ...labels.battle,
-            hpLabel: labels.battle.hpLabel,
-            levelTemplate: labels.battle.levelTemplate,
-            fainted: labels.battle.fainted,
-            teraTemplate: labels.battle.tera,
-          }}
-          typeNames={typeNames}
-          names={names}
-        />
-      ) : null}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-start">
+        {board ? (
+          <Battlefield
+            state={board}
+            labels={{
+              ...labels.battle,
+              hpLabel: labels.battle.hpLabel,
+              levelTemplate: labels.battle.levelTemplate,
+              fainted: labels.battle.fainted,
+              teraTemplate: labels.battle.tera,
+            }}
+            typeNames={typeNames}
+            names={names}
+            focus={pendingSide ? focus : null}
+            bottom={viewAs === 'p2' ? 'p2' : 'p1'}
+          />
+        ) : null}
 
-      {status === 'finished' && finishedResult && views.p1 ? (
-        <BattleResultPanel
-          result={finishedResult}
-          turns={views.p1.state.turn}
-          labels={labels.result}
-          playerLabel={sideLabel}
-          replayBusy={replayBusy}
-          onDownloadReplay={() => void downloadReplay()}
-          onNewBattle={reset}
-        />
-      ) : pendingSide && acting ? (
-        <div className="flex flex-col gap-2" data-testid="acting-panel">
-          <p className="m-0 text-sm font-semibold">
-            {formatMessage(labels.battle.yourActionTemplate, { player: sideLabel(pendingSide) })}
-          </p>
-          {acting.choices.kind === 'team-preview' ? (
-            <TeamPreviewPanel
-              key={`preview-${pendingSide}`}
-              side={pendingSide}
-              state={acting.state}
-              pick={acting.choices.pick}
-              labels={labels.preview}
-              openTeamSheets={battle.format.openTeamSheets}
-              busy={busy}
-              onSubmit={(command) => void submit(pendingSide, command)}
-            />
-          ) : acting.choices.kind === 'wait' ? null : (
-            <ActionPanel
-              key={`${pendingSide}-${acting.state.turn}-${acting.choices.kind}-${acting.state.eventCursor}`}
-              choices={acting.choices}
-              state={acting.state}
-              labels={labels.action}
-              names={names}
-              busy={busy}
-              onSubmit={(command) => void submit(pendingSide, command)}
-            />
-          )}
-          <p className="m-0 text-xs text-muted">{labels.battle.endTurnHint}</p>
+        {status === 'finished' && finishedResult && views.p1 ? (
+          <BattleResultPanel
+            result={finishedResult}
+            turns={views.p1.state.turn}
+            labels={labels.result}
+            playerLabel={sideLabel}
+            replayBusy={replayBusy}
+            timelineOpen={timelineOpen}
+            onToggleTimeline={() => setTimelineOpen((open) => !open)}
+            onDownloadReplay={() => void downloadReplay()}
+            onNewBattle={reset}
+          />
+        ) : pendingSide && acting ? (
+          <div
+            data-testid="acting-panel"
+            className="sticky bottom-0 z-20 -mx-4 flex w-auto min-w-0 max-h-[45dvh] flex-col gap-3 lg:gap-4 overflow-y-auto rounded-t-xl border-t border-border bg-surface-raised p-4 shadow-md sm:mx-0 lg:sticky lg:top-4 lg:bottom-auto lg:max-h-none lg:rounded-lg lg:border lg:border-border-subtle lg:p-5 lg:shadow-none"
+          >
+            <div className="flex flex-col gap-2">
+              <ol
+                className="m-0 flex list-none flex-wrap items-center gap-1 p-0 text-xs"
+                data-testid="side-progress"
+              >
+                {sidesAsked.map((side) => {
+                  const done = views[side]?.state.requests[side]?.submitted === true;
+                  const now = side === pendingSide;
+                  return (
+                    <li
+                      key={side}
+                      data-state={done ? 'done' : now ? 'current' : 'pending'}
+                      aria-current={now ? 'step' : undefined}
+                      className={`${badgeClass(now ? 'ready' : 'neutral')} ${now ? '' : done ? 'text-foreground' : ''}`}
+                    >
+                      <span aria-hidden="true">{done ? '✓' : now ? '→' : '○'}</span>
+                      {sideLabel(side)}
+                      <span className="sr-only">
+                        {' '}
+                        (
+                        {done
+                          ? labels.action.progressDone
+                          : now
+                            ? labels.action.progressCurrent
+                            : labels.action.progressPending}
+                        )
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+            {busy ? (
+              <p role="status" className="m-0 text-sm font-semibold" data-testid="resolving">
+                {labels.battle.resolving}
+              </p>
+            ) : null}
+            {acting.choices.kind === 'team-preview' ? (
+              <TeamPreviewPanel
+                key={`preview-${pendingSide}`}
+                side={pendingSide}
+                state={acting.state}
+                pick={acting.choices.pick}
+                labels={labels.preview}
+                openTeamSheets={battle.format.openTeamSheets}
+                busy={busy}
+                onSubmit={(command) => void submit(pendingSide, command)}
+              />
+            ) : acting.choices.kind === 'wait' ? null : (
+              <ActionPanel
+                key={`${pendingSide}-${acting.state.turn}-${acting.choices.kind}-${acting.state.eventCursor}`}
+                choices={acting.choices}
+                state={acting.state}
+                labels={labels.action}
+                names={names}
+                busy={busy}
+                playerLabel={sideLabel(pendingSide)}
+                onFocus={setFocus}
+                onSubmit={(command) => void submit(pendingSide, command)}
+              />
+            )}
+            <p className="m-0 text-xs text-muted">{labels.battle.endTurnHint}</p>
+          </div>
+        ) : null}
+      </div>
+
+      {status !== 'finished' && turns.length > 0 ? (
+        <div className="flex items-center gap-3 border-t border-border-subtle pt-3">
+          <button
+            type="button"
+            className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-foreground"
+            aria-expanded={timelineOpen}
+            onClick={() => setTimelineOpen((open) => !open)}
+          >
+            <span aria-hidden="true">{timelineOpen ? '▾' : '▸'}</span>
+            {timelineOpen
+              ? labels.timeline.hide
+              : formatMessage(labels.timeline.showTemplate, { count: turns.length })}
+          </button>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <TimelinePanel
-          turns={turns}
-          labels={labels.timeline}
-          ctx={ctx}
-          selectedTurn={selectedTurn}
-          onSelect={setSelectedTurn}
-        />
-        {inspected ? (
-          <TurnInspector
-            turn={inspected}
-            labels={labels.inspector}
-            ctx={ctx}
-            perspectiveLabel={perspectiveLabel(viewAs)}
-            onClose={() => {
-              setSelectedTurn(null);
-              setForking(null);
-            }}
-            {...(status === 'finished' && inspected.turn > 0
-              ? { onFork: () => void startFork(inspected.turn) }
-              : {})}
-          />
-        ) : null}
-      </div>
+      {timelineOpen || inspected ? (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start">
+          {timelineOpen ? (
+            <TimelinePanel
+              turns={turns}
+              labels={labels.timeline}
+              ctx={ctx}
+              selectedTurn={selectedTurn}
+              onSelect={setSelectedTurn}
+            />
+          ) : null}
+          {inspected ? (
+            <div className={timelineOpen ? '' : 'lg:col-span-2'}>
+              <TurnInspector
+                turn={inspected}
+                labels={labels.inspector}
+                ctx={ctx}
+                perspectiveLabel={perspectiveLabel(viewAs)}
+                onClose={() => {
+                  setSelectedTurn(null);
+                  setForking(null);
+                }}
+                {...(status === 'finished' && inspected.turn > 0
+                  ? { onFork: () => void startFork(inspected.turn) }
+                  : {})}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {battle && inspected && forking && forking.turn === inspected.turn ? (
         <ForkPanel
           key={`${battle.battleId}-${forking.turn}-${viewAs}`}

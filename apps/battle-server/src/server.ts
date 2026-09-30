@@ -158,6 +158,26 @@ export function createBattleServer(options: BattleServerOptions = {}) {
       return send(res, 200, { team: importTeamText(body?.text) });
     }
 
+    if (
+      method === 'POST' &&
+      parts[1] === 'teams' &&
+      parts[2] === 'validate' &&
+      parts.length === 3
+    ) {
+      // Legality is the engine's alone: build a throwaway battle with this team on both sides (a team
+      // is legal on its own, so the two copies do not interact) and discard it.
+      const body = (await readJson(req)) as { formatId?: unknown; team?: unknown } | null;
+      const team = body?.team as BattleConfig['sides']['p1']['team'];
+      createBattle({
+        formatId: body?.formatId as BattleConfig['formatId'],
+        sides: {
+          p1: { displayName: 'Player 1', team },
+          p2: { displayName: 'Player 2', team },
+        },
+      });
+      return send(res, 200, { valid: true });
+    }
+
     if (parts[1] !== 'battles') throw new HttpError(404, 'NOT_FOUND');
 
     if (method === 'POST' && parts.length === 2) {

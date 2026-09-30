@@ -4,7 +4,9 @@ import { formatMessage } from '@pokestudio/i18n';
 
 import { describeEvent, type EventCopyContext } from '@/lib/battle/event-copy';
 import { refKey, type HpChange, type TurnSummary } from '@/lib/battle/timeline';
-import { buttonClass, cardClass } from '@/lib/ui-classes';
+import { buttonClass } from '@/lib/ui-classes';
+
+import { badgeClass, labelClass, optionClass, panelClass } from './styles';
 
 export interface TimelineLabels {
   heading: string;
@@ -44,12 +46,12 @@ export function TimelinePanel({
   onSelect: (turn: number) => void;
 }) {
   return (
-    <section aria-label={labels.heading} className={cardClass('flex flex-col gap-2 p-4')}>
+    <section aria-label={labels.heading} className={panelClass('flex flex-col gap-3 p-4')}>
       <h3 className="m-0 text-base font-bold">{labels.heading}</h3>
       {turns.length === 0 ? (
         <p className="m-0 text-sm text-muted">{labels.empty}</p>
       ) : (
-        <ol className="m-0 flex list-none flex-col gap-1 p-0">
+        <ol className="m-0 flex max-h-72 list-none flex-col gap-1 overflow-y-auto p-0">
           {turns.map((turn) => {
             const first = turn.actions[0]?.action;
             const summary = first ? describeEvent(first, ctx) : null;
@@ -60,7 +62,7 @@ export function TimelinePanel({
                   aria-current={selectedTurn === turn.turn ? 'true' : undefined}
                   onClick={() => onSelect(turn.turn)}
                   data-testid={`turn-${turn.turn}`}
-                  className={`${buttonClass('default', 'w-full justify-start text-left')} ${selectedTurn === turn.turn ? 'border-brand bg-brand-muted' : ''}`}
+                  className={optionClass(selectedTurn === turn.turn, 'w-full justify-start')}
                 >
                   <span className="shrink-0 font-bold">
                     {turn.turn === 0
@@ -87,6 +89,7 @@ export function TurnInspector({
   ctx,
   perspectiveLabel,
   variantLabel,
+  variant,
   onClose,
   onFork,
 }: {
@@ -96,6 +99,7 @@ export function TurnInspector({
   perspectiveLabel: string;
   /** Names this inspector when two are shown side by side (original / alternative). */
   variantLabel?: string;
+  variant?: 'original' | 'alternative';
   onClose?: () => void;
   /** Offered only when the turn can be forked (a finished battle). */
   onFork?: () => void;
@@ -105,7 +109,7 @@ export function TurnInspector({
     <section
       aria-label={labels.heading}
       data-testid="turn-inspector"
-      className={cardClass('flex flex-col gap-3 p-4')}
+      className={panelClass('flex flex-col gap-4 p-4 sm:p-5')}
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="m-0 text-base font-bold">
@@ -113,7 +117,11 @@ export function TurnInspector({
           {formatMessage(ctx.templates['turnStarted'] ?? 'Turn {turn}', { turn: turn.turn })}
         </h3>
         {variantLabel ? (
-          <span className="rounded-md bg-brand-muted px-2 py-0.5 text-xs font-semibold">
+          <span
+            className={
+              badgeClass('neutral') + (variant === 'alternative' ? ' ring-1 ring-border' : '')
+            }
+          >
             {variantLabel}
           </span>
         ) : null}
@@ -128,9 +136,7 @@ export function TurnInspector({
       </p>
 
       <div className="flex flex-col gap-2">
-        <h4 className="m-0 text-xs font-semibold uppercase tracking-wide text-muted">
-          {labels.actions}
-        </h4>
+        <h4 className={`m-0 ${labelClass}`}>{labels.actions}</h4>
         {turn.actions.length === 0 ? (
           <p className="m-0 text-sm text-muted">{labels.noActions}</p>
         ) : (
@@ -138,7 +144,7 @@ export function TurnInspector({
             {turn.actions.map(({ action, children }) => (
               <li
                 key={action.seq}
-                className="flex flex-col gap-1 rounded-md border border-border-subtle p-2"
+                className="flex flex-col gap-1 rounded-md bg-surface px-3 py-2.5"
               >
                 <span className="text-sm font-semibold">{line(action)}</span>
                 {children.length > 0 ? (
@@ -156,9 +162,7 @@ export function TurnInspector({
 
       {turn.residual.length > 0 ? (
         <div className="flex flex-col gap-1">
-          <h4 className="m-0 text-xs font-semibold uppercase tracking-wide text-muted">
-            {labels.endOfTurn}
-          </h4>
+          <h4 className={`m-0 ${labelClass}`}>{labels.endOfTurn}</h4>
           <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-sm text-muted">
             {turn.residual.map((event) => (
               <li key={event.seq}>{line(event)}</li>
@@ -169,9 +173,7 @@ export function TurnInspector({
 
       {turn.hp.length > 0 ? (
         <div className="flex flex-col gap-1">
-          <h4 className="m-0 text-xs font-semibold uppercase tracking-wide text-muted">
-            {labels.hpChanges}
-          </h4>
+          <h4 className={`m-0 ${labelClass}`}>{labels.hpChanges}</h4>
           <ul className="m-0 flex list-none flex-col gap-0.5 p-0 text-sm">
             {turn.hp.map((change) => (
               <li key={refKey(change.pokemon)} className="flex justify-between gap-2">

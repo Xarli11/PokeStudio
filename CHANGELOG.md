@@ -6,6 +6,22 @@ Use human-readable entries. Do not dump every commit.
 
 ## Unreleased
 
+### Battle Sandbox UX polish (2026-09-30)
+
+Guided, progressive Sandbox (advanced mode; no new mechanics). Setup explains that both sides are
+controlled by the user, is ordered as format → Player 1 → Player 2, summarises the format from catalog
+metadata, and checks each team's legality with the engine before Start (new battle-server route
+`POST /v1/teams/validate`, which builds a throwaway battle; no legality logic in the web) — each team
+shows an empty/checking/ready/needs-changes status, Start stays disabled with a helper saying what is
+missing, and illegal teams get a localized heading with the engine's message as detail. In battle, one
+Pokémon decides at a time ("Player 1 · Garchomp — Choose an action"), Doubles turns are built step by
+step and reviewed before sending, targets are asked only when there is a choice (a single legal target
+is picked automatically, illegal ones are disabled), the acting Pokémon and legal targets are
+highlighted on the battlefield, and a "Resolving turn…" state blocks double submits. The acting panel
+is sticky on mobile, the timeline is collapsed by default and the result comes first. No sprites yet
+(monogram avatars): the existing resolver needs species/dex data the battle state does not carry and
+its sources are provisional/local-only. Visual and responsive pass: three-level surfaces on existing design tokens (dark and light), one cohesive battlefield, a segmented perspective control, and on small screens a compact battle header and a 45dvh action sheet with an internal sticky action bar and a compact target mode (checked at 430/390/360 px, no horizontal overflow). `functional battle UI` remains unchecked pending owner review.
+
 ### Battle Forks (2026-09-29)
 
 "Try a different play" in the Turn Inspector of a finished Sandbox battle (ADR-0019, addendum). The

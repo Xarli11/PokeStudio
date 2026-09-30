@@ -587,7 +587,7 @@
     },
     "sandbox": {
       "title": "Sandbox de combate",
-      "tagline": "Juega un combate completo entre dos equipos: tú eliges las acciones de ambos lados y el motor de combate autoritativo resuelve cada turno.",
+      "tagline": "Prueba equipos y formatos controlando a los dos jugadores de un combate.",
       "metaDescription": "Juega un combate Pokémon completo entre dos equipos en el Sandbox de combate de PokeStudio.",
       "cardTitle": "Sandbox de combate",
       "cardDescription": "Elige un formato, carga dos equipos y juega el combate turno a turno — controlas ambos lados. Revisa cualquier turno en la línea de tiempo.",
@@ -611,7 +611,7 @@
       "setup": {
         "heading": "Prepara el combate",
         "formatLabel": "Formato",
-        "playerTemplate": "Equipo del jugador {n}",
+        "playerTemplate": "Jugador {n}",
         "sideOne": "Jugador 1",
         "sideTwo": "Jugador 2",
         "fromBuild": "Desde Equipo",
@@ -623,12 +623,25 @@
         "importButton": "Leer equipo",
         "importing": "Leyendo…",
         "memberCountTemplate": "{count} Pokémon",
-        "teamMissing": "Elige un equipo para cada jugador.",
         "createButton": "Iniciar combate",
         "creating": "Iniciando…",
-        "problemsHeading": "Este equipo no es legal en el formato elegido:",
-        "problemsTeamTemplate": "Jugador {n}:",
-        "buildMappingNote": "Los equipos de Equipo se envían tal cual; el motor de combate decide si son legales para el formato."
+        "buildMappingNote": "Los equipos de Equipo se envían tal cual; el motor de combate decide si son legales para el formato.",
+        "purpose": "Controla ambos lados para probar equipos, formatos y situaciones de combate.",
+        "purposeDetail": "No hay rival ni emparejamiento: tú eliges los movimientos de los dos jugadores.",
+        "stepTemplate": "{step} · {title}",
+        "stepFormat": "Formato",
+        "statusEmpty": "Elige un equipo",
+        "statusChecking": "Comprobando el equipo…",
+        "statusReady": "Equipo listo",
+        "statusInvalid": "Necesita ajustes",
+        "statusUnavailable": "No se pudo comprobar el equipo",
+        "invalidHeadingTemplate": "Este equipo no es válido para {format}.",
+        "detailLabel": "Detalle",
+        "startReady": "Todo listo.",
+        "startCheckingHelp": "Comprobando los equipos…",
+        "startInvalidTemplate": "Ajusta el equipo del Jugador {n} para empezar.",
+        "startMissingTemplate": "Elige el equipo del Jugador {n} para empezar.",
+        "startUnavailable": "Ahora mismo no se puede comprobar el equipo. Comprueba que el servidor de combate está en marcha."
       },
       "formats": {
         "sv-ou": "Escarlata/Púrpura OU",
@@ -640,7 +653,9 @@
       "formatMeta": {
         "singles": "Individual",
         "doubles": "Dobles",
-        "openTeamSheets": "Hojas de equipo abiertas"
+        "openTeamSheets": "Hojas de equipo abiertas",
+        "singlesSummary": "Individual · 1 Pokémon activo",
+        "doublesSummary": "Dobles · 2 Pokémon activos"
       },
       "battle": {
         "turnTemplate": "Turno {turn}",
@@ -649,7 +664,6 @@
         "player1": "Jugador 1",
         "player2": "Jugador 2",
         "spectator": "Espectador",
-        "yourActionTemplate": "{player}: elige tu acción",
         "waitingTemplate": "{player} espera al otro lado",
         "submitted": "Elección enviada",
         "endTurnHint": "Ambos jugadores eligen y después se resuelve el turno.",
@@ -665,7 +679,12 @@
         "fieldEmpty": "Sin efectos de campo",
         "hazards": "Condiciones de lado",
         "tera": "Teracristalizado: {type}",
-        "unknownPokemon": "Desconocido"
+        "unknownPokemon": "Desconocido",
+        "resolving": "Resolviendo turno…",
+        "battlefield": "Campo de batalla",
+        "actingTag": "Actúa",
+        "targetTag": "Posible objetivo",
+        "selectedTag": "Objetivo elegido"
       },
       "preview": {
         "heading": "Vista previa de equipos",
@@ -677,20 +696,39 @@
         "orderTemplate": "#{n}"
       },
       "action": {
-        "slotTemplate": "Posición {n}",
+        "actorTemplate": "{player} · {pokemon}",
+        "stepOfTemplate": "{n} de {total}",
+        "chooseAction": "Elige una acción",
+        "chooseReplacement": "Elige un reemplazo",
+        "forcedSwitchCountTemplate": "Envía {count}",
         "moves": "Movimientos",
         "switches": "Cambiar a",
         "pass": "Pasar",
         "ppTemplate": "PP {pp}",
-        "target": "Objetivo",
-        "targetFoe": "Rival {n}",
-        "targetAlly": "Tu aliado",
+        "chooseTarget": "Elige un objetivo",
+        "targetFoeTemplate": "{name} (rival)",
+        "targetAllyTemplate": "{name} (aliado)",
+        "targetAutoTemplate": "Objetivo: {name}",
         "terastallize": "Teracristalizar",
+        "next": "Siguiente",
+        "back": "Atrás",
+        "review": "Revisar turno",
+        "reviewHeading": "Confirma el turno",
+        "change": "Cambiar",
+        "changeMove": "Cambiar movimiento",
+        "summaryMoveTemplate": "{pokemon} → {move}",
+        "summaryMoveTargetTemplate": "{pokemon} → {move} sobre {target}",
+        "summarySwitchTemplate": "{pokemon} → cambia a {to}",
+        "summaryPassTemplate": "{pokemon} → sin acción",
+        "summaryTera": " · Teracristalizar",
         "submit": "Confirmar elección",
+        "confirmTurn": "Confirmar turno",
         "submitting": "Enviando…",
-        "forcedHeading": "Elige un reemplazo",
-        "forcedSwitchCountTemplate": "Envía {count} Pokémon",
-        "chooseFirst": "Elige una acción para cada posición.",
+        "chooseFirst": "Elige una acción para continuar.",
+        "forcedCountHint": "Envía exactamente los Pokémon que se piden.",
+        "progressDone": "hecho",
+        "progressCurrent": "ahora",
+        "progressPending": "pendiente",
         "noActionNeeded": "No hace falta ninguna acción"
       },
       "timeline": {
@@ -698,7 +736,9 @@
         "empty": "Todavía no ha pasado nada.",
         "turnTemplate": "Turno {turn}",
         "openInspector": "Inspeccionar turno",
-        "startLabel": "Inicio"
+        "startLabel": "Inicio",
+        "hide": "Ocultar línea de tiempo",
+        "showTemplate": "Ver línea de tiempo ({count})"
       },
       "inspector": {
         "heading": "Inspector de turno",
@@ -718,7 +758,10 @@
         "turnsTemplate": "Turnos jugados: {turns}",
         "downloadReplay": "Descargar repetición",
         "newBattle": "Nuevo combate",
-        "replayNote": "La repetición reproduce este combate exactamente a partir de su semilla y sus comandos."
+        "replayNote": "La repetición reproduce este combate exactamente a partir de su semilla y sus comandos.",
+        "showTimeline": "Ver línea de tiempo",
+        "hideTimeline": "Ocultar línea de tiempo",
+        "inspectHint": "Abre un turno en la línea de tiempo para inspeccionarlo o probar otra jugada."
       },
       "events": {
         "battleStarted": "El combate comenzó.",

@@ -171,6 +171,7 @@ function fake() {
   const actions: SandboxServerActions = {
     createSandboxBattle: vi.fn(async () => ok({ battleId: ID, format: stateFor('p1').format })),
     importTeamText: vi.fn(async () => ok({ team: TEAM })),
+    validateSandboxTeam: vi.fn(async () => ok({ valid: true as const })),
     loadSideView: vi.fn(async (_id, side): Promise<ActionResult<SideView>> =>
       ok({ state: stateFor(side), choices: choicesFor(side) }),
     ),
@@ -263,6 +264,12 @@ async function startBattle(actions: SandboxServerActions) {
     fireEvent.click(within(picker).getByRole('button', { name: labels.setup.importButton }));
     await screen.findByTestId(`team-ready-${n}`);
   }
+  await waitFor(() =>
+    expect(
+      (screen.getByRole('button', { name: labels.setup.createButton }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false),
+  );
   fireEvent.click(screen.getByRole('button', { name: labels.setup.createButton }));
   await screen.findByTestId('sandbox-battle');
 }
@@ -334,6 +341,12 @@ describe('Battle Sandbox: setup', () => {
       fireEvent.click(within(picker).getByRole('button', { name: labels.setup.importButton }));
       await screen.findByTestId(`team-ready-${n}`);
     }
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('button', { name: labels.setup.createButton }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false),
+    );
     fireEvent.click(screen.getByRole('button', { name: labels.setup.createButton }));
     const box = await screen.findByTestId('team-problems');
     expect(box.textContent).toContain('Garchomp is banned.');
@@ -357,6 +370,12 @@ describe('Battle Sandbox: setup', () => {
       fireEvent.click(within(picker).getByRole('button', { name: labels.setup.importButton }));
       await screen.findByTestId(`team-ready-${n}`);
     }
+    await waitFor(() =>
+      expect(
+        (screen.getByRole('button', { name: labels.setup.createButton }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false),
+    );
     fireEvent.click(screen.getByRole('button', { name: labels.setup.createButton }));
     expect((await screen.findByTestId('sandbox-error')).textContent).toBe(
       labels.errors.BATTLE_SERVER_NOT_CONFIGURED,
@@ -371,9 +390,7 @@ describe('Battle Sandbox: playing a battle', () => {
 
     // Team preview, player 1 first.
     expect(screen.getByTestId('turn-indicator').textContent).toBe(labels.battle.preview);
-    expect(screen.getByTestId('acting-panel').textContent).toContain(
-      'Player 1: choose your action',
-    );
+    expect(screen.getByTestId('acting-panel').textContent).toContain('Player 1 (now)');
     const confirm = () =>
       screen.getByRole('button', { name: labels.preview.submit }) as HTMLButtonElement;
     expect(confirm().disabled).toBe(true);
@@ -386,9 +403,7 @@ describe('Battle Sandbox: playing a battle', () => {
 
     // Then player 2 is asked; the panel switches sides by itself.
     await waitFor(() =>
-      expect(screen.getByTestId('acting-panel').textContent).toContain(
-        'Player 2: choose your action',
-      ),
+      expect(screen.getByTestId('acting-panel').textContent).toContain('Player 2 (now)'),
     );
     fireEvent.click(screen.getByRole('button', { name: /Garchomp/ }));
     fireEvent.click(screen.getByRole('button', { name: /Rotom-Wash/ }));
@@ -396,9 +411,7 @@ describe('Battle Sandbox: playing a battle', () => {
     await waitFor(() => expect(screen.getByTestId('turn-indicator').textContent).toBe('Turn 1'));
 
     // A move turn: choose Earthquake with Terastallization for player 1.
-    expect(screen.getByTestId('acting-panel').textContent).toContain(
-      'Player 1: choose your action',
-    );
+    expect(screen.getByTestId('acting-panel').textContent).toContain('Player 1 (now)');
     fireEvent.click(
       within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Earthquake/ }),
     );
@@ -500,6 +513,7 @@ describe('Battle Sandbox: timeline and Turn Inspector', () => {
     await startBattle(actions);
     await playPreview(actions);
 
+    fireEvent.click(screen.getByRole('button', { name: /Show timeline/ }));
     expect(screen.getByTestId('turn-1')).toBeTruthy();
     expect(screen.queryByTestId('turn-inspector')).toBeNull();
     fireEvent.click(screen.getByTestId('turn-1'));
@@ -521,6 +535,7 @@ describe('Battle Sandbox: forks', () => {
     const { actions } = fake();
     await startBattle(actions);
     await playPreview(actions);
+    fireEvent.click(screen.getByRole('button', { name: /Show timeline/ }));
     fireEvent.click(screen.getByTestId('turn-1'));
     // Mid-battle there is nothing to fork.
     expect(screen.queryByRole('button', { name: labels.inspector.tryDifferent })).toBeNull();
@@ -533,6 +548,7 @@ describe('Battle Sandbox: forks', () => {
       fireEvent.click(screen.getByRole('button', { name: labels.action.submit }));
     }
     await screen.findByTestId('battle-result');
+    // The timeline stays open from before the battle ended.
     fireEvent.click(screen.getByTestId('turn-1'));
     fireEvent.click(screen.getByRole('button', { name: labels.inspector.tryDifferent }));
 
@@ -578,6 +594,7 @@ describe('Battle Sandbox: forks', () => {
       ok: false,
       error: { code: 'ILLEGAL_CHOICE' },
     });
+    fireEvent.click(screen.getByRole('button', { name: labels.result.showTimeline }));
     fireEvent.click(screen.getByTestId('turn-1'));
     fireEvent.click(screen.getByRole('button', { name: labels.inspector.tryDifferent }));
     const panel = await screen.findByTestId('fork-panel');
@@ -588,5 +605,211 @@ describe('Battle Sandbox: forks', () => {
       labels.errors.ILLEGAL_CHOICE,
     );
     expect(screen.queryByTestId('fork-result')).toBeNull();
+  });
+});
+
+async function importTeam(n: 1 | 2) {
+  const picker = screen.getByTestId(`team-picker-${n}`);
+  fireEvent.click(within(picker).getByRole('button', { name: labels.setup.fromPaste }));
+  fireEvent.change(within(picker).getByLabelText(labels.setup.pasteLabel), {
+    target: { value: 'Garchomp' },
+  });
+  fireEvent.click(within(picker).getByRole('button', { name: labels.setup.importButton }));
+  await screen.findByTestId(`team-ready-${n}`);
+}
+const startButton = () =>
+  screen.getByRole('button', { name: labels.setup.createButton }) as HTMLButtonElement;
+
+describe('Battle Sandbox UX: setup', () => {
+  it('explains what the sandbox is, in order: format, player 1, player 2', () => {
+    const { actions } = fake();
+    render(<BattleSandbox labels={labels} typeNames={typeNames} actions={actions} />);
+    expect(screen.getByTestId('sandbox-purpose').textContent).toBe(
+      'Control both sides to test teams, formats, and battle situations.',
+    );
+    const legends = [
+      screen.getByText('1 · Format'),
+      screen.getByText('2 · Player 1'),
+      screen.getByText('3 · Player 2'),
+    ];
+    for (let i = 1; i < legends.length; i++) {
+      expect(
+        legends[i - 1]!.compareDocumentPosition(legends[i]!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+  });
+
+  it('summarises the chosen format from catalog metadata', () => {
+    const { actions } = fake();
+    render(<BattleSandbox labels={labels} typeNames={typeNames} actions={actions} />);
+    const meta = () => screen.getByTestId('format-meta').textContent;
+    expect(meta()).toBe('Singles · 1 active Pokémon');
+    fireEvent.change(screen.getByLabelText(labels.setup.formatLabel), {
+      target: { value: 'champions-vgc-reg-mb' },
+    });
+    expect(meta()).toBe('Doubles · 2 active Pokémon · Open team sheets');
+  });
+
+  it('shows each team’s status and says what is missing before Start is possible', async () => {
+    const { actions } = fake();
+    render(<BattleSandbox labels={labels} typeNames={typeNames} actions={actions} />);
+    const status = (n: number) => screen.getByTestId(`team-status-${n}`);
+    expect(status(1).textContent).toContain(labels.setup.statusEmpty);
+    expect(startButton().disabled).toBe(true);
+    expect(screen.getByTestId('start-help').textContent).toBe("Choose Player 1's team to start.");
+
+    await importTeam(1);
+    await waitFor(() => expect(status(1).dataset['status']).toBe('ready'));
+    expect(status(1).textContent).toContain(labels.setup.statusReady);
+    expect(startButton().disabled).toBe(true);
+    expect(screen.getByTestId('start-help').textContent).toBe("Choose Player 2's team to start.");
+
+    await importTeam(2);
+    await waitFor(() => expect(startButton().disabled).toBe(false));
+    expect(screen.getByTestId('start-help').dataset['ready']).toBe('true');
+    expect(actions.validateSandboxTeam).toHaveBeenCalledWith('sv-ou', TEAM);
+  });
+
+  it('presents an illegal team with a friendly heading and the engine’s message as detail, and does not allow starting', async () => {
+    const { actions } = fake();
+    (actions.validateSandboxTeam as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'INVALID_TEAM',
+        details: { side: 'p1', problems: ['Spore is banned by Sleep Moves Clause.'] },
+      },
+    });
+    render(<BattleSandbox labels={labels} typeNames={typeNames} actions={actions} />);
+    await importTeam(1);
+    await importTeam(2);
+    const invalid = await screen.findByTestId('team-invalid-1');
+    expect(invalid.textContent).toContain('This team is not valid for Scarlet/Violet OU.');
+    expect(invalid.textContent).toContain('Detail: Spore is banned by Sleep Moves Clause.');
+    expect(screen.getByTestId('team-status-1').textContent).toContain(labels.setup.statusInvalid);
+    expect(startButton().disabled).toBe(true);
+    expect(screen.getByTestId('start-help').textContent).toBe("Fix Player 1's team to start.");
+    fireEvent.click(startButton());
+    expect(actions.createSandboxBattle).not.toHaveBeenCalled();
+  });
+
+  it('blocks Start, with an explanation, when legality cannot be checked', async () => {
+    const { actions } = fake();
+    (actions.validateSandboxTeam as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      error: { code: 'BATTLE_SERVER_UNAVAILABLE' },
+    });
+    render(<BattleSandbox labels={labels} typeNames={typeNames} actions={actions} />);
+    await importTeam(1);
+    await importTeam(2);
+    await waitFor(() =>
+      expect(screen.getByTestId('team-status-1').dataset['status']).toBe('unavailable'),
+    );
+    expect(screen.getByTestId('team-status-detail-1').textContent).toContain(
+      labels.errors.BATTLE_SERVER_UNAVAILABLE,
+    );
+    expect(startButton().disabled).toBe(true);
+    expect(screen.getByTestId('start-help').textContent).toBe(labels.setup.startUnavailable);
+  });
+
+  it('has critical setup copy in both languages', () => {
+    const es = getDictionary('es').battle.sandbox;
+    expect(es.setup.purpose).toBe(
+      'Controla ambos lados para probar equipos, formatos y situaciones de combate.',
+    );
+    expect(es.setup.createButton).toBe('Iniciar combate');
+    expect(es.setup.statusReady).toBe('Equipo listo');
+    expect(es.setup.statusInvalid).toBe('Necesita ajustes');
+    expect(es.battle.resolving).toBe('Resolviendo turno…');
+    expect(es.action.chooseAction).toBe('Elige una acción');
+    expect(es.action.confirmTurn).toBe('Confirmar turno');
+    expect(labels.action.chooseAction).toBe('Choose an action');
+  });
+});
+
+describe('Battle Sandbox UX: during and after the battle', () => {
+  it('always says who acts and with which Pokémon', async () => {
+    const { actions } = fake();
+    await startBattle(actions);
+    await playPreview(actions);
+    await waitFor(() =>
+      expect(screen.getByTestId('actor-line').textContent).toBe('Player 1 · Garchomp'),
+    );
+    expect(screen.getByTestId('action-prompt').textContent).toBe(labels.action.chooseAction);
+    expect(screen.getByTestId('turn-indicator').textContent).toBe('Turn 1');
+    // Player 1 is now, player 2 is waiting.
+    const states = [...screen.getByTestId('side-progress').querySelectorAll('li')].map((li) =>
+      li.getAttribute('data-state'),
+    );
+    expect(states).toEqual(['current', 'pending']);
+    // Only the first move step is on screen; a single Pokémon confirms directly.
+    expect(screen.queryByRole('button', { name: labels.action.next })).toBeNull();
+    expect(screen.getByRole('button', { name: labels.action.submit })).toBeTruthy();
+  });
+
+  it('shows that the turn is resolving and cannot be sent twice', async () => {
+    const { actions } = fake();
+    await startBattle(actions);
+    await playPreview(actions);
+    const before = (actions.submitSandboxCommand as ReturnType<typeof vi.fn>).mock.calls.length;
+    let release: (value: unknown) => void = () => undefined;
+    (actions.submitSandboxCommand as ReturnType<typeof vi.fn>).mockImplementationOnce(
+      () => new Promise((resolve) => (release = resolve)),
+    );
+    fireEvent.click(
+      within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Earthquake/ }),
+    );
+    const confirm = screen.getByRole('button', { name: labels.action.submit });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+    expect((await screen.findByTestId('resolving')).textContent).toBe(labels.battle.resolving);
+    expect(actions.submitSandboxCommand).toHaveBeenCalledTimes(before + 1);
+    release({ ok: true, data: { resolved: false, state: {}, events: [] } });
+    await waitFor(() => expect(screen.queryByTestId('resolving')).toBeNull());
+  });
+
+  it('keeps the timeline out of the way during the battle and gives the result priority when it ends', async () => {
+    const { actions } = fake();
+    await startBattle(actions);
+    await playPreview(actions);
+    expect(screen.queryByTestId('turn-1')).toBeNull();
+    for (const player of ['Player 1', 'Player 2']) {
+      await waitFor(() => expect(screen.getByTestId('acting-panel').textContent).toContain(player));
+      fireEvent.click(
+        within(screen.getByTestId('acting-panel')).getByRole('button', { name: /Earthquake/ }),
+      );
+      fireEvent.click(screen.getByRole('button', { name: labels.action.submit }));
+    }
+    const result = await screen.findByTestId('battle-result');
+    expect(result.querySelector('[data-testid="result-headline"]')?.textContent).toBe(
+      'Player 1 won the battle.',
+    );
+    expect(screen.queryByTestId('turn-1')).toBeNull();
+    // The fork is not offered next to the result: only from an opened turn.
+    expect(screen.queryByRole('button', { name: labels.inspector.tryDifferent })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: labels.result.showTimeline }));
+    expect(screen.getByTestId('turn-1')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: labels.inspector.tryDifferent })).toBeNull();
+    fireEvent.click(screen.getByTestId('turn-1'));
+    expect(screen.getByRole('button', { name: labels.inspector.tryDifferent })).toBeTruthy();
+  });
+});
+
+describe('Battle Sandbox layout: mobile-first structure', () => {
+  it('is one column by default, with the desktop side column and sticky offsets only at lg', async () => {
+    const { actions } = fake();
+    await startBattle(actions);
+    await playPreview(actions);
+    const grid = screen.getByTestId('acting-panel').parentElement!;
+    const classes = grid.className.split(/\s+/);
+    expect(classes).toContain('grid-cols-1');
+    // The 28rem action column may only exist behind the desktop breakpoint.
+    const columns = classes.filter((c) => c.includes('grid-cols-['));
+    expect(columns.length).toBe(1);
+    expect(columns.every((c) => c.startsWith('lg:'))).toBe(true);
+    // No fixed or minimum widths outside lg on the panel and its grid.
+    const panel = screen.getByTestId('acting-panel').className.split(/\s+/);
+    expect(panel).toContain('min-w-0');
+    expect(panel.filter((c) => /^(w-\[|min-w-\[|w-max|min-w-max)/.test(c))).toEqual([]);
+    expect(panel.filter((c) => /^(w-\[|min-w-\[)/.test(c))).toEqual([]);
   });
 });
