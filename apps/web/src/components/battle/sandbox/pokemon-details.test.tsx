@@ -255,9 +255,15 @@ describe('Pokémon details: what each perspective sees', () => {
     expect(panel.getByText('PAR')).toBeTruthy();
     expect(panel.getByText('Attack +2 · Speed -1')).toBeTruthy(); // boosts stay separate from stats
     expect(panel.getByText('Modest')).toBeTruthy();
-    expect(panel.getByText('EVs')).toBeTruthy();
-    expect(panel.getByText('SpA 252'.replace('SpA', 'Sp. Atk'))).toBeTruthy();
-    expect(panel.getByText('IVs')).toBeTruthy();
+    // EVs list only the allocated stats; IVs list all six.
+    const evs = within(panel.getByText('EVs').parentElement as HTMLElement);
+    expect(evs.getByText('Sp. Atk').nextSibling?.textContent).toBe('252');
+    expect(evs.getByText('Speed').nextSibling?.textContent).toBe('252');
+    expect(evs.getByText('HP').nextSibling?.textContent).toBe('4');
+    expect(evs.queryByText('Attack')).toBeNull();
+    const ivs = within(panel.getByText('IVs').parentElement as HTMLElement);
+    expect(ivs.getByText('Attack').nextSibling?.textContent).toBe('0');
+    expect(ivs.getAllByRole('term')).toHaveLength(6);
     expect(panel.getByText('Good as Gold')).toBeTruthy();
     expect(panel.getByText('Leftovers')).toBeTruthy();
     const moves = within(panel.getByTestId('details-moves'));

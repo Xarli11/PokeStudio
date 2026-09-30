@@ -22,36 +22,61 @@ const STAT_ORDER = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const;
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 const sectionHeading = 'm-0 text-xs font-semibold uppercase tracking-wide text-muted';
-const row = 'flex items-baseline justify-between gap-3 text-sm';
+const sectionClass =
+  'flex flex-col gap-3 border-t border-border-subtle pt-4 first:border-t-0 first:pt-0';
+const gridClass = 'm-0 grid grid-cols-2 gap-2 min-[400px]:grid-cols-3';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className={row}>
+    <div className="flex items-baseline justify-between gap-3 text-sm">
       <dt className="text-muted">{label}</dt>
       <dd className="m-0 min-w-0 text-right font-semibold tabular-nums">{children}</dd>
     </div>
   );
 }
 
-function StatChips({
+/** A compact label/value grid (stats, EVs, IVs): small muted label above a dominant number. */
+function StatGrid({
   table,
   labels,
-  onlyNonZero,
+  onlyNonZero = false,
+  large = false,
+  testId,
 }: {
   table: BattleStatTable;
   labels: PokemonDetailsLabels;
-  onlyNonZero: boolean;
+  onlyNonZero?: boolean;
+  large?: boolean;
+  testId?: string;
 }) {
   const entries = STAT_ORDER.filter((stat) => !onlyNonZero || table[stat] > 0);
-  if (entries.length === 0) return <>0</>;
+  if (entries.length === 0) return <p className="m-0 text-sm font-semibold tabular-nums">0</p>;
   return (
-    <span className="flex flex-wrap justify-end gap-1">
+    <dl className={gridClass} {...(testId ? { 'data-testid': testId } : {})}>
       {entries.map((stat) => (
-        <span key={stat} className={tagClass()}>
-          {labels.stat[stat]} {table[stat]}
-        </span>
+        <div
+          key={stat}
+          className="flex min-w-0 flex-col gap-0.5 rounded-md border border-border-subtle bg-surface px-3 py-2"
+        >
+          <dt className="truncate text-xs text-muted">{labels.stat[stat]}</dt>
+          <dd
+            className={`m-0 font-bold leading-tight tabular-nums ${large ? 'text-xl' : 'text-base'}`}
+          >
+            {table[stat]}
+          </dd>
+        </div>
       ))}
-    </span>
+    </dl>
+  );
+}
+
+/** A labelled spread (EVs / Stat Points / IVs) inside SET. */
+function Spread({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm text-muted">{title}</span>
+      {children}
+    </div>
   );
 }
 
@@ -121,11 +146,20 @@ export function PokemonDetailsPanel({
   const name = pokemon.nickname ?? pokemon.species;
   const details = pokemon.privateDetails;
   const boosts = Object.entries(pokemon.boosts) as [BattleBoostId, number][];
-  const typeText = pokemon.types?.map((type) => typeNames[type.toLowerCase()] ?? type).join(' / ');
   const hp =
     pokemon.hp.kind === 'exact'
       ? `${pokemon.hp.current} / ${pokemon.hp.max}`
       : `${pokemon.hp.percent}%`;
+  const percent = Math.max(
+    0,
+    Math.min(
+      100,
+      pokemon.hp.kind === 'exact'
+        ? Math.round((pokemon.hp.current * 100) / Math.max(pokemon.hp.max, 1))
+        : pokemon.hp.percent,
+    ),
+  );
+  const barColor = percent > 50 ? 'bg-brand' : percent > 20 ? 'bg-warning' : 'bg-danger';
   const gender = pokemon.gender === 'M' ? '♂' : pokemon.gender === 'F' ? '♀' : null;
   const moves = pokemon.moves ?? [];
   const hasSet =
@@ -155,23 +189,24 @@ export function PokemonDetailsPanel({
         className="relative flex max-h-[85dvh] w-full min-w-0 flex-col overflow-hidden rounded-t-xl border-t border-border bg-surface-raised shadow-md sm:max-h-none sm:w-[26rem] sm:max-w-full sm:rounded-none sm:border-l sm:border-t-0"
       >
         <header className="flex items-start justify-between gap-3 border-b border-border-subtle p-4">
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <h3 id="pokemon-details-title" className="m-0 truncate text-lg font-bold leading-tight">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <h3 id="pokemon-details-title" className="m-0 truncate text-xl font-bold leading-tight">
               {name}
             </h3>
-            <p className="m-0 text-sm text-muted">
-              {pokemon.nickname ? `${pokemon.species} · ` : ''}
-              {formatMessage(levelTemplate, { level: pokemon.level })}
-              {typeText ? ` · ${typeText}` : ''}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+              {pokemon.nickname ? <span>{pokemon.species}</span> : null}
+              <span>{formatMessage(levelTemplate, { level: pokemon.level })}</span>
+              {pokemon.types?.map((type) => (
+                <span key={type} className={tagClass()}>
+                  {typeNames[type.toLowerCase()] ?? type}
+                </span>
+              ))}
               {gender ? (
-                <>
-                  {' · '}
-                  <span aria-label={pokemon.gender === 'M' ? labels.male : labels.female}>
-                    {gender}
-                  </span>
-                </>
+                <span aria-label={pokemon.gender === 'M' ? labels.male : labels.female}>
+                  {gender}
+                </span>
               ) : null}
-            </p>
+            </div>
           </div>
           <button
             ref={closeButton}
@@ -187,13 +222,29 @@ export function PokemonDetailsPanel({
           </button>
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
-          <p className="m-0 text-xs text-muted">{labels.scopeNote}</p>
-
-          <section className="flex flex-col gap-2" aria-label={labels.sectionState}>
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+          <section className={sectionClass} aria-label={labels.sectionState}>
             <h4 className={sectionHeading}>{labels.sectionState}</h4>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm text-muted">{labels.hp}</span>
+                <span className="text-lg font-bold tabular-nums">{hp}</span>
+              </div>
+              <div
+                role="meter"
+                aria-label={labels.hp}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={percent}
+                className="h-1.5 w-full overflow-hidden rounded-full bg-surface-active"
+              >
+                <div
+                  className={`h-full rounded-full ${barColor}`}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            </div>
             <dl className="m-0 flex flex-col gap-1.5">
-              <Row label={labels.hp}>{hp}</Row>
               {pokemon.status ? (
                 <Row label={labels.status}>{STATUS_LABEL[pokemon.status]}</Row>
               ) : null}
@@ -214,74 +265,76 @@ export function PokemonDetailsPanel({
           </section>
 
           {details ? (
-            <section className="flex flex-col gap-2" aria-label={labels.sectionStats}>
+            <section className={sectionClass} aria-label={labels.sectionStats}>
               <h4 className={sectionHeading}>{labels.sectionStats}</h4>
-              <dl className="m-0 flex flex-col gap-1.5" data-testid="details-stats">
-                {STAT_ORDER.map((stat) => (
-                  <Row key={stat} label={labels.stat[stat]}>
-                    {details.stats[stat]}
-                  </Row>
-                ))}
-              </dl>
+              <StatGrid table={details.stats} labels={labels} large testId="details-stats" />
             </section>
           ) : null}
 
           {hasSet ? (
-            <section className="flex flex-col gap-2" aria-label={labels.sectionSet}>
+            <section className={sectionClass} aria-label={labels.sectionSet}>
               <h4 className={sectionHeading}>{labels.sectionSet}</h4>
-              <dl className="m-0 flex flex-col gap-1.5">
+              <dl className="m-0 flex flex-col gap-2">
                 {pokemon.ability !== undefined ? (
                   <Row label={labels.ability}>{label('abilities', pokemon.ability)}</Row>
                 ) : null}
                 {pokemon.item ? (
                   <Row label={labels.item}>{label('items', pokemon.item)}</Row>
                 ) : null}
-                {details ? (
-                  <>
-                    <Row label={labels.nature}>{details.nature}</Row>
-                    <Row label={family === 'champions' ? labels.statPoints : labels.evs}>
-                      <StatChips table={details.evs} labels={labels} onlyNonZero />
-                    </Row>
-                    {details.ivs ? (
-                      <Row label={labels.ivs}>
-                        <StatChips table={details.ivs} labels={labels} onlyNonZero={false} />
-                      </Row>
-                    ) : null}
-                  </>
-                ) : null}
+                {details ? <Row label={labels.nature}>{details.nature}</Row> : null}
                 {pokemon.teraType ? (
                   <Row label={labels.tera}>
                     {typeNames[pokemon.teraType.toLowerCase()] ?? pokemon.teraType}
                   </Row>
                 ) : null}
               </dl>
+              {details ? (
+                <>
+                  <Spread title={family === 'champions' ? labels.statPoints : labels.evs}>
+                    <StatGrid table={details.evs} labels={labels} onlyNonZero />
+                  </Spread>
+                  {details.ivs ? (
+                    <Spread title={labels.ivs}>
+                      <StatGrid table={details.ivs} labels={labels} />
+                    </Spread>
+                  ) : null}
+                </>
+              ) : null}
             </section>
           ) : null}
 
           {moves.length > 0 ? (
-            <section className="flex flex-col gap-2" aria-label={labels.sectionMoves}>
+            <section className={sectionClass} aria-label={labels.sectionMoves}>
               <h4 className={sectionHeading}>{labels.sectionMoves}</h4>
-              <ul className="m-0 flex list-none flex-col gap-1.5 p-0" data-testid="details-moves">
+              <ul
+                className="m-0 flex list-none flex-col divide-y divide-border-subtle overflow-hidden rounded-md border border-border-subtle bg-surface p-0"
+                data-testid="details-moves"
+              >
                 {moves.map((move) => (
-                  <li key={move.id} className={row}>
+                  <li
+                    key={move.id}
+                    className="flex items-baseline justify-between gap-3 px-3 py-2 text-sm"
+                  >
                     <span className="min-w-0 truncate font-semibold">
                       {label('moves', move.id)}
-                      {move.disabled ? (
-                        <span className="ml-2 text-xs font-normal text-muted">
-                          {labels.disabled}
+                    </span>
+                    <span className="flex shrink-0 items-baseline gap-2 text-muted">
+                      {move.disabled ? <span className="text-xs">{labels.disabled}</span> : null}
+                      {move.pp !== undefined && move.maxPp !== undefined ? (
+                        <span className="tabular-nums">
+                          {move.pp} / {move.maxPp}
                         </span>
                       ) : null}
                     </span>
-                    {move.pp !== undefined && move.maxPp !== undefined ? (
-                      <span className="shrink-0 tabular-nums text-muted">
-                        {move.pp} / {move.maxPp}
-                      </span>
-                    ) : null}
                   </li>
                 ))}
               </ul>
             </section>
           ) : null}
+
+          <p className="m-0 border-t border-border-subtle pt-3 text-xs text-muted">
+            {labels.scopeNote}
+          </p>
         </div>
       </div>
     </div>
